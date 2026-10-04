@@ -1,0 +1,54 @@
+/* Styles ported from e-catalog-ref/src/index.css, scoped to the furniture catalog app */
+
+.furniture-catalog {
+  --color-wood: #8B5A2B;
+  --color-wood-dark: #6E3D19;
+  --color-wood-light: #FAF5EE;
+  --color-wood-border: #E8D8C8;
+
+  font-family: var(--font-plus-jakarta), var(--font-poppins), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: 0.01em;
+  line-height: 1.55;
+}
+
+.furniture-catalog ::selection {
+  background-color: #8B5A2B;
+  color: #ffffff;
+}
+
+.furniture-catalog :is(h1, h2, h3, h4, h5, h6, .font-display) {
+  font-family: var(--font-plus-jakarta), var(--font-poppins), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  letter-spacing: 0;
+  line-height: 1.3;
+}
+
+.furniture-catalog :is(p, span, label, input, button) {
+  letter-spacing: 0.01em;
+}
+
+/* Hide scrollbar for clean horizontal scrolling on mobile */
+.furniture-catalog .no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.furniture-catalog .no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom subtle scrollbar */
+.furniture-catalog ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.furniture-catalog ::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+.furniture-catalog ::-webkit-scrollbar-thumb {
+  background: #d4d4d4;
+  border-radius: 3px;
+}
+.furniture-catalog ::-webkit-scrollbar-thumb:hover {
+  background: #a3a3a3;
+}
