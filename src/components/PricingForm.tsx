@@ -42,9 +42,9 @@ function Step({
   children: ReactNode;
 }) {
   return (
-    <span className="flex items-center gap-3 text-base font-bold leading-snug tracking-[-0.01em] text-ink">
+    <span className="flex items-center gap-2.5 text-[0.9375rem] font-bold leading-snug tracking-[-0.01em] text-ink sm:gap-3 sm:text-base">
       <span
-        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px] font-bold tabular-nums transition-colors ${
+        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold sm:h-7 sm:w-7 sm:text-[13px] tabular-nums transition-colors ${
           done
             ? "bg-primary text-white"
             : error
@@ -74,23 +74,23 @@ const SERVICES: Record<
   website: {
     name: "Website Development",
     slug: "websites",
-    description: "A complete website for your business",
+    description: "Full website for your business",
     questions: [
       {
         id: "businessType",
-        label: "Are you a",
+        label: "You are a",
         summary: "Business type",
         options: ["Furniture Retailer", "Manufacturer", "Wholesaler"],
       },
       {
         id: "budget",
-        label: "What is your budget?",
+        label: "Your budget?",
         summary: "Budget",
         options: ["₹10k–25k", "₹25k–50k", "₹50k–1L", "₹1L+"],
       },
       {
         id: "websiteType",
-        label: "What kind of website do you want?",
+        label: "Type of website?",
         summary: "Website type",
         options: ["Catalog", "E-Commerce", "Branding / Information"],
       },
@@ -99,17 +99,17 @@ const SERVICES: Record<
   ecatalog: {
     name: "E-Catalog",
     slug: "e-catalog",
-    description: "An online catalog customers browse on their phone",
+    description: "Online catalog for phones",
     questions: [
       {
         id: "products",
-        label: "How many products do you want in the catalog?",
+        label: "How many products?",
         summary: "Number of products",
         options: ["Up to 50", "50–100", "100–250", "250+"],
       },
       {
         id: "domain",
-        label: "Do you have your own domain?",
+        label: "Have your own domain?",
         summary: "Own domain",
         options: ["Yes", "No", "Not sure"],
       },
@@ -118,17 +118,17 @@ const SERVICES: Record<
   pdf: {
     name: "PDF Catalog",
     slug: "pdf-catalog",
-    description: "A printable catalog you can share anywhere",
+    description: "Printable, shareable catalog",
     questions: [
       {
         id: "business",
-        label: "What is your business?",
+        label: "Your business?",
         summary: "Business",
         options: ["Furniture", "Curtains", "Fabrics"],
       },
       {
         id: "products",
-        label: "How many products do you want in the catalog?",
+        label: "How many products?",
         summary: "Number of products",
         options: ["Up to 20", "20–50", "50–100", "100+"],
       },
@@ -141,7 +141,7 @@ const SERVICE_ORDER: ServiceKey[] = ["website", "ecatalog", "pdf"];
 type Errors = Record<string, string>;
 
 function cardClass(error?: string) {
-  return `min-w-0 scroll-mt-6 rounded-card border bg-white p-4 transition-colors duration-300 sm:p-5 ${
+  return `min-w-0 scroll-mt-6 rounded-card border bg-white p-3.5 transition-colors duration-300 sm:p-5 ${
     error
       ? "border-red-400 bg-red-50/40 ring-4 ring-red-500/10"
       : "border-line"
@@ -157,7 +157,7 @@ function buildMessage(
   return [
     "Hi AllAboutWeb, I'd like to know the pricing.",
     "",
-    `Name: ${name}`,
+    ...(name ? [`Name: ${name}`] : []),
     `Service: ${serviceName}`,
     ...questions.map((q) => `${q.summary}: ${answers[q.id]}`),
   ].join("\n");
@@ -181,7 +181,7 @@ function ChipGroup({
         return (
           <label
             key={option}
-            className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition active:scale-95 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${
+            className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13px] font-medium transition sm:px-4 sm:text-sm active:scale-95 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${
               checked
                 ? "border-primary bg-primary text-white shadow-[0_6px_16px_-6px_rgba(252,108,38,0.6)]"
                 : "border-line bg-white text-ink hover:-translate-y-0.5 hover:border-primary hover:text-primary"
@@ -221,22 +221,24 @@ export default function PricingForm({
   const Heading = headingLevel;
   const questions = service ? SERVICES[service].questions : [];
   const answeredCount = questions.filter((q) => answers[q.id]).length;
-  // Before a service is picked, assume a typical 2-question flow for the bar
-  const totalSteps = 2 + (service ? questions.length : 2);
-  const doneSteps = (name.trim() ? 1 : 0) + (service ? 1 : 0) + answeredCount;
+  // Name is optional, so the bar tracks only the required steps.
+  // Before a service is picked, assume a typical 2-question flow.
+  const totalSteps = 1 + (service ? questions.length : 2);
+  const doneSteps = (service ? 1 : 0) + answeredCount;
   const progress = Math.round((doneSteps / totalSteps) * 100);
+  // Name comes last, after the service questions
+  const nameStep = 2 + (service ? questions.length : 2);
 
   function selectService(next: ServiceKey) {
     setService(next);
     setAnswers({});
-    setErrors((prev) => ({ name: prev.name }));
+    setErrors({});
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const nextErrors: Errors = {};
-    if (!name.trim()) nextErrors.name = "Enter your name.";
     if (!service) nextErrors.service = "Choose a service.";
     for (const q of questions) {
       if (!answers[q.id]) nextErrors[q.id] = "Pick an option.";
@@ -244,7 +246,7 @@ export default function PricingForm({
     setErrors(nextErrors);
 
     // Jump to the first incomplete field, in the order they appear
-    const firstInvalid = ["name", "service", ...questions.map((q) => q.id)].find(
+    const firstInvalid = ["service", ...questions.map((q) => q.id)].find(
       (id) => nextErrors[id]
     );
     if (firstInvalid) {
@@ -271,21 +273,20 @@ export default function PricingForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
-      <div className="mb-3 pr-8">
-        <p className="inline-flex items-center gap-1.5 rounded-full bg-tint px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-primary">
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3 sm:gap-4">
+      <div className="mb-1 pr-8 sm:mb-3">
+        <p className="inline-flex items-center gap-1.5 rounded-full bg-tint px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-primary sm:px-3 sm:text-[11px]">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
           Free quote in minutes
         </p>
-        <Heading className="mt-4 text-3xl font-extrabold leading-[1.1] tracking-[-0.03em] text-ink sm:text-4xl">
+        <Heading className="mt-3 text-2xl font-extrabold leading-[1.1] tracking-[-0.03em] text-ink sm:mt-4 sm:text-4xl">
           Get the <span className="highlight">pricing</span>
         </Heading>
-        <p className="mt-3 max-w-md text-[15px] leading-relaxed text-slate sm:text-base">
-          Answer a few quick questions and we&apos;ll send you pricing on
-          WhatsApp.
+        <p className="mt-2 max-w-md text-sm leading-relaxed text-slate sm:mt-3 sm:text-base">
+          A few quick questions, pricing on WhatsApp.
         </p>
         <div
-          className="mt-5 h-1.5 overflow-hidden rounded-full bg-line"
+          className="mt-4 h-1.5 sm:mt-5 overflow-hidden rounded-full bg-line"
           role="progressbar"
           aria-label="Form progress"
           aria-valuemin={0}
@@ -299,44 +300,13 @@ export default function PricingForm({
         </div>
       </div>
 
-      <div data-field="name" className={cardClass(errors.name)}>
-        <label htmlFor="pricing-name" className="mb-3 block">
-          <Step n={1} done={Boolean(name.trim())} error={Boolean(errors.name)}>
-            Your name
-          </Step>
-        </label>
-        <input
-          id="pricing-name"
-          type="text"
-          autoComplete="name"
-          autoCapitalize="words"
-          enterKeyHint="next"
-          value={name}
-          onChange={(event) => {
-            setName(event.target.value);
-            if (errors.name) setErrors((prev) => ({ ...prev, name: "" }));
-          }}
-          placeholder="e.g. Rahul Sharma"
-          aria-invalid={Boolean(errors.name)}
-          aria-describedby={errors.name ? "pricing-name-error" : undefined}
-          className={`w-full rounded-btn border bg-paper px-4 py-3 text-base text-ink transition placeholder:text-slate/70 focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/15 sm:py-2.5 sm:text-sm ${
-            errors.name ? "border-red-400" : "border-line"
-          }`}
-        />
-        {errors.name && (
-          <p id="pricing-name-error" className="mt-2 text-[13px] font-medium text-red-600">
-            {errors.name}
-          </p>
-        )}
-      </div>
-
       <fieldset data-field="service" className={cardClass(errors.service)}>
-        <legend className="float-left mb-3 w-full">
-          <Step n={2} done={Boolean(service)} error={Boolean(errors.service)}>
+        <legend className="float-left mb-2.5 w-full sm:mb-3">
+          <Step n={1} done={Boolean(service)} error={Boolean(errors.service)}>
             What do you need?
           </Step>
         </legend>
-        <div className="clear-both grid gap-2.5 sm:grid-cols-3">
+        <div className="clear-both grid gap-2 sm:grid-cols-3 sm:gap-2.5">
           {SERVICE_ORDER.map((key) => {
             const checked = service === key;
             const { name: serviceName, description, slug } = SERVICES[key];
@@ -357,12 +327,12 @@ export default function PricingForm({
                   onChange={() => selectService(key)}
                   className="sr-only"
                 />
-                <span className="relative aspect-[1400/988] w-24 shrink-0 overflow-hidden rounded-[10px] bg-paper sm:w-full sm:rounded-none">
+                <span className="relative aspect-[1400/988] w-20 shrink-0 overflow-hidden rounded-[10px] bg-paper sm:w-full sm:rounded-none">
                   <Image
                     src={`${IMAGE_BASE}/${slug}/1.webp`}
                     alt=""
                     fill
-                    sizes="(min-width: 640px) 160px, 96px"
+                    sizes="(min-width: 640px) 160px, 80px"
                     className={`object-cover transition duration-500 group-hover:scale-105 ${
                       checked ? "" : "saturate-[0.85]"
                     }`}
@@ -383,10 +353,10 @@ export default function PricingForm({
                   <CheckIcon />
                 </span>
                 <span className="flex min-w-0 flex-col pr-8 sm:p-3 sm:pr-3">
-                  <span className="text-[15px] font-bold leading-tight tracking-[-0.01em] text-ink">
+                  <span className="text-sm font-bold leading-tight tracking-[-0.01em] text-ink sm:text-[15px]">
                     {serviceName}
                   </span>
-                  <span className="mt-1 text-xs leading-snug text-slate">
+                  <span className="mt-0.5 text-xs leading-snug text-slate sm:mt-1">
                     {description}
                   </span>
                 </span>
@@ -406,9 +376,9 @@ export default function PricingForm({
           className={`animate-enter-up [animation-duration:0.5s] ${cardClass(errors[q.id])}`}
           style={{ ["--enter-delay" as string]: `${i * 70}ms` }}
         >
-          <legend className="float-left mb-3 w-full">
+          <legend className="float-left mb-2.5 w-full sm:mb-3">
             <Step
-              n={i + 3}
+              n={i + 2}
               done={Boolean(answers[q.id])}
               error={Boolean(errors[q.id])}
             >
@@ -431,17 +401,39 @@ export default function PricingForm({
         </fieldset>
       ))}
 
+      <div className={cardClass()}>
+        <label htmlFor="pricing-name" className="mb-2.5 block sm:mb-3">
+          <Step n={nameStep} done={Boolean(name.trim())}>
+            <span>
+              Your name{" "}
+              <span className="text-xs font-medium text-slate sm:text-sm">(optional)</span>
+            </span>
+          </Step>
+        </label>
+        <input
+          id="pricing-name"
+          type="text"
+          autoComplete="name"
+          autoCapitalize="words"
+          enterKeyHint="send"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="e.g. Rahul Sharma"
+          className="w-full rounded-btn border border-line bg-paper px-3.5 py-2.5 text-base text-ink transition placeholder:text-slate/70 focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/15 sm:py-2.5 sm:text-sm"
+        />
+      </div>
+
       {/* Sticky action bar on mobile; bleeds over the parent's p-5 padding */}
       <div className="sticky bottom-0 z-10 -mx-5 -mb-5 mt-2 flex flex-col gap-2.5 border-t border-line bg-white/95 px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-12px_24px_-16px_rgba(1,18,60,0.25)] backdrop-blur-md sm:static sm:mx-0 sm:mb-0 sm:gap-3 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none sm:backdrop-blur-none">
         <button
           type="submit"
-          className="group inline-flex min-h-13 items-center justify-center gap-2 rounded-btn bg-primary px-6 py-3 text-base font-bold tracking-[-0.01em] text-white shadow-[0_14px_30px_-12px_rgba(252,108,38,0.7)] transition hover:-translate-y-0.5 hover:bg-primary/90 active:translate-y-0"
+          className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-btn bg-primary px-6 py-3 text-[0.9375rem] font-bold sm:min-h-13 sm:text-base tracking-[-0.01em] text-white shadow-[0_14px_30px_-12px_rgba(252,108,38,0.7)] transition hover:-translate-y-0.5 hover:bg-primary/90 active:translate-y-0"
         >
           <WhatsAppIcon />
           Get the pricing
         </button>
-        <p className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs font-medium text-slate">
-          {["No spam", "No commitment", "Reply within minutes"].map((item) => (
+        <p className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] font-medium text-slate sm:gap-x-4 sm:text-xs">
+          {["No spam", "No commitment", "Quick reply"].map((item) => (
             <span key={item} className="inline-flex items-center gap-1">
               <span className="text-primary">
                 <CheckIcon />
