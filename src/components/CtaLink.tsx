@@ -1,19 +1,21 @@
 import { ReactNode } from "react";
+import Link from "next/link";
 
 type Variant = "primary" | "secondary" | "white" | "outline-light";
-type Size = "sm" | "md";
+type Size = "sm" | "md" | "lg";
 
 const VARIANT_STYLES: Record<Variant, string> = {
   primary:
-    "bg-gradient-to-r from-secondary to-tertiary text-primary hover:opacity-90",
+    "bg-primary text-white hover:bg-primary/90",
   secondary: "border border-line bg-white text-ink hover:bg-tint",
-  white: "bg-white text-primary hover:bg-paper",
+  white: "bg-white text-secondary hover:bg-paper",
   "outline-light": "border border-white/40 text-white hover:bg-white/10",
 };
 
 const SIZE_STYLES: Record<Size, string> = {
   sm: "px-4 py-2 text-sm",
   md: "px-6 py-3 text-sm",
+  lg: "px-8 py-4 text-base",
 };
 
 export default function CtaLink({
@@ -33,14 +35,26 @@ export default function CtaLink({
   onClick?: () => void;
   children: ReactNode;
 }) {
+  const classes = `inline-flex items-center justify-center rounded-btn font-semibold transition ${VARIANT_STYLES[variant]} ${SIZE_STYLES[size]} ${className}`;
+
+  if (external) {
+    return (
+      <a
+        href={href}
+        onClick={onClick}
+        className={classes}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {children}
+      </a>
+    );
+  }
+
+  // next/link enables soft navigation, which lets /get-pricing open as a modal.
   return (
-    <a
-      href={href}
-      onClick={onClick}
-      className={`inline-flex items-center justify-center rounded-btn font-semibold transition ${VARIANT_STYLES[variant]} ${SIZE_STYLES[size]} ${className}`}
-      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-    >
+    <Link href={href} onClick={onClick} className={classes}>
       {children}
-    </a>
+    </Link>
   );
 }

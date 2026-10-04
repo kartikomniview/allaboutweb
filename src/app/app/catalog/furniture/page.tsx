@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import CtaLink from "@/components/CtaLink";
+import { whatsappUrl } from "@/lib/contact";
 
 export const metadata: Metadata = {
   title: "Furniture Catalog | AllAboutWeb",
   description:
     "Browse the AllAboutWeb furniture catalog — sofas, beds, dining sets, wardrobes, and more. Enquire on WhatsApp for pricing and availability.",
 };
-
-const WHATSAPP_NUMBER = "918269329125";
 
 function FurniturePieceIcon() {
   return (
@@ -100,16 +99,16 @@ export default function FurnitureCatalogPage() {
 
         <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {PRODUCTS.map((product) => {
-            const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+            const whatsappHref = whatsappUrl(
               `Hi, I'm interested in the ${product.name}.`
-            )}`;
+            );
 
             return (
               <div
                 key={product.id}
                 className="flex flex-col overflow-hidden rounded-card border border-line bg-white"
               >
-                <div className="flex aspect-[4/3] items-center justify-center bg-tint text-secondary">
+                <div className="flex aspect-[4/3] items-center justify-center bg-tint text-primary">
                   <FurniturePieceIcon />
                 </div>
                 <div className="flex flex-1 flex-col p-6">

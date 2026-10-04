@@ -169,7 +169,7 @@ export default function CatalogPage() {
     <div className="bg-paper">
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 header:px-8">
         <div className="max-w-2xl">
-          <p className="text-sm font-semibold text-secondary">Catalog</p>
+          <p className="text-sm font-semibold text-primary">Catalog</p>
           <h1 className="mt-2 text-3xl font-bold sm:text-4xl">
             Browse our catalogs
           </h1>
@@ -185,14 +185,14 @@ export default function CatalogPage() {
               <Link
                 key={slug}
                 href={`/app/catalog/${slug}`}
-                className="group rounded-card border border-line bg-white p-8 transition-colors hover:border-secondary"
+                className="group rounded-card border border-line bg-white p-8 transition-colors hover:border-primary"
               >
-                <div className="inline-flex items-center justify-center rounded-btn bg-tint p-2.5 text-secondary">
+                <div className="inline-flex items-center justify-center rounded-btn bg-tint p-2.5 text-primary">
                   <Icon />
                 </div>
                 <h2 className="mt-5 text-xl font-semibold">{title}</h2>
                 <p className="mt-2 text-slate">{description}</p>
-                <span className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-secondary">
+                <span className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-primary">
                   View catalog
                   <ArrowIcon />
                 </span>
@@ -203,7 +203,7 @@ export default function CatalogPage() {
                 aria-disabled="true"
                 className="rounded-card border border-line bg-white/60 p-8"
               >
-                <div className="inline-flex items-center justify-center rounded-btn bg-tint p-2.5 text-secondary opacity-60">
+                <div className="inline-flex items-center justify-center rounded-btn bg-tint p-2.5 text-primary opacity-60">
                   <Icon />
                 </div>
                 <h2 className="mt-5 text-xl font-semibold text-slate">

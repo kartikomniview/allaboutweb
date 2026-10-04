@@ -1,3 +1,6 @@
+import SectionHeading from "./SectionHeading";
+import { revealDelay } from "@/lib/reveal";
+
 function DirectIcon() {
   return (
     <svg
@@ -69,51 +72,70 @@ function ShareIcon() {
   );
 }
 
-const REASONS = [
+const REASONS: {
+  icon: () => React.JSX.Element;
+  title: string;
+  description: string;
+}[] = [
   {
     icon: DirectIcon,
     title: "Direct Communication",
-    description: "Talk directly to the person working on your project.",
+    description: "Talk to the person building your project.",
   },
   {
     icon: CustomIcon,
-    title: "Made for Your Business",
-    description: "No generic templates copied from somewhere else.",
+    title: "Made for You",
+    description: "No generic templates. Built for your business.",
   },
   {
     icon: MobileIcon,
     title: "Mobile Friendly",
-    description:
-      "Your customers can browse your website or catalog easily from their phone.",
+    description: "Looks great and works fast on every phone.",
   },
   {
     icon: ShareIcon,
     title: "Easy to Share",
-    description: "Share your catalog or website directly through WhatsApp.",
+    description: "Send your site or catalog straight on WhatsApp.",
   },
 ];
 
 export default function WhyUs() {
   return (
-    <section id="why-us" className="scroll-mt-24 bg-paper">
-      <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 header:px-8">
-        <div className="max-w-xl">
-          <h2 className="text-3xl font-bold sm:text-4xl">
-            Why Work With Us
-          </h2>
-        </div>
+    <section id="why-us" className="scroll-mt-24 bg-ink">
+      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:py-20 sm:px-6 header:px-8 lg:grid-cols-[1fr_1.4fr] lg:items-center lg:gap-16">
+        <SectionHeading
+          tone="dark"
+          eyebrow="Why AllAboutWeb"
+          title={
+            <>
+              Why Work <span className="text-primary">With Us</span>
+            </>
+          }
+          description={
+            <>
+              <strong>Simple, personal and built to work</strong> — everything
+              a small business needs online.
+            </>
+          }
+        />
 
-        <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {REASONS.map(({ icon: Icon, title, description }) => (
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          {REASONS.map(({ icon: Icon, title, description }, i) => (
             <div
               key={title}
-              className="rounded-card border border-line bg-white p-6"
+              data-reveal="up"
+              style={revealDelay(i * 100)}
+              className="group rounded-card border border-white/10 bg-white/5 p-4 transition hover:-translate-y-1 hover:border-primary/60 hover:bg-white/[0.08] sm:p-5"
             >
-              <div className="inline-flex items-center justify-center rounded-btn bg-tint p-2.5 text-secondary">
-                <Icon />
+              <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+                <span className="inline-flex shrink-0 items-center justify-center rounded-btn bg-primary p-2 text-white transition group-hover:scale-110 sm:p-2.5">
+                  <Icon />
+                </span>
+                <h3 className="text-base font-semibold leading-snug text-white sm:text-lg">
+                  {title}
+                </h3>
               </div>
-              <h3 className="mt-4 text-base font-semibold">{title}</h3>
-              <p className="mt-2 text-sm leading-6 text-slate">
+              <p className="mt-2 text-sm leading-6 text-white/70 sm:mt-3 sm:text-[0.9375rem] sm:leading-7">
                 {description}
               </p>
             </div>

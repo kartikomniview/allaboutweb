@@ -8,6 +8,7 @@ import Pricing from "@/components/Pricing";
 import Faq from "@/components/Faq";
 import LeadForm from "@/components/LeadForm";
 import Footer from "@/components/Footer";
+import RevealObserver from "@/components/RevealObserver";
 
 export default function Home() {
   return (
@@ -24,6 +25,7 @@ export default function Home() {
         <LeadForm />
       </main>
       <Footer />
+      <RevealObserver />
     </>
   );
 }

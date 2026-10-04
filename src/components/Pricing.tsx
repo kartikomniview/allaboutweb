@@ -1,3 +1,8 @@
+import Link from "next/link";
+import SectionHeading from "./SectionHeading";
+import { PRICING_PATH, pricingHref, type ServiceKey } from "@/lib/contact";
+import { revealDelay } from "@/lib/reveal";
+
 function WebsiteIcon() {
   return (
     <svg
@@ -51,49 +56,155 @@ function PdfIcon() {
   );
 }
 
-const OPTIONS = [
-  { id: "website", label: "Website", icon: WebsiteIcon },
-  { id: "ecatalog", label: "E-Catalog", icon: CatalogIcon },
-  { id: "pdf-catalog", label: "PDF Catalog", icon: PdfIcon },
+function CheckIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      className="h-3 w-3"
+      aria-hidden="true"
+    >
+      <path d="M5 12.5l4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+const PLANS = [
+  {
+    id: "pdf-catalog",
+    service: "pdf" as ServiceKey,
+    label: "PDF Catalog",
+    icon: PdfIcon,
+    price: "2,999",
+    tagline: "A clean, printable catalog of your products.",
+    features: ["Up to 20 pages", "Custom branded design", "Print & WhatsApp ready", "2 revision rounds"],
+  },
+  {
+    id: "ecatalog",
+    service: "ecatalog" as ServiceKey,
+    label: "E-Catalog",
+    icon: CatalogIcon,
+    price: "4,999",
+    tagline: "An online catalog customers can browse on any phone.",
+    features: ["Up to 100 products", "Shareable link", "Enquire on WhatsApp", "Free updates for 1 month"],
+    popular: true,
+  },
+  {
+    id: "website",
+    service: "website" as ServiceKey,
+    label: "Website",
+    icon: WebsiteIcon,
+    price: "9,999",
+    tagline: "A complete website for your business.",
+    features: ["Up to 5 pages", "Mobile friendly & fast", "Basic SEO setup", "Contact form + WhatsApp"],
+  },
 ];
 
 export default function Pricing() {
   return (
-    <section className="bg-paper">
-      <div className="mx-auto max-w-3xl px-4 py-20 text-center sm:px-6 header:px-8">
-        <h2 className="text-3xl font-bold sm:text-4xl">
-          Tell Us What You Need
-        </h2>
-        <p className="mt-4 text-lg text-slate">
-          Every project is scoped around what you actually need — no rigid
-          packages to squeeze into.
-        </p>
+    <section id="pricing" className="scroll-mt-24 bg-paper">
+      <div className="mx-auto max-w-6xl px-4 py-16 sm:py-20 sm:px-6 header:px-8">
+        <SectionHeading
+          align="center"
+          eyebrow="Pricing"
+          title={
+            <>
+              Simple, <span className="highlight">Honest</span> Pricing
+            </>
+          }
+          description={
+            <>
+              Transparent starting prices —{" "}
+              <strong>final quote based on what you actually need</strong>.
+            </>
+          }
+        />
 
-        <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {OPTIONS.map(({ id, label, icon: Icon }) => (
-            <a
+        <div className="-mx-4 mt-8 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-6 pt-4 [scrollbar-width:none] sm:-mx-6 sm:px-6 md:mx-auto md:mt-12 md:grid md:max-w-5xl md:grid-cols-3 md:items-center md:gap-6 md:overflow-visible md:p-0 [&::-webkit-scrollbar]:hidden">
+          {PLANS.map(({ id, service, label, icon: Icon, price, tagline, features, popular }, i) => (
+            <div
               key={id}
-              href="#contact"
-              className="group flex flex-col items-center gap-3 rounded-card border border-line bg-white px-6 py-8 transition-colors hover:border-secondary"
+              data-reveal="up"
+              style={revealDelay(i * 100)}
+              className={`relative flex w-[82%] max-w-sm shrink-0 snap-center flex-col rounded-panel p-6 transition hover:-translate-y-1 sm:p-7 md:w-auto md:max-w-none ${
+                popular
+                  ? "order-first bg-ink text-white shadow-xl shadow-ink/20 md:order-none md:py-10"
+                  : "border border-line bg-white hover:border-primary/50 hover:shadow-lg"
+              }`}
             >
-              <span className="inline-flex items-center justify-center rounded-btn bg-tint p-2.5 text-secondary">
-                <Icon />
-              </span>
-              <span className="text-base font-semibold text-ink">
-                {label}
-              </span>
-            </a>
+              {popular && (
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-1 text-xs font-bold uppercase tracking-wider text-white">
+                  Most Popular
+                </span>
+              )}
+
+              <div className="flex items-center gap-3">
+                <span
+                  className={`inline-flex items-center justify-center rounded-btn p-2.5 ${
+                    popular ? "bg-primary text-white" : "bg-tint text-primary"
+                  }`}
+                >
+                  <Icon />
+                </span>
+                <h3 className="text-lg font-semibold">{label}</h3>
+              </div>
+
+              <p className={`mt-4 text-sm ${popular ? "text-white/70" : "text-slate"}`}>
+                {tagline}
+              </p>
+
+              <div className="mt-5 sm:mt-6">
+                <span className={`text-xs font-semibold uppercase tracking-wider ${popular ? "text-white/60" : "text-slate"}`}>
+                  Starting at
+                </span>
+                <p className="text-3xl font-bold sm:text-4xl">
+                  ₹{price}
+                </p>
+              </div>
+
+              <ul className="mt-5 space-y-2.5 text-sm sm:mt-6 sm:space-y-3 sm:text-[0.9375rem]">
+                {features.map((feature) => (
+                  <li key={feature} className="flex items-center gap-3">
+                    <span
+                      className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
+                        popular ? "bg-primary text-white" : "bg-tint text-primary"
+                      }`}
+                    >
+                      <CheckIcon />
+                    </span>
+                    <span className={popular ? "text-white/85" : "text-ink"}>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <Link
+                href={pricingHref(service)}
+                className={`mt-6 inline-flex sm:mt-8 items-center justify-center rounded-btn px-6 py-3 text-sm font-semibold transition ${
+                  popular
+                    ? "bg-primary text-white hover:bg-primary/90"
+                    : "border border-line bg-white text-ink hover:border-primary hover:text-primary"
+                }`}
+              >
+                Get Started
+              </Link>
+            </div>
           ))}
         </div>
 
-        <p className="mt-8 text-slate">
-          Need something specific?{" "}
-          <a
-            href="#contact"
-            className="font-semibold text-secondary hover:text-ink"
+        <p className="text-center text-xs font-medium text-slate md:hidden">
+          Swipe to compare plans →
+        </p>
+
+        <p data-reveal="up" style={revealDelay(300)} className="mt-6 text-center text-slate md:mt-10">
+          <em>Need something specific?</em>{" "}
+          <Link
+            href={PRICING_PATH}
+            className="font-semibold text-primary hover:text-ink"
           >
             Get a Quote →
-          </a>
+          </Link>
         </p>
       </div>
     </section>
