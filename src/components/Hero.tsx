@@ -92,7 +92,7 @@ export default function Hero() {
             Built for small &amp; growing businesses
           </span>
 
-          <h1 className="animate-enter-up mt-6 max-w-xl [--enter-delay:100ms] text-4xl font-bold leading-[1.08] sm:text-5xl lg:text-[3.5rem]">
+          <h1 className="animate-enter-up mt-6 max-w-xl [--enter-delay:100ms] text-[2rem] font-bold leading-[1.1] sm:text-5xl sm:leading-[1.08] lg:text-[3.5rem]">
             <span className="sr-only">
               Websites, E-Catalogs &amp; Product Catalogs
             </span>
@@ -115,7 +115,7 @@ export default function Hero() {
               </svg>
             </span>
           </h1>
-          <p className="animate-enter-up mt-7 max-w-lg text-base leading-7 text-slate [--enter-delay:200ms] sm:mt-8 sm:text-lg sm:leading-8">
+          <p className="animate-enter-up mt-7 max-w-lg text-[0.9375rem] leading-6.5 text-slate [--enter-delay:200ms] sm:mt-8 sm:text-lg sm:leading-8">
             Build a professional online presence with a{" "}
             <strong>modern website</strong>, <strong>shareable e-catalog</strong>,
             or a <strong>product catalog PDF</strong> — designed specifically
@@ -141,7 +141,7 @@ export default function Hero() {
             </CtaLink>
           </div>
 
-          <ul className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-3 sm:mt-8 text-sm font-medium text-ink">
+          <ul className="mt-7 hidden flex-wrap items-center gap-x-5 gap-y-3 sm:mt-8 sm:flex text-sm font-medium text-ink">
             {MICRO_TRUST.map((item, i) => (
               <li
                 key={item}
@@ -174,7 +174,7 @@ export default function Hero() {
             />
           </div>
 
-          <div className="animate-float absolute -bottom-6 left-2 flex items-center gap-3 rounded-card border border-line bg-white/95 px-3 py-2.5 shadow-xl backdrop-blur sm:-left-8 sm:px-4 sm:py-3">
+          <div className="animate-float absolute -bottom-6 left-2 hidden items-center gap-3 rounded-card border border-line bg-white/95 px-3 py-2.5 shadow-xl backdrop-blur sm:-left-8 sm:flex sm:px-4 sm:py-3">
             <span className="flex h-9 w-9 items-center justify-center rounded-btn bg-tint text-primary">
               <PhoneIcon />
             </span>

@@ -100,7 +100,7 @@ const WORK_ITEMS: WorkItem[] = [
 
 export default function Work() {
   return (
-    <section id="work" className="scroll-mt-24 overflow-hidden bg-white">
+    <section id="work" className="scroll-mt-24 overflow-hidden bg-tertiary">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:py-20 sm:px-6 header:px-8 lg:py-28">
         <SectionHeading
           align="center"
@@ -153,13 +153,13 @@ export default function Work() {
                     </p>
                     <h3
                       data-reveal="up"
-                      className="mt-2 text-2xl font-semibold leading-tight [--reveal-delay:120ms] sm:text-3xl"
+                      className="mt-2 text-xl font-semibold leading-tight [--reveal-delay:120ms] sm:text-3xl"
                     >
                       {title}
                     </h3>
                     <p
                       data-reveal="up"
-                      className="mt-3 text-base leading-7 text-slate [--reveal-delay:180ms] sm:text-lg sm:leading-8"
+                      className="mt-3 text-[0.9375rem] leading-6.5 text-slate [--reveal-delay:180ms] sm:text-lg sm:leading-8"
                     >
                       {description}
                     </p>
@@ -172,7 +172,7 @@ export default function Work() {
                     }`}
                   >
                     <div
-                      className={`absolute -inset-4 rounded-[28px] bg-tint sm:-inset-6 ${
+                      className={`absolute -inset-4 rounded-[28px] bg-white/70 shadow-sm sm:-inset-6 ${
                         reversed ? "rotate-2" : "-rotate-2"
                       }`}
                       aria-hidden="true"

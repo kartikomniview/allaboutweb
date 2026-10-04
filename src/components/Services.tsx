@@ -89,9 +89,19 @@ const SERVICES = [
 
 export default function Services() {
   return (
-    <section id="services" className="scroll-mt-24 overflow-hidden bg-paper">
+    <section id="services" className="relative isolate scroll-mt-24 overflow-hidden bg-secondary">
+      {/* Soft brand glows for depth */}
+      <div
+        className="absolute -left-40 top-20 -z-10 h-[28rem] w-[28rem] rounded-full bg-primary/15 blur-3xl"
+        aria-hidden="true"
+      />
+      <div
+        className="absolute -right-40 bottom-10 -z-10 h-[32rem] w-[32rem] rounded-full bg-[#0f5a57]/40 blur-3xl"
+        aria-hidden="true"
+      />
       <div className="mx-auto max-w-6xl px-4 py-16 sm:py-20 sm:px-6 header:px-8 lg:py-28">
         <SectionHeading
+          tone="dark"
           align="center"
           eyebrow="Our Services"
           title={
@@ -134,13 +144,13 @@ export default function Services() {
                     </p>
                     <h3
                       data-reveal="up"
-                      className="mt-4 text-2xl font-semibold leading-tight [--reveal-delay:120ms] sm:text-3xl lg:text-4xl"
+                      className="mt-4 text-xl font-semibold leading-tight text-white [--reveal-delay:120ms] sm:text-3xl lg:text-4xl"
                     >
                       {title}
                     </h3>
                     <p
                       data-reveal="up"
-                      className="mt-4 text-base text-slate [--reveal-delay:180ms] sm:text-lg"
+                      className="mt-4 text-[0.9375rem] text-white/70 [--reveal-delay:180ms] sm:text-lg"
                     >
                       {tagline}
                     </p>
@@ -153,7 +163,7 @@ export default function Services() {
                     }`}
                   >
                     <div
-                      className={`absolute -inset-4 rounded-[28px] bg-tint sm:-inset-6 ${
+                      className={`absolute -inset-4 rounded-[28px] border border-white/10 bg-white/5 sm:-inset-6 ${
                         reversed ? "rotate-2" : "-rotate-2"
                       }`}
                       aria-hidden="true"
@@ -175,12 +185,12 @@ export default function Services() {
                   >
                     <ul
                       data-reveal="up"
-                      className="flex flex-wrap gap-2 [--reveal-delay:240ms]"
+                      className="-mx-4 flex gap-2 overflow-x-auto px-4 [--reveal-delay:240ms] [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden"
                     >
                       {features.map((feature) => (
                         <li
                           key={feature}
-                          className="flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1 text-xs font-medium text-ink sm:text-sm"
+                          className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-white sm:text-sm"
                         >
                           <span className="text-primary">
                             <CheckIcon />
@@ -195,7 +205,7 @@ export default function Services() {
                     >
                       <Link
                         href={pricingHref(service)}
-                        className="group flex w-full items-center justify-center gap-2 rounded-btn bg-secondary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary sm:inline-flex sm:w-auto"
+                        className="group flex w-full items-center justify-center gap-2 rounded-btn bg-primary px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_-12px_rgba(252,108,38,0.6)] transition hover:bg-white hover:text-secondary sm:inline-flex sm:w-auto"
                       >
                         {cta}
                         <span className="transition-transform group-hover:translate-x-1">

@@ -86,7 +86,7 @@ export default function Faq() {
               style={revealDelay(i * 70)}
               className="group py-6"
             >
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-lg font-semibold text-ink marker:content-none hover:text-primary">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-base font-semibold sm:text-lg text-ink marker:content-none hover:text-primary">
                 {faq.question}
                 <span
                   className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-tint text-lg font-semibold text-primary transition-transform group-open:rotate-45"
@@ -95,7 +95,7 @@ export default function Faq() {
                   +
                 </span>
               </summary>
-              <p className="mt-3 max-w-2xl text-base leading-7 text-slate">
+              <p className="mt-3 max-w-2xl text-[0.9375rem] leading-6.5 text-slate sm:text-base sm:leading-7">
                 {faq.answer}
               </p>
             </details>

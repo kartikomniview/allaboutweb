@@ -29,7 +29,7 @@ export default function SectionHeading({
       </p>
       <h2
         data-reveal="up"
-        className={`mt-3 [--reveal-delay:80ms] text-3xl font-bold leading-[1.15] sm:text-4xl lg:text-[2.75rem] ${
+        className={`mt-3 [--reveal-delay:80ms] text-[1.625rem] font-bold leading-[1.2] sm:text-4xl sm:leading-[1.15] lg:text-[2.75rem] ${
           dark ? "text-white" : "text-ink"
         }`}
       >
@@ -38,7 +38,7 @@ export default function SectionHeading({
       {description && (
         <p
           data-reveal="up"
-          className={`mt-4 text-base leading-7 [--reveal-delay:160ms] sm:text-lg sm:leading-8 ${
+          className={`mt-4 text-[0.9375rem] leading-6.5 [--reveal-delay:160ms] sm:text-lg sm:leading-8 ${
             dark ? "text-white/70 [&_strong]:text-white" : "text-slate"
           }`}
         >

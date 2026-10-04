@@ -148,7 +148,7 @@ export default function Pricing() {
                 >
                   <Icon />
                 </span>
-                <h3 className="text-lg font-semibold">{label}</h3>
+                <h3 className="text-base font-semibold sm:text-lg">{label}</h3>
               </div>
 
               <p className={`mt-4 text-sm ${popular ? "text-white/70" : "text-slate"}`}>
@@ -159,7 +159,7 @@ export default function Pricing() {
                 <span className={`text-xs font-semibold uppercase tracking-wider ${popular ? "text-white/60" : "text-slate"}`}>
                   Starting at
                 </span>
-                <p className="text-3xl font-bold sm:text-4xl">
+                <p className="text-[1.75rem] font-bold sm:text-4xl">
                   ₹{price}
                 </p>
               </div>
