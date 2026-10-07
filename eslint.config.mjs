@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Separate Lambda project with its own package.json
+    "backend-api/**",
   ]),
 ]);
 

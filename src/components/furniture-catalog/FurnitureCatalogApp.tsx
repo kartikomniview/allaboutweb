@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { WHATSAPP_NUMBER, whatsappUrl } from '@/lib/contact';
@@ -16,8 +17,6 @@ import {
   MessageCircle,
   Phone,
   ShieldCheck,
-  Truck,
-  RotateCcw,
   Sparkles,
   Layers,
   ChevronRight,
@@ -30,515 +29,42 @@ import {
   Gift,
   Flame
 } from 'lucide-react';
+import {
+  AAW_PROMO,
+  CATEGORY_CARDS,
+  CATEGORY_TAB_LABELS,
+  CUSTOM_ORDER_CARD,
+  DEALS_COUNTDOWN_START,
+  DIWALI_BANNERS,
+  DIWALI_OFFERS,
+  DIWALI_PICK_IDS,
+  FAQS,
+  FESTIVE_GIFT,
+  FESTIVE_PRIVILEGE,
+  FESTIVE_RIBBON,
+  INITIAL_WISHLIST_IDS,
+  MAIN_CATEGORIES,
+  POPULAR_SEARCHES,
+  STORE,
+  STORY_HIGHLIGHTS,
+  TRUST_POINTS,
+  WHATSAPP_MESSAGES,
+  formatINR,
+  type DiwaliBanner,
+  type DiwaliOffer,
+  type MainCategory,
+} from './data';
+import type { CatalogProduct } from '@/lib/adminProducts';
 
-export type MainCategory = 'Sofa' | 'Chair' | 'Dining' | 'Table';
-
-export interface ProductItem {
-  id: string;
-  name: string;
-  category: MainCategory;
-  subCategory: string;
-  price: number;
-  originalPrice: number;
-  rating: number;
-  reviewCount: number;
-  tag?: string;
-  colors: { name: string; hex: string }[];
-  material: string;
-  dimensions: string;
-  woodType: string;
-  stockStatus: string;
-  description: string;
-  simpleHighlights: string[];
-}
-
-export const formatINR = (amount: number): string => {
-  return '₹' + amount.toLocaleString('en-IN');
+export const getWhatsAppUrl = (product?: CatalogProduct, customMessage?: string) => {
+  const text =
+    customMessage ?? (product ? WHATSAPP_MESSAGES.product(product) : WHATSAPP_MESSAGES.general());
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
 };
-
-const WHATSAPP_PHONE = WHATSAPP_NUMBER;
-
-export const getWhatsAppUrl = (product?: ProductItem, customMessage?: string) => {
-  if (customMessage) {
-    return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(customMessage)}`;
-  }
-  if (!product) {
-    const text = encodeURIComponent(
-      'Hello MyStore! I am looking for furniture for my home. Please share your latest festive catalog and prices.'
-    );
-    return `https://wa.me/${WHATSAPP_PHONE}?text=${text}`;
-  }
-  const text = encodeURIComponent(
-    `Hello MyStore! I am interested in this item:\n` +
-    `• Item: ${product.name}\n` +
-    `• Offer Price: ${formatINR(product.price)}\n` +
-    `• Type: ${product.category} - ${product.subCategory}\n` +
-    `• Wood: ${product.woodType}\n` +
-    `• Size: ${product.dimensions}\n\n` +
-    `Please share real photos, color options, and delivery time to my address.`
-  );
-  return `https://wa.me/${WHATSAPP_PHONE}?text=${text}`;
-};
-
-// Simplified products dataset written in friendly everyday language
-const PRODUCTS: ProductItem[] = [
-  // --- SOFA ---
-  {
-    id: 'sofa-1',
-    name: 'Nilgiri L-Shape Corner Sofa',
-    category: 'Sofa',
-    subCategory: 'L-Shape Sofa',
-    price: 42999,
-    originalPrice: 56999,
-    rating: 4.9,
-    reviewCount: 142,
-    tag: 'Most Popular',
-    colors: [
-      { name: 'Warm Cream', hex: '#F0ECE1' },
-      { name: 'Dark Grey', hex: '#373A40' },
-      { name: 'Deep Green', hex: '#2C4A3E' }
-    ],
-    material: 'Comfortable Linen Fabric & Soft Spring Cushions',
-    dimensions: '8 ft × 5.2 ft (Spacious 5-6 Seater)',
-    woodType: 'Solid Sal Wood Inner Frame',
-    stockStatus: 'Ready in Stock · Free Home Assembly',
-    description: 'A roomy L-shaped sofa designed for family time and TV viewing. The long chaise can be set up on either left or right side based on your living room layout.',
-    simpleHighlights: [
-      'Chaise fits on both left or right side',
-      'Washable fabric covers that resist tea & coffee stains',
-      'Firm back support for comfortable long seating'
-    ]
-  },
-  {
-    id: 'sofa-2',
-    name: 'Malabar Solid Teakwood 3-Seater Sofa',
-    category: 'Sofa',
-    subCategory: '3-Seater Sofa',
-    price: 29999,
-    originalPrice: 38999,
-    rating: 4.8,
-    reviewCount: 98,
-    tag: 'Festive Deal',
-    colors: [
-      { name: 'Honey Polish', hex: '#9E6B47' },
-      { name: 'Navy Blue', hex: '#1F3160' },
-      { name: 'Warm Cream', hex: '#F0ECE1' }
-    ],
-    material: '100% Real Teak Wood with Thick Washable Cushions',
-    dimensions: '6.5 ft Length × 2.8 ft Depth',
-    woodType: 'Pure Central Province (CP) Teak Wood',
-    stockStatus: 'In Stock · 3 Days Delivery',
-    description: 'Classic wooden 3-seater sofa made with thick teakwood planks. Heavy, sturdy, and built to last for generations without wobbling.',
-    simpleHighlights: [
-      'Made from 100% pure teak wood (no plywood or MDF)',
-      'Removable cushion covers with smooth zippers',
-      'Termite proof and water-resistant finish'
-    ]
-  },
-  {
-    id: 'sofa-3',
-    name: 'Aura Compact 2-Seater Sofa (Loveseat)',
-    category: 'Sofa',
-    subCategory: '2-Seater Sofa',
-    price: 19499,
-    originalPrice: 24999,
-    rating: 4.7,
-    reviewCount: 64,
-    tag: 'Small Space Pick',
-    colors: [
-      { name: 'Warm Mustard', hex: '#C68B59' },
-      { name: 'Slate Grey', hex: '#373A40' }
-    ],
-    material: 'Soft Textured Fabric & Solid Wooden Legs',
-    dimensions: '4.6 ft Length × 2.6 ft Depth',
-    woodType: 'Solid Hardwood Frame',
-    stockStatus: 'In Stock · Fast Dispatch',
-    description: 'A space-saving 2-person couch perfect for smaller apartments, bedroom reading corners, or home offices. Very cozy and stylish.',
-    simpleHighlights: [
-      'Slim arms that take less floor space',
-      'Easily holds up to 250 kg body weight',
-      'High ground clearance for easy broom & robot vacuum cleaning'
-    ]
-  },
-  {
-    id: 'sofa-4',
-    name: 'Vayu Solid Wood Daybed & Diwan',
-    category: 'Sofa',
-    subCategory: 'Diwan & Daybed',
-    price: 32000,
-    originalPrice: 41000,
-    rating: 4.6,
-    reviewCount: 39,
-    tag: 'Traditional',
-    colors: [
-      { name: 'Natural Brown', hex: '#B87C4C' },
-      { name: 'Cream White', hex: '#F0ECE1' }
-    ],
-    material: 'Pure Sheesham Wood with 2 Bolster Pillows',
-    dimensions: '6.7 ft Length × 3 ft Width',
-    woodType: 'Pure Sheesham Wood (Indian Rosewood)',
-    stockStatus: 'Made on Order · 7 Days',
-    description: 'A traditional Indian diwan bed that works as an afternoon resting spot and doubles as a comfortable bed when guests stay over.',
-    simpleHighlights: [
-      'Includes two round side bolster cushions',
-      'Smooth wooden polish that does not fade',
-      'Can be used with any standard single mattress'
-    ]
-  },
-
-  // --- CHAIR ---
-  {
-    id: 'chair-1',
-    name: 'Royal Sheesham Wooden Easy Armchair',
-    category: 'Chair',
-    subCategory: 'Living Room Armchair',
-    price: 14999,
-    originalPrice: 19999,
-    rating: 4.9,
-    reviewCount: 215,
-    tag: 'Customer Favorite',
-    colors: [
-      { name: 'Teak Brown', hex: '#B87C4C' },
-      { name: 'Walnut Finish', hex: '#9E6B47' }
-    ],
-    material: 'Solid Sheesham Wood with Natural Cane Weave',
-    dimensions: '2.1 ft Width × 2.2 ft Depth × 2.7 ft Height',
-    woodType: 'Pure Solid Sheesham Wood',
-    stockStatus: 'In Stock · Ships in 48 Hours',
-    description: 'Our most loved wooden easy chair. Features natural airy cane mesh at the back that stays cool during summers, paired with a soft seating cushion.',
-    simpleHighlights: [
-      'Authentic cane mesh back allows cooling airflow',
-      'Relaxing back angle for reading books or newspaper',
-      'Floor-friendly rubber pads on all legs'
-    ]
-  },
-  {
-    id: 'chair-2',
-    name: 'ErgoPro Wooden Study & Office Chair',
-    category: 'Chair',
-    subCategory: 'Study & Office Chair',
-    price: 11499,
-    originalPrice: 15999,
-    rating: 4.7,
-    reviewCount: 88,
-    tag: 'Work From Home',
-    colors: [
-      { name: 'Matte Black', hex: '#373A40' },
-      { name: 'Natural Wood', hex: '#B87C4C' }
-    ],
-    material: 'Solid Oak Timber with Memory Foam Cushion',
-    dimensions: '1.9 ft Width × 1.9 ft Depth (Height Adjustable)',
-    woodType: 'Solid Oak Wood Frame',
-    stockStatus: 'In Stock · Free Delivery',
-    description: 'A handsome solid wood study chair built for work from home. Has smooth height adjustment and rolling wheels, keeping your back pain-free during long work hours.',
-    simpleHighlights: [
-      'Smooth height adjust lever & 360 degree wheels',
-      'Cushioned seat prevents thigh numbness',
-      'Strong solid wood frame that looks premium in rooms'
-    ]
-  },
-  {
-    id: 'chair-3',
-    name: 'Kashmiri Handcrafted Floral Armchair',
-    category: 'Chair',
-    subCategory: 'Lounge Armchair',
-    price: 17999,
-    originalPrice: 22999,
-    rating: 4.8,
-    reviewCount: 52,
-    tag: 'Hand-Carved',
-    colors: [
-      { name: 'Warm Ivory', hex: '#F0ECE1' },
-      { name: 'Walnut Brown', hex: '#9E6B47' }
-    ],
-    material: 'Solid Walnut Wood with Soft Cotton Upholstery',
-    dimensions: '2.3 ft Width × 2.5 ft Depth × 2.6 ft Height',
-    woodType: 'Himalayan Walnut Hardwood',
-    stockStatus: 'In Stock',
-    description: 'Features gentle floral hand-carvings on the wooden arms. Adds a grand, traditional touch to your living room or master bedroom.',
-    simpleHighlights: [
-      'Hand-carved by traditional artisan craftsmen',
-      'Brass caps on front legs for royal look',
-      'Extra thick seat cushion that keeps its shape'
-    ]
-  },
-  {
-    id: 'chair-4',
-    name: 'Koto Wooden Dining Chairs (Set of 2)',
-    category: 'Chair',
-    subCategory: 'Dining Chair',
-    price: 13499,
-    originalPrice: 17999,
-    rating: 4.6,
-    reviewCount: 114,
-    tag: 'Pair of 2',
-    colors: [
-      { name: 'Honey Teak', hex: '#B87C4C' },
-      { name: 'Dark Grey', hex: '#373A40' }
-    ],
-    material: 'Solid Sheesham Wood & Easy-Clean Padded Seat',
-    dimensions: '1.6 ft Width × 1.7 ft Depth × 2.8 ft Height',
-    woodType: 'Pure Sheesham Wood',
-    stockStatus: 'In Stock · Free Setup',
-    description: 'Set of two matching solid wood dining chairs. Features curved wooden back support and easy-to-wipe cushion seats that survive food or curry spills.',
-    simpleHighlights: [
-      'Sold as a pair of two chairs together',
-      'Food-proof wipe-clean seat cushion',
-      'Curved back gives great support while eating'
-    ]
-  },
-
-  // --- DINING ---
-  {
-    id: 'dining-1',
-    name: 'Royal Teak 6-Seater Dining Table Set',
-    category: 'Dining',
-    subCategory: '6-Seater Dining Set',
-    price: 54999,
-    originalPrice: 69999,
-    rating: 4.9,
-    reviewCount: 78,
-    tag: 'Full Family Set',
-    colors: [
-      { name: 'Teak Polish', hex: '#B87C4C' },
-      { name: 'Walnut Polish', hex: '#9E6B47' }
-    ],
-    material: 'Pure Teakwood with Brass Inlays & Cushioned Chairs',
-    dimensions: '6 ft Length × 3 ft Width × 2.5 ft Height',
-    woodType: '100% Solid Central Province Teakwood',
-    stockStatus: 'In Stock · Free In-Home Fitting',
-    description: 'Our flagship family dining set. Includes one heavy 6-seater dining table, 4 comfortable chairs, and 1 full-size bench that easily accommodates family and guests during festive meals.',
-    simpleHighlights: [
-      'Complete Set: 1 Large Table + 4 Chairs + 1 Bench',
-      'Heat & water resistant table top polish',
-      'Smooth rounded corners so children do not get hurt'
-    ]
-  },
-  {
-    id: 'dining-2',
-    name: 'Aangan 4-Seater Compact Dining Set',
-    category: 'Dining',
-    subCategory: '4-Seater Dining Set',
-    price: 34999,
-    originalPrice: 44999,
-    rating: 4.8,
-    reviewCount: 92,
-    tag: 'Compact Size',
-    colors: [
-      { name: 'Walnut Finish', hex: '#9E6B47' },
-      { name: 'Warm Cream', hex: '#F0ECE1' }
-    ],
-    material: 'Pure Sheesham Wood with 4 Padded Chairs',
-    dimensions: '4 ft Length × 2.7 ft Width × 2.5 ft Height',
-    woodType: 'Pure Solid Sheesham Wood',
-    stockStatus: 'Fast Delivery',
-    description: 'Made specifically for 2BHK and 3BHK flats. All 4 chairs push completely inside the table so your dining area never feels crowded.',
-    simpleHighlights: [
-      'All 4 chairs slide fully under the table',
-      'Thick 35mm pure solid wood tabletop',
-      '100% termite proof with 10-year warranty'
-    ]
-  },
-  {
-    id: 'dining-3',
-    name: 'Samar Solid Wood 3-Person Dining Bench',
-    category: 'Dining',
-    subCategory: 'Dining Bench',
-    price: 9999,
-    originalPrice: 13999,
-    rating: 4.7,
-    reviewCount: 46,
-    tag: 'Multipurpose',
-    colors: [
-      { name: 'Natural Teak', hex: '#B87C4C' },
-      { name: 'Dark Grey', hex: '#373A40' }
-    ],
-    material: 'Solid Hardwood with Padded Seating Cushion',
-    dimensions: '4.6 ft Length × 1.3 ft Width × 1.5 ft Height',
-    woodType: 'Pure Hardwood Timber',
-    stockStatus: 'In Stock',
-    description: 'A cozy wooden bench that seats 3 adults or 4 kids easily at the dining table. Also looks great near the home entryway for putting on shoes.',
-    simpleHighlights: [
-      'Seats 3 adults comfortably (supports 300 kg)',
-      'Soft padded top cushion included',
-      'Slides easily under dining tables to save space'
-    ]
-  },
-  {
-    id: 'dining-4',
-    name: 'Chowk Wooden Breakfast Bar Stools (Set of 2)',
-    category: 'Dining',
-    subCategory: 'Bar Stool',
-    price: 12499,
-    originalPrice: 16999,
-    rating: 4.6,
-    reviewCount: 31,
-    tag: 'Set of 2',
-    colors: [
-      { name: 'Teak Brown', hex: '#B87C4C' },
-      { name: 'Matte Black', hex: '#373A40' }
-    ],
-    material: 'Solid Teak Wood with Brass Foot Ring',
-    dimensions: '2.5 ft Height (Standard Kitchen Counter Size)',
-    woodType: 'Pure Solid Teakwood',
-    stockStatus: 'Made on Order',
-    description: 'Set of two counter-height wooden stools with comfortable saddle-shaped tops and shiny brass rings where you can rest your feet while having breakfast.',
-    simpleHighlights: [
-      'Includes 2 matching counter bar stools',
-      'Contoured wooden seat shaped for natural sitting comfort',
-      'Brass footrest ring protects the wood from shoe marks'
-    ]
-  },
-
-  // --- TABLE ---
-  {
-    id: 'table-1',
-    name: 'Takshashila Large Study & Work Desk',
-    category: 'Table',
-    subCategory: 'Study Table & Desk',
-    price: 22999,
-    originalPrice: 29999,
-    rating: 4.9,
-    reviewCount: 167,
-    tag: 'Best for Work',
-    colors: [
-      { name: 'Walnut Brown', hex: '#9E6B47' },
-      { name: 'Teak Polish', hex: '#B87C4C' }
-    ],
-    material: 'Pure Sheesham Wood with 3 Storage Drawers',
-    dimensions: '4.6 ft Length × 2.1 ft Width × 2.5 ft Height',
-    woodType: 'Solid Sheesham Wood',
-    stockStatus: 'In Stock · Free Setup',
-    description: 'A spacious wooden study desk for laptops, monitors, and books. Has hidden cable holes to keep wires tidy and three smooth lockable drawers for files and stationery.',
-    simpleHighlights: [
-      'Built-in wire hole keeps laptop & phone chargers neat',
-      '3 smooth sliding drawers for notebooks & laptop',
-      'Rounded front edge so your wrists do not hurt while typing'
-    ]
-  },
-  {
-    id: 'table-2',
-    name: 'Udaipur Brass Inlay Center Coffee Table',
-    category: 'Table',
-    subCategory: 'Coffee Table',
-    price: 13999,
-    originalPrice: 18999,
-    rating: 4.8,
-    reviewCount: 83,
-    tag: 'Living Room Star',
-    colors: [
-      { name: 'Teak Brown', hex: '#B87C4C' },
-      { name: 'Cream Accent', hex: '#F0ECE1' }
-    ],
-    material: 'Pure Sheesham Wood with Real Brass Metal Inlay',
-    dimensions: '3.5 ft Length × 2 ft Width × 1.4 ft Height',
-    woodType: 'Pure Solid Sheesham Wood',
-    stockStatus: 'In Stock',
-    description: 'An eye-catching center table featuring real golden brass wire patterns hand-set into solid Sheesham wood. Includes a lower shelf to keep TV remotes and magazines.',
-    simpleHighlights: [
-      'Real golden brass wire hand-fitted into wood',
-      'Bottom shelf to store remotes, magazines & coasters',
-      'Water-proof polish: hot tea cups will not leave white marks'
-    ]
-  },
-  {
-    id: 'table-3',
-    name: 'Narmada Round Nesting Coffee Tables (Set of 2)',
-    category: 'Table',
-    subCategory: 'Coffee Table',
-    price: 8999,
-    originalPrice: 12499,
-    rating: 4.7,
-    reviewCount: 128,
-    tag: 'Space Saver',
-    colors: [
-      { name: 'Natural Wood', hex: '#B87C4C' },
-      { name: 'Charcoal Black', hex: '#373A40' }
-    ],
-    material: 'Solid Oak Wood Tops with Strong Metal Legs',
-    dimensions: 'Large: 2 ft Round, Small: 1.5 ft Round',
-    woodType: 'Solid Oak Wood Tops',
-    stockStatus: 'In Stock · Ships Fast',
-    description: 'Pair of two round tables. The smaller table slides right under the bigger one when you need space, and pulls out instantly when guests come over for tea.',
-    simpleHighlights: [
-      'Small table tucks completely under the large table',
-      'Round safe edges with zero sharp corners',
-      'Sturdy steel legs that do not wobble'
-    ]
-  },
-  {
-    id: 'table-4',
-    name: 'Jaipur Hallway Console Table',
-    category: 'Table',
-    subCategory: 'Console Table',
-    price: 17499,
-    originalPrice: 23999,
-    rating: 4.9,
-    reviewCount: 41,
-    tag: 'Entryway Pick',
-    colors: [
-      { name: 'Walnut Finish', hex: '#9E6B47' },
-      { name: 'Teak Brown', hex: '#B87C4C' }
-    ],
-    material: 'Solid Teak Wood with Brass Drawer Knobs',
-    dimensions: '3.8 ft Length × 1.1 ft Slim Depth × 2.6 ft Height',
-    woodType: 'Solid Indian Teak Wood',
-    stockStatus: 'Made on Order · 5 Days',
-    description: 'A slim table designed specifically for home entryways and corridors. Very slim so it does not block walking paths, with two drawers for house keys and mail.',
-    simpleHighlights: [
-      'Slim 1.1 ft depth fits any narrow hallway or behind sofa',
-      'Beautiful Rajasthani arch design on the legs',
-      'Two drawers for house keys, wallets, and car remotes'
-    ]
-  }
-];
-
-// Simple category cards for home view
-const CATEGORY_CARDS: {
-  key: MainCategory;
-  title: string;
-  tagline: string;
-  startingPrice: number;
-  simpleSubs: string[];
-  count: number;
-}[] = [
-  {
-    key: 'Sofa',
-    title: 'Sofas & Couches',
-    tagline: 'L-Shape corner sofas, 3-seaters, and solid wood diwans.',
-    startingPrice: 19499,
-    simpleSubs: ['L-Shape Sofas', '3-Seaters', '2-Seater Couches', 'Wooden Diwans'],
-    count: 4
-  },
-  {
-    key: 'Chair',
-    title: 'Chairs & Armchairs',
-    tagline: 'Comfortable Sheesham easy chairs, study chairs, and dining chairs.',
-    startingPrice: 11499,
-    simpleSubs: ['Easy Armchairs', 'Study & Work Chairs', 'Dining Chairs'],
-    count: 4
-  },
-  {
-    key: 'Dining',
-    title: 'Dining Tables & Sets',
-    tagline: 'Solid wood 4-seater & 6-seater dining sets for family meals.',
-    startingPrice: 9999,
-    simpleSubs: ['6-Seater Sets', '4-Seater Sets', 'Dining Benches', 'Kitchen Bar Stools'],
-    count: 4
-  },
-  {
-    key: 'Table',
-    title: 'Study & Coffee Tables',
-    tagline: 'Work desks with drawers, center coffee tables, and console tables.',
-    startingPrice: 8999,
-    simpleSubs: ['Study & Work Desks', 'Center Coffee Tables', 'Nesting Tables'],
-    count: 4
-  }
-];
 
 // Friendly Vector SVG placeholder with rich wooden colors and subcategory support
 const FriendlyFurniturePlaceholder: React.FC<{
-  category: MainCategory;
+  category: string;
   subCategory?: string;
   colorHex?: string;
   className?: string;
@@ -705,7 +231,7 @@ const FriendlyFurniturePlaceholder: React.FC<{
           </g>
         );
       }
-      if (sub.includes('4-seater')) {
+      if (sub.includes('4-seater') || sub.includes('2-seater')) {
         return (
           <g transform="translate(100, 60)" stroke={colorHex} strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
             {/* Left chair */}
@@ -740,66 +266,230 @@ const FriendlyFurniturePlaceholder: React.FC<{
       );
     }
 
-    // --- TABLE SUB-DESIGNS ---
-    if (sub.includes('coffee') || sub.includes('center')) {
+    // --- BED SUB-DESIGNS ---
+    if (category === 'Bed') {
+      if (sub.includes('bunk')) {
+        return (
+          <g transform="translate(100, 20)" stroke={colorHex} strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
+            {/* Corner posts */}
+            <line x1="10" y1="0" x2="10" y2="200" strokeWidth="5" stroke="#6E3D19" />
+            <line x1="170" y1="0" x2="170" y2="200" strokeWidth="5" stroke="#6E3D19" />
+            {/* Top bunk with safety rail */}
+            <line x1="10" y1="22" x2="125" y2="22" strokeWidth="3.5" stroke="#6E3D19" />
+            <rect x="16" y="38" width="148" height="12" rx="4" fill={colorHex} fillOpacity="0.2" />
+            <rect x="10" y="50" width="160" height="16" rx="3" fill={colorHex} fillOpacity="0.38" />
+            {/* Bottom bunk */}
+            <rect x="16" y="148" width="148" height="12" rx="4" fill={colorHex} fillOpacity="0.2" />
+            <rect x="10" y="160" width="160" height="16" rx="3" fill={colorHex} fillOpacity="0.38" />
+            {/* Ladder */}
+            <line x1="182" y1="50" x2="182" y2="200" strokeWidth="3" stroke="#6E3D19" />
+            <line x1="202" y1="50" x2="202" y2="200" strokeWidth="3" stroke="#6E3D19" />
+            {[80, 110, 140, 170].map(y => (
+              <line key={y} x1="182" y1={y} x2="202" y2={y} strokeWidth="2.5" stroke="#6E3D19" />
+            ))}
+          </g>
+        );
+      }
+      // King / Queen / Single / Storage / Four Poster (side view)
+      const isStorage = sub.includes('storage') || sub.includes('hydraulic');
+      const isPoster = sub.includes('poster');
+      const frameBottom = isStorage ? 164 : 150;
       return (
-        <g transform="translate(100, 70)" stroke={colorHex} strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
-          {/* Coffee Table low top */}
-          <rect x="10" y="18" width="180" height="18" rx="3" fill={colorHex} fillOpacity="0.38" />
-          {/* Inlay pattern */}
-          <line x1="40" y1="27" x2="160" y2="27" stroke="#C68B59" strokeWidth="2" />
-          {/* Lower shelf */}
-          <rect x="25" y="55" width="150" height="10" rx="2" fill={colorHex} fillOpacity="0.2" />
-          {/* Four legs */}
-          <line x1="20" y1="36" x2="16" y2="88" strokeWidth="4.5" stroke="#6E3D19" />
-          <line x1="180" y1="36" x2="184" y2="88" strokeWidth="4.5" stroke="#6E3D19" />
-          <line x1="45" y1="36" x2="42" y2="85" strokeWidth="3" stroke="#6E3D19" strokeOpacity="0.6" />
-          <line x1="155" y1="36" x2="158" y2="85" strokeWidth="3" stroke="#6E3D19" strokeOpacity="0.6" />
+        <g transform="translate(82, 35)" stroke={colorHex} strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
+          {isPoster && (
+            <>
+              <line x1="8" y1="0" x2="8" y2="40" strokeWidth="4" stroke="#6E3D19" />
+              <line x1="232" y1="0" x2="232" y2="88" strokeWidth="4" stroke="#6E3D19" />
+              <line x1="8" y1="0" x2="232" y2="0" strokeWidth="3" stroke="#6E3D19" strokeOpacity="0.6" />
+            </>
+          )}
+          {/* Headboard */}
+          <rect x="0" y="40" width="20" height="110" rx="4" fill={colorHex} fillOpacity="0.4" />
+          {/* Pillow & mattress */}
+          <rect x="26" y="92" width="46" height="18" rx="8" fill={colorHex} fillOpacity="0.45" />
+          <rect x="20" y="108" width="206" height="22" rx="5" fill={colorHex} fillOpacity="0.18" />
+          {/* Bed frame (deeper box for storage beds) */}
+          <rect x="20" y="130" width="212" height={frameBottom - 130} rx="3" fill={colorHex} fillOpacity="0.35" />
+          {isStorage && (
+            <>
+              <line x1="90" y1="134" x2="90" y2="160" strokeOpacity="0.4" />
+              <line x1="160" y1="134" x2="160" y2="160" strokeOpacity="0.4" />
+              <line x1="45" y1="147" x2="65" y2="147" strokeWidth="2.5" stroke="#C68B59" />
+              <line x1="115" y1="147" x2="135" y2="147" strokeWidth="2.5" stroke="#C68B59" />
+              <line x1="185" y1="147" x2="205" y2="147" strokeWidth="2.5" stroke="#C68B59" />
+            </>
+          )}
+          {/* Footboard */}
+          <rect x="226" y="88" width="12" height="62" rx="3" fill={colorHex} fillOpacity="0.4" />
+          {/* Legs */}
+          <line x1="10" y1="150" x2="10" y2="176" strokeWidth="5" stroke="#6E3D19" />
+          <line x1="232" y1={frameBottom} x2="232" y2="176" strokeWidth="5" stroke="#6E3D19" />
         </g>
       );
     }
-    if (sub.includes('console')) {
+
+    // --- WARDROBE SUB-DESIGNS ---
+    if (category === 'Wardrobe') {
+      const sliding = sub.includes('sliding');
+      const doors = sub.includes('4-door') ? 4 : sub.includes('3-door') ? 3 : 2;
+      const doorW = 40;
+      const width = sliding ? 130 : doors * doorW;
+      return (
+        <g transform={`translate(${200 - width / 2}, 28)`} stroke={colorHex} strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
+          {/* Crown & body */}
+          <rect x="-6" y="0" width={width + 12} height="10" rx="2" fill={colorHex} fillOpacity="0.45" />
+          <rect x="0" y="10" width={width} height="150" rx="2" fill={colorHex} fillOpacity="0.15" />
+          {sliding ? (
+            <>
+              {/* Overlapping sliding panels on a top track */}
+              <line x1="2" y1="15" x2={width - 2} y2="15" strokeWidth="2" strokeOpacity="0.5" />
+              <rect x="4" y="18" width="68" height="138" rx="2" fill={colorHex} fillOpacity="0.28" />
+              <rect x="58" y="18" width="68" height="138" rx="2" fill={colorHex} fillOpacity="0.2" />
+              <line x1="64" y1="70" x2="64" y2="100" strokeWidth="3" stroke="#C68B59" />
+              <line x1="118" y1="70" x2="118" y2="100" strokeWidth="3" stroke="#C68B59" />
+            </>
+          ) : (
+            Array.from({ length: doors }, (_, i) => (
+              <g key={i}>
+                <rect x={i * doorW + 3} y="14" width={doorW - 6} height="142" rx="2" fill={colorHex} fillOpacity="0.25" />
+                <circle cx={i % 2 === 0 ? i * doorW + doorW - 9 : i * doorW + 9} cy="85" r="2.5" fill="#C68B59" stroke="none" />
+              </g>
+            ))
+          )}
+          {/* Plinth & legs */}
+          <rect x="-2" y="160" width={width + 4} height="10" rx="2" fill={colorHex} fillOpacity="0.4" />
+          <line x1="6" y1="170" x2="6" y2="182" strokeWidth="5" stroke="#6E3D19" />
+          <line x1={width - 6} y1="170" x2={width - 6} y2="182" strokeWidth="5" stroke="#6E3D19" />
+        </g>
+      );
+    }
+
+    // --- DRESSER SUB-DESIGNS ---
+    if (category === 'Dresser') {
+      if (sub.includes('chest')) {
+        return (
+          <g transform="translate(140, 40)" stroke={colorHex} strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="0" y="0" width="120" height="10" rx="2" fill={colorHex} fillOpacity="0.45" />
+            <rect x="4" y="10" width="112" height="135" rx="2" fill={colorHex} fillOpacity="0.15" />
+            {[0, 1, 2, 3, 4].map(i => (
+              <g key={i}>
+                <rect x="10" y={16 + i * 25} width="100" height="21" rx="2" fill={colorHex} fillOpacity="0.28" />
+                <circle cx="60" cy={26.5 + i * 25} r="2.5" fill="#C68B59" stroke="none" />
+              </g>
+            ))}
+            <line x1="12" y1="145" x2="10" y2="162" strokeWidth="5" stroke="#6E3D19" />
+            <line x1="108" y1="145" x2="110" y2="162" strokeWidth="5" stroke="#6E3D19" />
+          </g>
+        );
+      }
+      if (sub.includes('wall')) {
+        return (
+          <g transform="translate(130, 30)" stroke={colorHex} strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
+            {/* Mirror */}
+            <rect x="25" y="0" width="90" height="110" rx="6" fill={colorHex} fillOpacity="0.12" />
+            <rect x="33" y="8" width="74" height="94" rx="4" fill="#DDEBF0" fillOpacity="0.7" strokeOpacity="0.5" />
+            <line x1="47" y1="32" x2="67" y2="16" stroke="#FFFFFF" strokeWidth="3" />
+            {/* Floating drawer unit */}
+            <rect x="0" y="120" width="140" height="34" rx="3" fill={colorHex} fillOpacity="0.38" />
+            <line x1="70" y1="124" x2="70" y2="150" strokeOpacity="0.4" />
+            <circle cx="35" cy="137" r="2.5" fill="#C68B59" stroke="none" />
+            <circle cx="105" cy="137" r="2.5" fill="#C68B59" stroke="none" />
+          </g>
+        );
+      }
+      // Dressing Table with Mirror (adds a stool for vanity sets)
+      const withStool = sub.includes('stool') || sub.includes('vanity');
+      return (
+        <g transform={`translate(${withStool ? 90 : 125}, 12)`} stroke={colorHex} strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
+          {/* Oval mirror */}
+          <ellipse cx="75" cy="55" rx="45" ry="55" fill={colorHex} fillOpacity="0.15" />
+          <ellipse cx="75" cy="55" rx="36" ry="46" fill="#DDEBF0" fillOpacity="0.7" strokeOpacity="0.5" />
+          <line x1="58" y1="40" x2="74" y2="22" stroke="#FFFFFF" strokeWidth="3" />
+          {/* Table top & drawers */}
+          <rect x="0" y="112" width="150" height="12" rx="2" fill={colorHex} fillOpacity="0.45" />
+          <rect x="6" y="124" width="138" height="34" rx="2" fill={colorHex} fillOpacity="0.25" />
+          <line x1="52" y1="124" x2="52" y2="158" strokeOpacity="0.4" />
+          <line x1="98" y1="124" x2="98" y2="158" strokeOpacity="0.4" />
+          {[29, 75, 121].map(cx => (
+            <circle key={cx} cx={cx} cy="141" r="2.5" fill="#C68B59" stroke="none" />
+          ))}
+          <line x1="12" y1="158" x2="10" y2="210" strokeWidth="4.5" stroke="#6E3D19" />
+          <line x1="138" y1="158" x2="140" y2="210" strokeWidth="4.5" stroke="#6E3D19" />
+          {withStool && (
+            <>
+              <rect x="170" y="160" width="50" height="14" rx="6" fill={colorHex} fillOpacity="0.45" />
+              <line x1="178" y1="174" x2="174" y2="210" strokeWidth="4" stroke="#6E3D19" />
+              <line x1="212" y1="174" x2="216" y2="210" strokeWidth="4" stroke="#6E3D19" />
+            </>
+          )}
+        </g>
+      );
+    }
+
+    // --- CENTER TABLE SUB-DESIGNS (also the fallback for any other category) ---
+    if (sub.includes('nesting')) {
       return (
         <g transform="translate(110, 55)" stroke={colorHex} strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
-          {/* Slim high tabletop */}
-          <rect x="10" y="15" width="160" height="16" rx="3" fill={colorHex} fillOpacity="0.35" />
-          {/* Dual drawers */}
-          <rect x="20" y="31" width="65" height="24" rx="2" fill={colorHex} fillOpacity="0.2" />
-          <rect x="95" y="31" width="65" height="24" rx="2" fill={colorHex} fillOpacity="0.2" />
-          <circle cx="52" cy="43" r="2.5" fill="#C68B59" />
-          <circle cx="127" cy="43" r="2.5" fill="#C68B59" />
-          {/* Tall slender legs */}
-          <line x1="18" y1="55" x2="12" y2="135" strokeWidth="4" stroke="#6E3D19" />
-          <line x1="162" y1="55" x2="168" y2="135" strokeWidth="4" stroke="#6E3D19" />
-          <path d="M25,65 Q90,85 155,65" strokeWidth="2.5" strokeOpacity="0.35" />
+          {/* Large table */}
+          <ellipse cx="80" cy="20" rx="80" ry="15" fill={colorHex} fillOpacity="0.38" />
+          <line x1="15" y1="28" x2="10" y2="115" strokeWidth="4.5" stroke="#6E3D19" />
+          <line x1="145" y1="28" x2="150" y2="115" strokeWidth="4.5" stroke="#6E3D19" />
+          {/* Smaller table tucked in front */}
+          <ellipse cx="120" cy="60" rx="60" ry="12" fill={colorHex} fillOpacity="0.3" />
+          <line x1="70" y1="66" x2="66" y2="115" strokeWidth="4" stroke="#6E3D19" />
+          <line x1="170" y1="66" x2="174" y2="115" strokeWidth="4" stroke="#6E3D19" />
         </g>
       );
     }
-    // Study Table & Desk (Default Table)
+    if (sub.includes('round')) {
+      return (
+        <g transform="translate(110, 70)" stroke={colorHex} strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
+          {/* Round top on a pedestal base */}
+          <ellipse cx="90" cy="20" rx="90" ry="18" fill={colorHex} fillOpacity="0.38" />
+          <line x1="90" y1="38" x2="90" y2="95" strokeWidth="8" stroke="#6E3D19" />
+          <ellipse cx="90" cy="100" rx="45" ry="8" fill={colorHex} fillOpacity="0.3" />
+        </g>
+      );
+    }
+    // Rectangular / Storage / Lift-Top Center Table (drawers instead of a shelf for storage)
+    const hasDrawers = sub.includes('storage');
     return (
-      <g transform="translate(100, 60)" stroke={colorHex} strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="10" y="22" width="180" height="20" rx="3" fill={colorHex} fillOpacity="0.35" />
-        <rect x="135" y="42" width="50" height="52" rx="2" fill={colorHex} fillOpacity="0.2" />
-        <line x1="135" y1="68" x2="185" y2="68" strokeOpacity="0.4" />
-        <circle cx="160" cy="55" r="2.5" fill="#6E3D19" />
-        <circle cx="160" cy="80" r="2.5" fill="#6E3D19" />
-        <line x1="22" y1="42" x2="18" y2="108" strokeWidth="4.5" stroke="#6E3D19" />
-        <line x1="130" y1="42" x2="130" y2="108" strokeWidth="3.5" stroke="#6E3D19" strokeOpacity="0.6" />
-        <line x1="185" y1="94" x2="185" y2="108" strokeWidth="4.5" stroke="#6E3D19" />
+      <g transform="translate(100, 70)" stroke={colorHex} strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
+        {/* Low table top with inlay line */}
+        <rect x="10" y="18" width="180" height="18" rx="3" fill={colorHex} fillOpacity="0.38" />
+        <line x1="40" y1="27" x2="160" y2="27" stroke="#C68B59" strokeWidth="2" />
+        {hasDrawers ? (
+          <>
+            <rect x="25" y="36" width="70" height="30" rx="2" fill={colorHex} fillOpacity="0.22" />
+            <rect x="105" y="36" width="70" height="30" rx="2" fill={colorHex} fillOpacity="0.22" />
+            <circle cx="60" cy="51" r="2.5" fill="#C68B59" stroke="none" />
+            <circle cx="140" cy="51" r="2.5" fill="#C68B59" stroke="none" />
+          </>
+        ) : (
+          <rect x="25" y="55" width="150" height="10" rx="2" fill={colorHex} fillOpacity="0.2" />
+        )}
+        {/* Four legs */}
+        <line x1="20" y1="36" x2="16" y2="88" strokeWidth="4.5" stroke="#6E3D19" />
+        <line x1="180" y1="36" x2="184" y2="88" strokeWidth="4.5" stroke="#6E3D19" />
+        <line x1="45" y1="36" x2="42" y2="85" strokeWidth="3" stroke="#6E3D19" strokeOpacity="0.6" />
+        <line x1="155" y1="36" x2="158" y2="85" strokeWidth="3" stroke="#6E3D19" strokeOpacity="0.6" />
       </g>
     );
   };
+
+  // Spaces and "&" in subcategory names would break the url(#id) reference.
+  const patternId = `pat-${category}-${subCategory || 'all'}`.replace(/[^A-Za-z0-9-]/g, '-');
 
   return (
     <div className={`relative overflow-hidden bg-gradient-to-b from-[#FDFBF7] to-[#F3EDE3] flex items-center justify-center select-none ${className}`}>
       <svg className="absolute inset-0 w-full h-full opacity-15 pointer-events-none" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <pattern id={`pat-${category}-${subCategory || 'all'}`} width="28" height="28" patternUnits="userSpaceOnUse">
+          <pattern id={patternId} width="28" height="28" patternUnits="userSpaceOnUse">
             <line x1="0" y1="0" x2="28" y2="0" stroke="#8B5A2B" strokeWidth="0.5" />
             <line x1="0" y1="0" x2="0" y2="28" stroke="#8B5A2B" strokeWidth="0.5" />
           </pattern>
         </defs>
-        <rect width="100%" height="100%" fill={`url(#pat-${category}-${subCategory || 'all'})`} />
+        <rect width="100%" height="100%" fill={`url(#${patternId})`} />
       </svg>
 
       <svg viewBox="0 0 400 240" className="w-[85%] h-[85%] z-10 transition-transform duration-500 ease-out group-hover:scale-105">
@@ -838,96 +528,6 @@ const DiyaIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) =
   </svg>
 );
 
-// Curated Diwali Festive Banners
-export interface DiwaliBanner {
-  id: string;
-  badge: string;
-  title: string;
-  headline: string;
-  description: string;
-  highlight: string;
-  ctaText: string;
-  gradient: string;
-  categoryLink: MainCategory;
-  categoryName: string;
-}
-
-export const DIWALI_BANNERS: DiwaliBanner[] = [
-  {
-    id: 'diwali-maha-utsav',
-    badge: 'DIWALI MAHA UTSAV 2026',
-    title: 'Solid Wood Festive Celebration',
-    headline: 'Up to 45% Off + Extra ₹2,500 Off',
-    description: '100% Real Teak & Sheesham Wood Furniture for Indian Homes.',
-    highlight: 'Free Doorstep Assembly in Local Region',
-    ctaText: 'Claim Festive Offer',
-    gradient: 'from-[#7C2D12] via-[#9A3412] to-[#B45309]',
-    categoryLink: 'Sofa',
-    categoryName: 'Living Room'
-  },
-  {
-    id: 'diwali-shubh-combo',
-    badge: 'SHUBH LABH LIVING COMBO',
-    title: 'Living Room Festive Bundle',
-    headline: 'Save ₹14,000 + Assured Silver Diya',
-    description: 'Nilgiri L-Shape Sofa + Udaipur Real Brass Wire Coffee Table.',
-    highlight: 'Guaranteed Festive Delivery in Local Region',
-    ctaText: 'View Combo Offer',
-    gradient: 'from-[#854D0E] via-[#A16207] to-[#713F12]',
-    categoryLink: 'Table',
-    categoryName: 'Combos'
-  },
-  {
-    id: 'diwali-puja-dining',
-    badge: 'PUJA & FESTIVE FEAST SPECIAL',
-    title: 'Family Gathering Dining Sets',
-    headline: 'Flat 25% Off Solid Teak Dining',
-    description: 'Royal Teak 6-Seater Table + 4 Chairs + Solid Wood Bench.',
-    highlight: 'Includes Free Pure Brass Diya Gift Set',
-    ctaText: 'Explore Dining Deals',
-    gradient: 'from-[#78350F] via-[#92400E] to-[#B45309]',
-    categoryLink: 'Dining',
-    categoryName: 'Dining Sets'
-  }
-];
-
-// Diwali Festive Offers Strip Data (Direct automatic savings, no coupon codes required)
-export interface DiwaliOffer {
-  id: string;
-  title: string;
-  benefit: string;
-  desc: string;
-  minOrder: string;
-  tag: string;
-}
-
-export const DIWALI_OFFERS: DiwaliOffer[] = [
-  {
-    id: 'diwali-instant-markdown',
-    title: 'Festive Cash Savings',
-    benefit: 'Instant ₹2,500 Off',
-    desc: 'Direct markdown on furniture orders above ₹25,000',
-    minOrder: 'Applied automatically on booking',
-    tag: 'Festive Special'
-  },
-  {
-    id: 'diwali-combo-savings',
-    title: 'Living Room Combo Deal',
-    benefit: 'Extra 10% Off Bundles',
-    desc: 'Extra savings on Sofa + Coffee Table pairings',
-    minOrder: 'Automatic bundle discount',
-    tag: 'Combo Offer'
-  },
-  {
-    id: 'diwali-dining-puja',
-    title: 'Puja Dining Special',
-    benefit: 'Flat ₹4,000 Off Sets',
-    desc: 'Discounted on 6-Seater Royal Teak Dining Tables',
-    minOrder: 'Family dining collection',
-    tag: 'Festive Feast'
-  }
-];
-
 // WhatsApp Brand Icon
 const WhatsAppIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
   <svg className={`fill-current shrink-0 ${className}`} viewBox="0 0 24 24">
@@ -935,20 +535,36 @@ const WhatsAppIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' 
   </svg>
 );
 
+// The product's main photo (uploaded in the admin panel), or the drawn
+// placeholder when it has none. The parent must be position: relative.
+const ProductVisual: React.FC<{ product: CatalogProduct; sizes: string }> = ({ product, sizes }) =>
+  product.mainImageUrl ? (
+    <Image
+      src={product.mainImageUrl}
+      alt={product.productName}
+      fill
+      sizes={sizes}
+      className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+    />
+  ) : (
+    <FriendlyFurniturePlaceholder
+      category={product.categoryName}
+      subCategory={product.subcategoryName}
+      colorHex={product.colors[0]?.hex || '#8B5A2B'}
+      className="w-full h-full"
+    />
+  );
+
 // Streamlined Image-Focused Product Card (Card UI with soft shadows instead of rigid borders)
 const ProductCard: React.FC<{
-  product: ProductItem;
+  product: CatalogProduct;
   isWishlisted: boolean;
-  onSelect: (product: ProductItem) => void;
+  onSelect: (product: CatalogProduct) => void;
   onToggleWishlist: (id: string, e: React.MouseEvent) => void;
 }> = ({ product, isWishlisted, onSelect, onToggleWishlist }) => {
-  const isFestive = Boolean(
-    product.tag && (
-      product.tag.toLowerCase().includes('diwali') ||
-      product.tag.toLowerCase().includes('festive') ||
-      product.tag.toLowerCase().includes('dhamaka')
-    )
-  );
+  // The first tag is the card badge.
+  const badge = product.tags[0];
+  const isFestive = Boolean(badge && /diwali|festive|dhamaka/i.test(badge));
 
   return (
     <article
@@ -957,21 +573,16 @@ const ProductCard: React.FC<{
     >
       {/* Dominant Image Section with warm soft backdrop */}
       <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-b from-[#FDFBF7] to-[#F5ECE0]">
-        <FriendlyFurniturePlaceholder
-          category={product.category}
-          subCategory={product.subCategory}
-          colorHex={product.colors[0]?.hex || '#8B5A2B'}
-          className="w-full h-full"
-        />
+        <ProductVisual product={product} sizes="(min-width: 640px) 200px, 50vw" />
 
-        {product.tag && (
+        {badge && (
           <span className={`absolute top-2 left-2 sm:top-2.5 sm:left-2.5 px-2 py-0.5 text-white text-[9px] sm:text-[10px] font-bold tracking-wide shadow-xs rounded-md flex items-center gap-1 ${
             isFestive
               ? 'bg-gradient-to-r from-[#B45309] to-[#9A3412] text-amber-100 ring-1 ring-amber-300/40'
               : 'bg-[#8B5A2B]'
           }`}>
             {isFestive && <DiyaIcon className="w-2.5 h-2.5 shrink-0" />}
-            <span>{product.tag}</span>
+            <span>{badge}</span>
           </span>
         )}
 
@@ -987,17 +598,19 @@ const ProductCard: React.FC<{
       {/* Clean, Non-Technical Card Information */}
       <div className="p-3 sm:p-4 flex flex-col justify-between gap-2 sm:gap-2.5 flex-1">
         <h2 className="text-xs sm:text-sm font-semibold text-[#111111] group-hover:text-[#8B5A2B] transition-colors line-clamp-1">
-          {product.name}
+          {product.productName}
         </h2>
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pt-0.5">
-          <div className="flex items-baseline gap-1 sm:gap-1.5">
+        <div className="flex items-center justify-between gap-1.5 pt-0.5">
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-1 sm:gap-x-1.5">
             <span className="text-xs sm:text-base font-bold text-[#111111] tabular-nums">
               {formatINR(product.price)}
             </span>
-            <span className="text-[10px] sm:text-[11px] text-neutral-400 line-through tabular-nums">
-              {formatINR(product.originalPrice)}
-            </span>
+            {product.originalPrice > product.price && (
+              <span className="text-[10px] sm:text-[11px] text-neutral-400 line-through tabular-nums">
+                {formatINR(product.originalPrice)}
+              </span>
+            )}
           </div>
 
           <a
@@ -1005,10 +618,11 @@ const ProductCard: React.FC<{
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center justify-center gap-1.5 bg-[#25D366] hover:bg-[#20bd5a] text-white px-2.5 py-1.5 text-[11px] sm:text-xs font-semibold transition-all shrink-0 shadow-sm hover:shadow-md rounded-lg w-full sm:w-auto active:scale-95"
+            aria-label={`Enquire about ${product.productName} on WhatsApp`}
+            title="Enquire on WhatsApp"
+            className="inline-flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center bg-[#25D366] hover:bg-[#20bd5a] text-white transition-all shrink-0 shadow-sm hover:shadow-md rounded-full active:scale-95"
           >
-            <WhatsAppIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-            <span>WhatsApp</span>
+            <WhatsAppIcon className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />
           </a>
         </div>
       </div>
@@ -1018,7 +632,8 @@ const ProductCard: React.FC<{
 
 type AppTab = 'home' | 'catalog' | 'wishlist' | 'help';
 
-export default function FurnitureCatalogApp() {
+// `products` are the published products from the admin panel (loaded by the page).
+export default function FurnitureCatalogApp({ products }: { products: CatalogProduct[] }) {
   // Mobile App Navigation Tab: 'home' | 'catalog' | 'wishlist' | 'help'
   const [activeTab, setActiveTab] = useState<AppTab>('home');
   const [activeCategory, setActiveCategory] = useState<MainCategory>('Sofa');
@@ -1032,15 +647,18 @@ export default function FurnitureCatalogApp() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Wishlist & Bottom Sheet Modal States
-  const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [wishlist, setWishlist] = useState<string[]>(['sofa-1', 'dining-1']);
+  // Only ids that exist, so the saved-items badge never counts missing products.
+  const [wishlist, setWishlist] = useState<string[]>(() =>
+    INITIAL_WISHLIST_IDS.filter(id => products.some(p => p.id === id))
+  );
 
   // Active banner index for Diwali banner carousel
   const [activeBannerIdx, setActiveBannerIdx] = useState(0);
 
   // Dynamic Diwali countdown timer
-  const [timeLeft, setTimeLeft] = useState({ days: 2, hours: 14, mins: 38, secs: 45 });
+  const [timeLeft, setTimeLeft] = useState(DEALS_COUNTDOWN_START);
 
   // E-catalog promo pop-up: first after 30s, then 1 min after each close.
   // It opens as an intercepted route, so this component (and its state) stays mounted behind it.
@@ -1085,16 +703,14 @@ export default function FurnitureCatalogApp() {
   const handleClaimDiwaliOffer = (banner: DiwaliBanner) => {
     showToast(`🪔 Claiming: ${banner.headline}`);
     setTimeout(() => {
-      const msg = `Hello MyStore! 🪔 Happy Diwali! I want to claim the festive offer: "${banner.title} - ${banner.headline}". Please share available designs and festive pricing.`;
-      window.open(getWhatsAppUrl(undefined, msg), '_blank');
+      window.open(getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.banner(banner)), '_blank');
     }, 400);
   };
 
   const handleClaimOffer = (offer: DiwaliOffer) => {
     showToast(`🪔 Claiming ${offer.title} (${offer.benefit})`);
     setTimeout(() => {
-      const msg = `Hello MyStore! 🪔 Happy Diwali! I want to avail the festive offer: "${offer.title} - ${offer.benefit}". Please share details and delivery timeline to my local address.`;
-      window.open(getWhatsAppUrl(undefined, msg), '_blank');
+      window.open(getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.offer(offer)), '_blank');
     }, 400);
   };
 
@@ -1123,12 +739,12 @@ export default function FurnitureCatalogApp() {
 
   // Scoped products for current category
   const categoryProducts = useMemo(() => {
-    return PRODUCTS.filter(p => p.category === activeCategory);
-  }, [activeCategory]);
+    return products.filter(p => p.categoryName === activeCategory);
+  }, [products, activeCategory]);
 
   // Available subcategories for active category
   const availableSubCategories = useMemo(() => {
-    return ['All', ...Array.from(new Set(categoryProducts.map(p => p.subCategory)))];
+    return ['All', ...Array.from(new Set(categoryProducts.map(p => p.subcategoryName)))];
   }, [categoryProducts]);
 
   // Available colors
@@ -1139,27 +755,28 @@ export default function FurnitureCatalogApp() {
     return Array.from(unique.entries()).map(([name, hex]) => ({ name, hex }));
   }, [categoryProducts]);
 
-  // Global search across any category, subcategory, name, or wood
+  // Global search across category, subcategory, name, tags, wood, material or description
   const searchResults = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return null;
 
-    return PRODUCTS.filter(item => {
-      const matchCat = item.category.toLowerCase().includes(q);
-      const matchSub = item.subCategory.toLowerCase().includes(q);
-      const matchName = item.name.toLowerCase().includes(q);
-      const matchWood = item.woodType.toLowerCase().includes(q);
-      const matchMat = item.material.toLowerCase().includes(q);
-      const matchDesc = item.description.toLowerCase().includes(q);
-
-      return matchCat || matchSub || matchName || matchWood || matchMat || matchDesc;
-    });
-  }, [searchQuery]);
+    return products.filter(item =>
+      [
+        item.categoryName,
+        item.subcategoryName,
+        item.productName,
+        ...item.tags,
+        item.woodType,
+        item.material,
+        item.description,
+      ].some(field => field.toLowerCase().includes(q))
+    );
+  }, [products, searchQuery]);
 
   // Filtered products on the category detail page
   const filteredCategoryProducts = useMemo(() => {
     return categoryProducts.filter(item => {
-      if (activeSubCategory !== 'All' && item.subCategory !== activeSubCategory) {
+      if (activeSubCategory !== 'All' && item.subcategoryName !== activeSubCategory) {
         return false;
       }
       if (activeColor !== 'All' && !item.colors.some(c => c.name === activeColor)) {
@@ -1171,28 +788,30 @@ export default function FurnitureCatalogApp() {
 
   // Wishlisted products list
   const wishlistedProducts = useMemo(() => {
-    return PRODUCTS.filter(p => wishlist.includes(p.id));
-  }, [wishlist]);
+    return products.filter(p => wishlist.includes(p.id));
+  }, [products, wishlist]);
 
   // Curated 4 top festive picks for the Diwali Dhamaka section
   const diwaliPicks = useMemo(() => {
-    return [
-      PRODUCTS.find(p => p.id === 'sofa-2') || PRODUCTS[1],
-      PRODUCTS.find(p => p.id === 'dining-1') || PRODUCTS[4],
-      PRODUCTS.find(p => p.id === 'table-2') || PRODUCTS[7],
-      PRODUCTS.find(p => p.id === 'chair-1') || PRODUCTS[2],
-    ];
-  }, []);
+    return DIWALI_PICK_IDS
+      .map(id => products.find(p => p.id === id))
+      .filter((p): p is CatalogProduct => Boolean(p));
+  }, [products]);
 
-  // Story highlights for mobile home screen
-  const storyHighlights = [
-    { title: 'Diwali Deals', isDiwali: true, icon: '🪔' },
-    { title: 'Sofas', cat: 'Sofa' as MainCategory, icon: '🛋️' },
-    { title: 'Chairs', cat: 'Chair' as MainCategory, icon: '🪑' },
-    { title: 'Dining', cat: 'Dining' as MainCategory, icon: '🍽️' },
-    { title: 'Desks', cat: 'Table' as MainCategory, icon: '🪵' },
-    { title: 'Custom', cat: 'Sofa' as MainCategory, isCustom: true, icon: '✨' },
-  ];
+  // "Trending For You": the 4 best-rated products (more reviews breaks ties)
+  const trendingProducts = useMemo(() => {
+    return [...products]
+      .sort((a, b) => b.rating - a.rating || b.reviewCount - a.reviewCount)
+      .slice(0, 4);
+  }, [products]);
+
+  // Home category cards with live design counts and "From" prices
+  const categoryCards = useMemo(() => {
+    return CATEGORY_CARDS.map(card => {
+      const prices = products.filter(p => p.categoryName === card.key).map(p => p.price);
+      return { ...card, count: prices.length, startingPrice: prices.length ? Math.min(...prices) : 0 };
+    }).filter(card => card.count > 0);
+  }, [products]);
 
   return (
     <div className="min-h-screen bg-white text-[#111111] font-sans antialiased flex flex-col items-center justify-start sm:py-6 sm:px-4">
@@ -1210,9 +829,9 @@ export default function FurnitureCatalogApp() {
             <Home className="w-3 h-3" />
             <span>Home</span>
           </Link>
-          <span className="truncate flex-1">Get an E-Catalog for your Business</span>
+          <span className="truncate flex-1">{AAW_PROMO.text}</span>
           <a
-            href={whatsappUrl('Hi AllAboutWeb! I saw your furniture e-catalog demo and would like an e-catalog for my business. Please share the details.')}
+            href={whatsappUrl(AAW_PROMO.whatsappMessage)}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 bg-[#25D366] hover:bg-[#1ebe5a] text-white px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0 transition-colors"
@@ -1230,14 +849,11 @@ export default function FurnitureCatalogApp() {
             <div className="flex items-center gap-1.5 truncate">
               <DiyaIcon className="w-3.5 h-3.5 shrink-0" />
               <span className="truncate">
-                <strong className="text-amber-200 font-bold">Diwali Mahotsav:</strong> Flat ₹2,500 Festive Savings on orders above ₹25,000
+                <strong className="text-amber-200 font-bold">{FESTIVE_RIBBON.label}</strong> {FESTIVE_RIBBON.text}
               </span>
             </div>
             <button
-              onClick={() => {
-                const msg = 'Hello MyStore! 🪔 Happy Diwali! I want to avail the Diwali Mahotsav festive discounts for solid wood furniture. Please share offers and pricing.';
-                window.open(getWhatsAppUrl(undefined, msg), '_blank');
-              }}
+              onClick={() => window.open(getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.festiveRibbon()), '_blank')}
               className="bg-amber-400 hover:bg-amber-300 text-neutral-900 font-bold px-2.5 py-0.5 rounded-full text-[9px] shrink-0 transition-transform active:scale-95 shadow-2xs ml-1.5 flex items-center gap-1"
             >
               <span>Claim</span>
@@ -1253,14 +869,14 @@ export default function FurnitureCatalogApp() {
                 className="cursor-pointer flex items-center gap-1.5"
               >
                 <span className="w-7 h-7 rounded-lg bg-[#8B5A2B] text-white flex items-center justify-center font-bold text-xs shadow-xs">
-                  M
+                  {STORE.initial}
                 </span>
                 <div>
                   <span className="font-bold text-base text-[#111111] tracking-tight leading-none block">
-                    MyStore
+                    {STORE.name}
                   </span>
                   <span className="text-[9px] text-[#8B5A2B] font-semibold tracking-wider uppercase block">
-                    Solid Wood
+                    {STORE.tagline}
                   </span>
                 </div>
               </div>
@@ -1306,13 +922,13 @@ export default function FurnitureCatalogApp() {
           <div className="px-4 pb-2 flex items-center justify-between text-[11px] text-neutral-600">
             <div className="flex items-center gap-1 bg-neutral-100/80 px-2.5 py-0.5 rounded-full text-[10px] text-neutral-700">
               <MapPin className="w-3 h-3 text-[#8B5A2B]" />
-              <span className="font-semibold text-neutral-900">Local Region Delivery</span>
+              <span className="font-semibold text-neutral-900">{STORE.deliveryArea}</span>
               <span className="text-neutral-400">·</span>
-              <span className="text-emerald-700 font-medium">Free Doorstep Assembly</span>
+              <span className="text-emerald-700 font-medium">{STORE.deliveryPerk}</span>
             </div>
             <span className="text-[10px] text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded-full flex items-center gap-1">
               <DiyaIcon className="w-3 h-3" />
-              <span>Diwali Special</span>
+              <span>{FESTIVE_RIBBON.badge}</span>
             </span>
           </div>
 
@@ -1369,7 +985,7 @@ export default function FurnitureCatalogApp() {
                   <p className="text-xs font-semibold text-[#111111]">No designs found for &ldquo;{searchQuery}&rdquo;</p>
                   <p className="text-[11px] text-neutral-500">Need something custom made? Send a photo to our carpenter on WhatsApp.</p>
                   <a
-                    href={getWhatsAppUrl(undefined, `Hello MyStore! I was searching for "${searchQuery}". Can you make this custom in teak or sheesham?`)}
+                    href={getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.searchNotFound(searchQuery))}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#25D366] text-white text-xs font-semibold rounded-xl shadow-xs"
@@ -1401,21 +1017,18 @@ export default function FurnitureCatalogApp() {
                   {/* STORY HIGHLIGHTS (Native Instagram/App category circles with Diwali Deals) */}
                   <div className="py-1">
                     <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-1">
-                      {storyHighlights.map((story) => {
-                        const isDiwali = Boolean(story.isDiwali);
+                      {STORY_HIGHLIGHTS.map((story) => {
+                        const isDiwali = story.action === 'offers';
                         return (
                           <button
                             key={story.title}
                             onClick={() => {
-                              if (story.isDiwali) {
-                                const el = document.getElementById('diwali-offers-section');
-                                if (el) {
-                                  el.scrollIntoView({ behavior: 'smooth' });
-                                }
-                              } else if (story.isCustom) {
+                              if (story.action === 'offers') {
+                                document.getElementById('diwali-offers-section')?.scrollIntoView({ behavior: 'smooth' });
+                              } else if (story.action === 'whatsapp') {
                                 window.open(getWhatsAppUrl(), '_blank');
-                              } else if (story.cat) {
-                                handleSelectCategory(story.cat);
+                              } else {
+                                handleSelectCategory(story.category);
                               }
                             }}
                             className="flex flex-col items-center gap-1 shrink-0 group active:scale-95 transition-transform"
@@ -1592,22 +1205,19 @@ export default function FurnitureCatalogApp() {
 
                       {/* Assured Festive Gift Card */}
                       <div
-                        onClick={() => {
-                          const msg = 'Hello MyStore! 🪔 Happy Diwali! I am booking solid wood furniture and would like to claim the complimentary Pure Brass Diya Gift Set.';
-                          window.open(getWhatsAppUrl(undefined, msg), '_blank');
-                        }}
+                        onClick={() => window.open(getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.festiveGift()), '_blank')}
                         className="min-w-[190px] max-w-[210px] bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-3 shadow-xs hover:shadow-md transition-all active:scale-[0.98] cursor-pointer border border-amber-300/70 flex flex-col justify-between shrink-0"
                       >
                         <div className="space-y-1">
                           <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-amber-800 bg-white px-1.5 py-0.5 rounded-md shadow-2xs">
                             <Gift className="w-2.5 h-2.5 text-amber-600" />
-                            <span>Festive Gift</span>
+                            <span>{FESTIVE_GIFT.tag}</span>
                           </span>
                           <p className="text-xs font-bold text-[#7C2D12] leading-tight pt-1">
-                            Pure Brass Diya Set
+                            {FESTIVE_GIFT.title}
                           </p>
                           <p className="text-[10px] text-neutral-600 leading-relaxed">
-                            Complimentary traditional brass diya set + timber care oil with every festive pre-order!
+                            {FESTIVE_GIFT.description}
                           </p>
                         </div>
                         <div className="mt-2 pt-1.5 border-t border-amber-200/60 flex items-center justify-between text-[10px] font-bold text-amber-800">
@@ -1651,7 +1261,7 @@ export default function FurnitureCatalogApp() {
                   {/* QUICK SEARCH SUGGESTION PILLS */}
                   <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-[11px]">
                     <span className="text-[10px] font-semibold text-neutral-400 shrink-0">Popular:</span>
-                    {['L-Shape', '3-Seater', 'Armchair', 'Study Desk', '6-Seater', 'Sheesham'].map(chip => (
+                    {POPULAR_SEARCHES.map(chip => (
                       <button
                         key={chip}
                         onClick={() => { setSearchQuery(chip); setIsSearchOpen(true); }}
@@ -1678,7 +1288,7 @@ export default function FurnitureCatalogApp() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-2.5">
-                      {CATEGORY_CARDS.map((cat) => (
+                      {categoryCards.map((cat) => (
                         <div
                           key={cat.key}
                           onClick={() => handleSelectCategory(cat.key)}
@@ -1718,7 +1328,7 @@ export default function FurnitureCatalogApp() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-2.5">
-                      {PRODUCTS.slice(0, 4).map((product) => (
+                      {trendingProducts.map((product) => (
                         <ProductCard
                           key={product.id}
                           product={product}
@@ -1737,14 +1347,14 @@ export default function FurnitureCatalogApp() {
                         <Sparkles className="w-4 h-4" />
                       </span>
                       <div>
-                        <h4 className="font-bold text-xs text-[#111111]">Need Custom Dimensions?</h4>
+                        <h4 className="font-bold text-xs text-[#111111]">{CUSTOM_ORDER_CARD.title}</h4>
                         <p className="text-[11px] text-neutral-600 leading-relaxed">
-                          We customize Sheesham and Teak wood to fit your room dimensions.
+                          {CUSTOM_ORDER_CARD.description}
                         </p>
                       </div>
                     </div>
                     <a
-                      href={getWhatsAppUrl(undefined, 'Hello! I need custom dimensions for my room furniture. Can I share photos and measurements?')}
+                      href={getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.customDimensions())}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs active:scale-98 transition-all"
@@ -1756,21 +1366,13 @@ export default function FurnitureCatalogApp() {
 
                   {/* TRUST POINTS (Clean Mobile Badges) */}
                   <div className="grid grid-cols-3 gap-2 text-center pt-1">
-                    <div className="bg-white rounded-xl p-2.5 shadow-2xs space-y-1">
-                      <Truck className="w-4 h-4 text-[#8B5A2B] mx-auto" />
-                      <p className="font-bold text-[10px] text-neutral-900 leading-tight">Free Delivery</p>
-                      <p className="text-[9px] text-neutral-500">Local Region</p>
-                    </div>
-                    <div className="bg-white rounded-xl p-2.5 shadow-2xs space-y-1">
-                      <ShieldCheck className="w-4 h-4 text-[#8B5A2B] mx-auto" />
-                      <p className="font-bold text-[10px] text-neutral-900 leading-tight">10-Yr Warranty</p>
-                      <p className="text-[9px] text-neutral-500">Termite Proof</p>
-                    </div>
-                    <div className="bg-white rounded-xl p-2.5 shadow-2xs space-y-1">
-                      <RotateCcw className="w-4 h-4 text-[#8B5A2B] mx-auto" />
-                      <p className="font-bold text-[10px] text-neutral-900 leading-tight">0% No-Cost EMI</p>
-                      <p className="text-[9px] text-neutral-500">Major Cards</p>
-                    </div>
+                    {TRUST_POINTS.map(({ icon: Icon, title, subtitle }) => (
+                      <div key={title} className="bg-white rounded-xl p-2.5 shadow-2xs space-y-1">
+                        <Icon className="w-4 h-4 text-[#8B5A2B] mx-auto" />
+                        <p className="font-bold text-[10px] text-neutral-900 leading-tight">{title}</p>
+                        <p className="text-[9px] text-neutral-500">{subtitle}</p>
+                      </div>
+                    ))}
                   </div>
 
                 </div>
@@ -1782,7 +1384,7 @@ export default function FurnitureCatalogApp() {
                   
                   {/* Category Segmented Switch Bar */}
                   <div className="flex items-center gap-1.5 bg-neutral-100 p-1 rounded-2xl overflow-x-auto no-scrollbar shadow-inner">
-                    {(['Sofa', 'Chair', 'Dining', 'Table'] as MainCategory[]).map((cat) => {
+                    {MAIN_CATEGORIES.map((cat) => {
                       const isCatSelected = activeCategory === cat;
                       return (
                         <button
@@ -1798,7 +1400,7 @@ export default function FurnitureCatalogApp() {
                               : 'text-neutral-600 hover:text-black'
                           }`}
                         >
-                          {cat === 'Dining' ? 'Dining' : cat === 'Table' ? 'Tables' : `${cat}s`}
+                          {CATEGORY_TAB_LABELS[cat]}
                         </button>
                       );
                     })}
@@ -1846,7 +1448,7 @@ export default function FurnitureCatalogApp() {
                             <span className={`text-[10px] font-semibold leading-tight line-clamp-1 px-0.5 ${
                               isSelected ? 'text-white' : 'text-neutral-800'
                             }`}>
-                              {sub === 'All' ? `All ${activeCategory}s` : sub}
+                              {sub === 'All' ? `All ${CATEGORY_TAB_LABELS[activeCategory]}` : sub}
                             </span>
                           </button>
                         );
@@ -1907,7 +1509,7 @@ export default function FurnitureCatalogApp() {
                           onClick={() => { setActiveSubCategory('All'); setActiveColor('All'); }}
                           className="px-3 py-1.5 bg-[#8B5A2B] text-white text-xs font-semibold rounded-xl"
                         >
-                          Show All {activeCategory}s
+                          Show All {CATEGORY_TAB_LABELS[activeCategory]}
                         </button>
                       </div>
                     ) : (
@@ -1971,7 +1573,7 @@ export default function FurnitureCatalogApp() {
                     <div className="space-y-3">
                       {/* Bulk WhatsApp Inquiry Action */}
                       <a
-                        href={getWhatsAppUrl(undefined, `Hello MyStore! I have saved ${wishlistedProducts.length} items in my wishlist:\n` + wishlistedProducts.map(p => `• ${p.name} (${formatINR(p.price)})`).join('\n') + `\n\nCan you give a package offer and delivery time for all of these?`)}
+                        href={getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.wishlistPackage(wishlistedProducts))}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="bg-[#25D366] hover:bg-[#20bd5a] text-white p-3 rounded-2xl flex items-center justify-between font-semibold text-xs shadow-md active:scale-98 transition-all"
@@ -2012,14 +1614,14 @@ export default function FurnitureCatalogApp() {
                     <div className="flex items-center justify-between">
                       <span className="inline-flex items-center gap-1 bg-white/20 px-2 py-0.5 rounded-full text-[10px] font-bold">
                         <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                        Online Now
+                        {STORE.whatsappSupport.status}
                       </span>
-                      <span className="text-[10px] text-white/80">Avg reply: 2 mins</span>
+                      <span className="text-[10px] text-white/80">{STORE.whatsappSupport.replyTime}</span>
                     </div>
 
-                    <h3 className="text-base font-bold">Chat with Master Carpenter</h3>
+                    <h3 className="text-base font-bold">{STORE.whatsappSupport.title}</h3>
                     <p className="text-[11px] text-white/90 leading-snug">
-                      Ask for real workshop timber photos, wood polish samples, custom sizes, or delivery timelines.
+                      {STORE.whatsappSupport.description}
                     </p>
 
                     <a
@@ -2041,11 +1643,11 @@ export default function FurnitureCatalogApp() {
                       </span>
                       <div>
                         <p className="text-xs font-bold text-neutral-900">Direct Phone Support</p>
-                        <p className="text-[11px] text-neutral-500">1800-123-4567 (10 AM - 8 PM)</p>
+                        <p className="text-[11px] text-neutral-500">{STORE.phone.display} ({STORE.phone.hours})</p>
                       </div>
                     </div>
                     <a
-                      href="tel:18001234567"
+                      href={`tel:${STORE.phone.tel}`}
                       className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-semibold rounded-xl"
                     >
                       Call Now
@@ -2059,11 +1661,11 @@ export default function FurnitureCatalogApp() {
                         <MapPin className="w-4 h-4" />
                       </span>
                       <div>
-                        <h4 className="text-xs font-bold text-neutral-900">Showroom & Experience Center</h4>
+                        <h4 className="text-xs font-bold text-neutral-900">{STORE.showroom.title}</h4>
                         <p className="text-[11px] text-neutral-600 mt-0.5">
-                          100 Feet Road, Indiranagar, Bengaluru, Karnataka 560038
+                          {STORE.showroom.address}
                         </p>
-                        <p className="text-[10px] text-neutral-400 mt-1">Open daily: 10:30 AM to 8:30 PM</p>
+                        <p className="text-[10px] text-neutral-400 mt-1">{STORE.showroom.hours}</p>
                       </div>
                     </div>
                   </div>
@@ -2072,22 +1674,18 @@ export default function FurnitureCatalogApp() {
                   <div className="bg-white rounded-2xl p-3.5 space-y-2 shadow-xs">
                     <div className="flex items-center gap-2 text-xs font-bold text-neutral-900">
                       <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                      <span>10-Year Replacement Guarantee</span>
+                      <span>{STORE.warranty.title}</span>
                     </div>
                     <p className="text-[11px] text-neutral-600 leading-relaxed">
-                      Every piece is built with kiln-dried seasoned hardwood. Protected by industrial anti-termite vac-treatment. Guaranteed not to bend, warp, or crack under normal household use.
+                      {STORE.warranty.description}
                     </p>
                   </div>
 
                   {/* FAQ Quick Accordion */}
                   <div className="space-y-1.5 pt-1">
                     <h4 className="text-xs font-bold text-neutral-900">Common Questions</h4>
-                    {[
-                      { q: 'Can I customize the sofa size or wood finish?', a: 'Yes! Send your room photos or dimensions via WhatsApp and our carpenter will prepare custom plans.' },
-                      { q: 'How is the delivery and assembly handled?', a: 'We provide free doorstep delivery with our trained carpenters doing complete assembly.' },
-                      { q: 'What payment modes are accepted?', a: 'UPI, credit/debit cards with 0% EMI options, and cash on delivery for selected cities.' }
-                    ].map((item, i) => (
-                      <div key={i} className="bg-white rounded-xl p-2.5 shadow-2xs text-[11px] space-y-0.5">
+                    {FAQS.map((item) => (
+                      <div key={item.q}className="bg-white rounded-xl p-2.5 shadow-2xs text-[11px] space-y-0.5">
                         <p className="font-semibold text-neutral-900">{item.q}</p>
                         <p className="text-neutral-500 leading-snug">{item.a}</p>
                       </div>
@@ -2122,10 +1720,10 @@ export default function FurnitureCatalogApp() {
               <div className="px-4 py-2 border-b border-neutral-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold text-[#8B5A2B] bg-[#FAF5EE] px-2.5 py-0.5 rounded-full">
-                    {selectedProduct.category}
+                    {selectedProduct.categoryName}
                   </span>
                   <span className="text-xs text-neutral-500 font-medium truncate max-w-[200px]">
-                    {selectedProduct.subCategory}
+                    {selectedProduct.subcategoryName}
                   </span>
                 </div>
                 <button
@@ -2141,15 +1739,10 @@ export default function FurnitureCatalogApp() {
               <div className="overflow-y-auto p-4 space-y-3.5 flex-1">
                 {/* Visual Showcase */}
                 <div className="aspect-[4/3] w-full rounded-2xl bg-gradient-to-b from-[#FDFBF7] to-[#F5ECE0] overflow-hidden relative shadow-inner">
-                  <FriendlyFurniturePlaceholder
-                    category={selectedProduct.category}
-                    subCategory={selectedProduct.subCategory}
-                    colorHex={selectedProduct.colors[0]?.hex || '#8B5A2B'}
-                    className="w-full h-full"
-                  />
-                  {selectedProduct.tag && (
+                  <ProductVisual product={selectedProduct} sizes="(min-width: 640px) 400px, 100vw" />
+                  {selectedProduct.tags[0] && (
                     <span className="absolute top-2 left-2 px-2 py-0.5 bg-[#8B5A2B] text-white text-[9px] font-bold rounded-md shadow-xs">
-                      {selectedProduct.tag}
+                      {selectedProduct.tags[0]}
                     </span>
                   )}
                 </div>
@@ -2161,17 +1754,22 @@ export default function FurnitureCatalogApp() {
                     <span>{selectedProduct.rating}</span>
                     <span className="text-neutral-400 font-normal">({selectedProduct.reviewCount} customer reviews)</span>
                   </div>
-                  <h3 className="text-base font-bold text-[#111111]">{selectedProduct.name}</h3>
+                  <h3 className="text-base font-bold text-[#111111]">{selectedProduct.productName}</h3>
                   <div className="flex items-baseline gap-2 mt-1">
                     <span className="text-lg font-bold text-[#111111] tabular-nums">
                       {formatINR(selectedProduct.price)}
                     </span>
-                    <span className="text-xs text-neutral-400 line-through tabular-nums">
-                      {formatINR(selectedProduct.originalPrice)}
-                    </span>
-                    <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">
-                      {Math.round(((selectedProduct.originalPrice - selectedProduct.price) / selectedProduct.originalPrice) * 100)}% Discount
-                    </span>
+                    {/* MRP is optional in the admin panel; it equals the price when there's no discount. */}
+                    {selectedProduct.originalPrice > selectedProduct.price && (
+                      <>
+                        <span className="text-xs text-neutral-400 line-through tabular-nums">
+                          {formatINR(selectedProduct.originalPrice)}
+                        </span>
+                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">
+                          {Math.round(((selectedProduct.originalPrice - selectedProduct.price) / selectedProduct.originalPrice) * 100)}% Discount
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -2184,20 +1782,27 @@ export default function FurnitureCatalogApp() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 font-bold text-xs text-amber-900">
                       <DiyaIcon className="w-4 h-4" />
-                      <span>Diwali Festive Privilege</span>
+                      <span>{FESTIVE_PRIVILEGE.title}</span>
                     </div>
                     <span className="text-[10px] font-bold bg-amber-700 text-white px-2.5 py-0.5 rounded-full shadow-2xs">
-                      Festive Discount Active
+                      {FESTIVE_PRIVILEGE.badge}
                     </span>
                   </div>
                   <p className="text-[11px] text-amber-950/80 leading-relaxed">
-                    Order for local region delivery before Diwali. Includes <strong>Free Solid Wood Assembly</strong> + <strong>Free Brass Diya Gift Set</strong>.
+                    {FESTIVE_PRIVILEGE.intro}{' '}
+                    {FESTIVE_PRIVILEGE.perks.map((perk, i) => (
+                      <React.Fragment key={perk}>
+                        {i > 0 && ' + '}
+                        <strong>{perk}</strong>
+                      </React.Fragment>
+                    ))}
+                    .
                   </p>
                 </div>
 
                 {/* Highlights Card */}
                 <div className="bg-[#FAF6F0] p-3 rounded-2xl space-y-1.5 text-xs text-neutral-700">
-                  {selectedProduct.simpleHighlights.map((h, i) => (
+                  {selectedProduct.highlights.map((h, i) => (
                     <div key={i} className="flex items-start gap-2">
                       <Check className="w-3.5 h-3.5 text-[#8B5A2B] shrink-0 mt-0.5" />
                       <span>{h}</span>
@@ -2225,10 +1830,7 @@ export default function FurnitureCatalogApp() {
               {/* Sheet Sticky Bottom CTA Bar */}
               <div className="p-3 bg-white border-t border-neutral-100 flex items-center gap-2 shadow-lg">
                 <a
-                  href={getWhatsAppUrl(
-                    undefined,
-                    `Hello MyStore! 🪔 Happy Diwali! I want to claim the Diwali Festive Price for:\n• ${selectedProduct.name} (${formatINR(selectedProduct.price)})\n• Category: ${selectedProduct.category} - ${selectedProduct.subCategory}\n• Wood: ${selectedProduct.woodType}\n\nPlease confirm the festive discount and local delivery timeline.`
-                  )}
+                  href={getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.productFestivePrice(selectedProduct))}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 bg-[#25D366] hover:bg-[#20bd5a] text-white py-2.5 px-4 text-xs font-bold rounded-2xl shadow-sm flex items-center justify-center gap-2 active:scale-98 transition-all"

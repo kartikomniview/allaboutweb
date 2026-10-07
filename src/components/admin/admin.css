@@ -1,0 +1,81 @@
+/* Admin panel motion: skeleton shimmer, indeterminate progress bar,
+   drawer / dialog / toast entrances. Reduced-motion is handled globally. */
+
+.admin-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #eceef4;
+  border-radius: 6px;
+}
+
+.admin-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  animation: admin-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes admin-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.admin-progress {
+  position: relative;
+  height: 2px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+}
+
+.admin-progress::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  background: var(--color-primary);
+  animation: admin-progress 1.1s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+@keyframes admin-progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+.admin-fade-in {
+  animation: admin-fade-in 0.2s ease-out both;
+}
+
+@keyframes admin-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.admin-slide-in {
+  animation: admin-slide-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes admin-slide-in {
+  from {
+    transform: translateX(32px);
+    opacity: 0;
+  }
+}
+
+.admin-pop-in {
+  animation: admin-pop-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes admin-pop-in {
+  from {
+    transform: translateY(8px) scale(0.98);
+    opacity: 0;
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "aaw-backend-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AllAboutWeb admin API: auth + e-catalog products (AWS Lambda + API Gateway, Firebase Auth + Firestore)",
+  "type": "module",
+  "main": "index.mjs",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "package": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package.ps1"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1146.0",
+    "@aws-sdk/s3-presigned-post": "^3.1146.0",
+    "firebase-admin": "^13.0.0"
+  }
+}

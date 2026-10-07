@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Poppins } from "next/font/google";
 import FurnitureCatalogApp from "@/components/furniture-catalog/FurnitureCatalogApp";
+import { getCatalogProducts } from "@/lib/catalogProducts";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -35,12 +36,16 @@ export const metadata: Metadata = {
   },
 };
 
-export default function FurnitureCatalogPage() {
+// Products come from the admin panel (Firestore) through the public API and
+// are refreshed in the background every minute (see getCatalogProducts).
+export default async function FurnitureCatalogPage() {
+  const products = await getCatalogProducts();
+
   return (
     <div
       className={`${plusJakarta.variable} ${poppins.variable} furniture-catalog flex-1 bg-white text-[#111111] antialiased selection:bg-[#111111] selection:text-white`}
     >
-      <FurnitureCatalogApp />
+      <FurnitureCatalogApp products={products} />
     </div>
   );
 }
