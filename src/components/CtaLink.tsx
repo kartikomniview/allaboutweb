@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import Link from "next/link";
 
-type Variant = "primary" | "secondary" | "white" | "outline-light";
+type Variant = "primary" | "secondary" | "white" | "outline-light" | "whatsapp";
 type Size = "sm" | "md" | "lg";
 
 const VARIANT_STYLES: Record<Variant, string> = {
@@ -10,6 +10,7 @@ const VARIANT_STYLES: Record<Variant, string> = {
   secondary: "border border-line bg-white text-ink hover:bg-tint",
   white: "bg-white text-secondary hover:bg-paper",
   "outline-light": "border border-white/40 text-white hover:bg-white/10",
+  whatsapp: "bg-whatsapp text-white hover:bg-whatsapp/90",
 };
 
 const SIZE_STYLES: Record<Size, string> = {

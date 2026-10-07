@@ -1,6 +1,11 @@
 import { ReactNode } from "react";
-import SectionHeading from "./SectionHeading";
+import { Plus } from "lucide-react";
+import CtaLink from "@/components/CtaLink";
+import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
+import { whatsappUrl } from "@/lib/contact";
 import { revealDelay } from "@/lib/reveal";
+import Section from "./ui/Section";
+import SectionHeading from "./ui/SectionHeading";
 
 const FAQS: { question: string; answer: ReactNode }[] = [
   {
@@ -67,41 +72,58 @@ const FAQS: { question: string; answer: ReactNode }[] = [
 
 export default function Faq() {
   return (
-    <section id="faq" className="scroll-mt-24 bg-white">
-      <div className="mx-auto max-w-3xl px-4 py-16 sm:py-20 sm:px-6 header:px-8">
-        <SectionHeading
-          eyebrow="FAQ"
-          title={
-            <>
-              Frequently Asked <span className="highlight">Questions</span>
-            </>
-          }
-        />
+    <Section id="faq" tone="paper">
+      <div className="lg:grid lg:grid-cols-[1fr_1.6fr] lg:gap-16">
+        <div>
+          <SectionHeading
+            eyebrow="FAQ"
+            title="Frequently asked questions"
+            description="Quick answers to what businesses usually ask us."
+          />
+          <div
+            data-reveal="up"
+            className="mt-8 hidden rounded-card border border-line bg-white p-6 shadow-card lg:block"
+          >
+            <p className="font-bold text-ink">Still have a question?</p>
+            <p className="mt-1 text-sm text-slate">
+              Message us on WhatsApp and we&apos;ll get back to you.
+            </p>
+            <CtaLink
+              href={whatsappUrl("Hi AllAboutWeb, I have a question.")}
+              external
+              variant="whatsapp"
+              className="mt-4 gap-2"
+            >
+              <WhatsAppIcon />
+              Ask on WhatsApp
+            </CtaLink>
+          </div>
+        </div>
 
-        <div className="mt-10 divide-y divide-line border-t border-line">
+        <div className="mt-6 flex flex-col gap-3 sm:mt-10 lg:mt-0">
           {FAQS.map((faq, i) => (
             <details
               key={faq.question}
               data-reveal="up"
               style={revealDelay(i * 70)}
-              className="group py-6"
+              className="group rounded-card border border-line bg-white shadow-card transition open:border-primary/40"
             >
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-base font-semibold sm:text-lg text-ink marker:content-none hover:text-primary">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-4 text-[0.9375rem] font-semibold text-ink marker:content-none hover:text-primary sm:p-5 sm:text-base [&::-webkit-details-marker]:hidden">
                 {faq.question}
                 <span
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-tint text-lg font-semibold text-primary transition-transform group-open:rotate-45"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-tint text-primary transition-transform group-open:rotate-45"
                   aria-hidden="true"
                 >
-                  +
+                  <Plus className="h-4 w-4" />
                 </span>
               </summary>
-              <p className="mt-3 max-w-2xl text-[0.9375rem] leading-6.5 text-slate sm:text-base sm:leading-7">
+              <p className="px-4 pb-4 text-sm leading-6.5 text-slate sm:px-5 sm:pb-5 sm:text-[0.9375rem] sm:leading-7">
                 {faq.answer}
               </p>
             </details>
           ))}
         </div>
       </div>
-    </section>
+    </Section>
   );
 }

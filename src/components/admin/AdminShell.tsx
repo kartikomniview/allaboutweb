@@ -48,14 +48,10 @@ function Brand() {
 function SidebarContent({
   user,
   pathname,
-  loggingOut,
-  onLogout,
   onNavigate,
 }: {
   user: AdminUser;
   pathname: string;
-  loggingOut: boolean;
-  onLogout: () => void;
   onNavigate?: () => void;
 }) {
   return (
@@ -116,16 +112,6 @@ function SidebarContent({
             </p>
             <p className="text-[11px] text-slate">Administrator</p>
           </div>
-          <button
-            type="button"
-            onClick={onLogout}
-            disabled={loggingOut}
-            title="Log out"
-            aria-label="Log out"
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-btn text-slate transition-colors hover:bg-ink/[0.05] hover:text-ink disabled:opacity-50"
-          >
-            {loggingOut ? <Spinner /> : <LogOut className="h-4 w-4" aria-hidden />}
-          </button>
         </div>
       </div>
     </div>
@@ -203,7 +189,10 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     );
   }
 
-  const sidebarProps = { user, pathname, loggingOut, onLogout: handleLogout };
+  const sidebarProps = { user, pathname };
+  const pageTitle = NAV.flatMap((g): readonly { href: string; label: string }[] => g.items).find((i) =>
+    pathname.startsWith(i.href),
+  )?.label;
 
   return (
     <AdminUserContext.Provider value={user}>
@@ -214,19 +203,6 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         </div>
         <SidebarContent {...sidebarProps} />
       </aside>
-
-      {/* Mobile top bar */}
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-white/90 px-4 backdrop-blur lg:hidden">
-        <Brand />
-        <button
-          type="button"
-          onClick={() => setMobileNavOpen(true)}
-          aria-label="Open menu"
-          className="grid h-9 w-9 place-items-center rounded-btn text-ink hover:bg-ink/[0.05]"
-        >
-          <Menu className="h-5 w-5" aria-hidden />
-        </button>
-      </header>
 
       {/* Mobile sidebar drawer */}
       {mobileNavOpen && (
@@ -255,7 +231,27 @@ export default function AdminShell({ children }: { children: ReactNode }) {
       )}
 
       <div className="flex flex-1 flex-col lg:pl-64">
-        <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-10">{children}</div>
+        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-line bg-white/90 px-3 backdrop-blur sm:px-4 lg:h-16 lg:px-5">
+          <div className="flex min-w-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen(true)}
+              aria-label="Open menu"
+              className="grid h-9 w-9 place-items-center rounded-btn text-ink hover:bg-ink/[0.05] lg:hidden"
+            >
+              <Menu className="h-5 w-5" aria-hidden />
+            </button>
+            <div className="lg:hidden">
+              <Brand />
+            </div>
+            {pageTitle && <h2 className="hidden truncate text-[15px] font-semibold text-ink lg:block">{pageTitle}</h2>}
+          </div>
+          <Button variant="secondary" size="sm" onClick={handleLogout} loading={loggingOut} aria-label="Log out">
+            {!loggingOut && <LogOut className="h-4 w-4" aria-hidden />}
+            <span className="hidden sm:inline">Log out</span>
+          </Button>
+        </header>
+        <div className="w-full flex-1 px-3 py-5 sm:px-4 lg:px-5 lg:py-6">{children}</div>
       </div>
     </AdminUserContext.Provider>
   );
