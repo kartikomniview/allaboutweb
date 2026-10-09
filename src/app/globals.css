@@ -120,6 +120,29 @@ strong {
   animation-delay: var(--enter-delay, 0ms);
 }
 
+/* Step-by-step flows (pricing form) — new step slides in from the direction of travel */
+@keyframes step-next {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+
+@keyframes step-back {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
+
+.animate-step-next {
+  animation: step-next 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-step-back {
+  animation: step-back 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* Scroll-in reveal — toggled by RevealObserver; delay via [--reveal-delay:Xms].
    Only hidden when JS can run, so content never stays invisible without it. */
 @media (scripting: enabled) {
@@ -172,7 +195,9 @@ strong {
   }
 
   .animate-enter-up,
-  .animate-enter-zoom {
+  .animate-enter-zoom,
+  .animate-step-next,
+  .animate-step-back {
     animation: none;
   }
 

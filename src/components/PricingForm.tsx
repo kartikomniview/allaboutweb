@@ -1,11 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { ChevronLeft } from "lucide-react";
 import { type ServiceKey, whatsappUrl } from "@/lib/contact";
 
-const IMAGE_BASE =
-  "https://aawsite.s3.ap-south-1.amazonaws.com/website/landing/services";
+/** Square service photos kept in `public/icon/services/compressed/` */
+const THUMB_BASE = "/icon/services/compressed";
+
+/** Pause after a tap so the selection registers before the next step slides in */
+const AUTO_ADVANCE_MS = 250;
 
 function CheckIcon({ className = "h-3 w-3" }: { className?: string }) {
   return (
@@ -30,36 +34,6 @@ function WhatsAppIcon() {
   );
 }
 
-function Step({
-  n,
-  done,
-  error,
-  children,
-}: {
-  n: number;
-  done: boolean;
-  error?: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <span className="flex items-center gap-2.5 text-[0.9375rem] font-bold leading-snug tracking-[-0.01em] text-ink sm:gap-3 sm:text-base">
-      <span
-        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold sm:h-7 sm:w-7 sm:text-[13px] tabular-nums transition-colors ${
-          done
-            ? "bg-primary text-white"
-            : error
-              ? "bg-red-100 text-red-600"
-              : "bg-tint text-primary"
-        }`}
-        aria-hidden="true"
-      >
-        {done ? <CheckIcon /> : n}
-      </span>
-      {children}
-    </span>
-  );
-}
-
 type Question = {
   id: string;
   label: string;
@@ -69,11 +43,11 @@ type Question = {
 
 const SERVICES: Record<
   ServiceKey,
-  { name: string; description: string; slug: string; questions: Question[] }
+  { name: string; description: string; thumb: string; questions: Question[] }
 > = {
   website: {
     name: "Website Development",
-    slug: "websites",
+    thumb: "website-development",
     description: "Full website for your business",
     questions: [
       {
@@ -98,7 +72,7 @@ const SERVICES: Record<
   },
   ecatalog: {
     name: "E-Catalog",
-    slug: "e-catalog",
+    thumb: "e-catalog",
     description: "Online catalog for phones",
     questions: [
       {
@@ -117,7 +91,7 @@ const SERVICES: Record<
   },
   pdf: {
     name: "PDF Catalog",
-    slug: "pdf-catalog",
+    thumb: "product-catalog-pdf",
     description: "Printable, shareable catalog",
     questions: [
       {
@@ -138,15 +112,9 @@ const SERVICES: Record<
 
 const SERVICE_ORDER: ServiceKey[] = ["website", "ecatalog", "pdf"];
 
-type Errors = Record<string, string>;
+const SUB_HEADING = { h1: "h2", h2: "h3", h3: "h4" } as const;
 
-function cardClass(error?: string) {
-  return `min-w-0 scroll-mt-6 rounded-card border bg-white p-3.5 transition-colors duration-300 sm:p-5 ${
-    error
-      ? "border-red-400 bg-red-50/40 ring-4 ring-red-500/10"
-      : "border-line"
-  }`;
-}
+const STEP_TITLE_ID = "pricing-step-title";
 
 function buildMessage(
   name: string,
@@ -163,44 +131,52 @@ function buildMessage(
   ].join("\n");
 }
 
-function ChipGroup({
+/** Full-width, app-style radio tile. */
+function OptionTile({
   name,
-  options,
   value,
-  onChange,
+  checked,
+  onSelect,
+  onTap,
+  children,
 }: {
   name: string;
-  options: string[];
-  value?: string;
-  onChange: (value: string) => void;
+  value: string;
+  checked: boolean;
+  onSelect: () => void;
+  /** Pointer taps only — keyboard users move through options without auto-advancing */
+  onTap: () => void;
+  children: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap gap-2">
-      {options.map((option) => {
-        const checked = value === option;
-        return (
-          <label
-            key={option}
-            className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13px] font-medium transition sm:px-4 sm:text-sm active:scale-95 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${
-              checked
-                ? "border-primary bg-primary text-white shadow-[0_6px_16px_-6px_rgba(252,108,38,0.6)]"
-                : "border-line bg-white text-ink hover:-translate-y-0.5 hover:border-primary hover:text-primary"
-            }`}
-          >
-            <input
-              type="radio"
-              name={name}
-              value={option}
-              checked={checked}
-              onChange={() => onChange(option)}
-              className="sr-only"
-            />
-            {checked && <CheckIcon />}
-            {option}
-          </label>
-        );
-      })}
-    </div>
+    <label
+      onClick={(event) => {
+        if (event.detail > 0) onTap();
+      }}
+      className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-card border-2 p-3 transition active:scale-[0.98] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${
+        checked
+          ? "border-primary bg-tint shadow-[0_10px_24px_-14px_rgba(252,108,38,0.6)]"
+          : "border-line bg-white hover:border-primary/50"
+      }`}
+    >
+      <input
+        type="radio"
+        name={name}
+        value={value}
+        checked={checked}
+        onChange={onSelect}
+        className="sr-only"
+      />
+      {children}
+      <span
+        className={`ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition ${
+          checked ? "border-primary bg-primary text-white" : "border-line text-transparent"
+        }`}
+        aria-hidden="true"
+      >
+        <CheckIcon />
+      </span>
+    </label>
   );
 }
 
@@ -212,55 +188,59 @@ export default function PricingForm({
   headingLevel?: "h1" | "h2" | "h3";
 }) {
   const [name, setName] = useState("");
-  const [service, setService] = useState<ServiceKey | undefined>(
-    initialService
-  );
+  const [service, setService] = useState<ServiceKey | undefined>(initialService);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [errors, setErrors] = useState<Errors>({});
+  // Coming from a service's card, that choice is already made
+  const [step, setStep] = useState(initialService ? 1 : 0);
+  const [direction, setDirection] = useState<"next" | "back">("next");
+
+  const advanceTimer = useRef<number | undefined>(undefined);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const shownStep = useRef(step);
 
   const Heading = headingLevel;
+  const StepHeading = SUB_HEADING[headingLevel];
   const questions = service ? SERVICES[service].questions : [];
-  const answeredCount = questions.filter((q) => answers[q.id]).length;
-  // Name is optional, so the bar tracks only the required steps.
-  // Before a service is picked, assume a typical 2-question flow.
-  const totalSteps = 1 + (service ? questions.length : 2);
-  const doneSteps = (service ? 1 : 0) + answeredCount;
-  const progress = Math.round((doneSteps / totalSteps) * 100);
-  // Name comes last, after the service questions
-  const nameStep = 2 + (service ? questions.length : 2);
+  // Service → its questions → name. Before a service is picked, assume a typical 2-question flow.
+  const totalSteps = 2 + (service ? questions.length : 2);
+  const isLast = Boolean(service) && step === totalSteps - 1;
+  const question = step > 0 && !isLast ? questions[step - 1] : undefined;
+  const canContinue = step === 0 ? Boolean(service) : question ? Boolean(answers[question.id]) : true;
+
+  // Move focus to the new step's title so screen readers announce it
+  useEffect(() => {
+    if (shownStep.current === step) return;
+    shownStep.current = step;
+    titleRef.current?.focus({ preventScroll: true });
+    titleRef.current?.scrollIntoView({ block: "nearest" });
+  }, [step]);
+
+  useEffect(() => () => window.clearTimeout(advanceTimer.current), []);
+
+  function goTo(next: number) {
+    window.clearTimeout(advanceTimer.current);
+    setDirection(next >= step ? "next" : "back");
+    setStep(next);
+  }
+
+  function advanceSoon() {
+    window.clearTimeout(advanceTimer.current);
+    advanceTimer.current = window.setTimeout(() => {
+      setDirection("next");
+      setStep((current) => current + 1);
+    }, AUTO_ADVANCE_MS);
+  }
 
   function selectService(next: ServiceKey) {
+    if (next === service) return;
     setService(next);
     setAnswers({});
-    setErrors({});
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
-    const nextErrors: Errors = {};
-    if (!service) nextErrors.service = "Choose a service.";
-    for (const q of questions) {
-      if (!answers[q.id]) nextErrors[q.id] = "Pick an option.";
-    }
-    setErrors(nextErrors);
-
-    // Jump to the first incomplete field, in the order they appear
-    const firstInvalid = ["service", ...questions.map((q) => q.id)].find(
-      (id) => nextErrors[id]
-    );
-    if (firstInvalid) {
-      const card = event.currentTarget.querySelector<HTMLElement>(
-        `[data-field="${firstInvalid}"]`
-      );
-      card?.querySelector<HTMLInputElement>("input")?.focus({ preventScroll: true });
-      const reduceMotion = window.matchMedia(
-        "(prefers-reduced-motion: reduce)"
-      ).matches;
-      card?.scrollIntoView({
-        behavior: reduceMotion ? "auto" : "smooth",
-        block: "center",
-      });
+    if (!isLast) {
+      if (canContinue) goTo(step + 1);
       return;
     }
     if (!service) return;
@@ -272,143 +252,72 @@ export default function PricingForm({
     else window.location.assign(url);
   }
 
-  return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3 sm:gap-4">
-      <div className="mb-1 pr-8 sm:mb-3">
-        <p className="inline-flex items-center gap-1.5 rounded-full bg-tint px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-primary sm:px-3 sm:text-[11px]">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
-          Free quote in minutes
-        </p>
-        <Heading className="mt-3 text-2xl font-extrabold leading-[1.1] tracking-[-0.03em] text-ink sm:mt-4 sm:text-4xl">
-          Get the <span className="highlight">pricing</span>
-        </Heading>
-        <p className="mt-2 max-w-md text-sm leading-relaxed text-slate sm:mt-3 sm:text-base">
-          A few quick questions, pricing on WhatsApp.
-        </p>
-        <div
-          className="mt-4 h-1.5 sm:mt-5 overflow-hidden rounded-full bg-line"
-          role="progressbar"
-          aria-label="Form progress"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={progress}
-        >
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-primary to-[#ff9a5c] transition-[width] duration-500 ease-out"
-            style={{ width: `${Math.max(progress, 4)}%` }}
-          />
-        </div>
-      </div>
+  let title: string;
+  let hint: string | undefined;
+  let body: ReactNode;
 
-      <fieldset data-field="service" className={cardClass(errors.service)}>
-        <legend className="float-left mb-2.5 w-full sm:mb-3">
-          <Step n={1} done={Boolean(service)} error={Boolean(errors.service)}>
-            What do you need?
-          </Step>
-        </legend>
-        <div className="clear-both grid gap-2 sm:grid-cols-3 sm:gap-2.5">
-          {SERVICE_ORDER.map((key) => {
-            const checked = service === key;
-            const { name: serviceName, description, slug } = SERVICES[key];
-            return (
-              <label
-                key={key}
-                className={`group relative flex cursor-pointer items-center gap-3 overflow-hidden rounded-card border-2 p-2 transition duration-200 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary sm:flex-col sm:items-stretch sm:gap-0 sm:p-0 ${
-                  checked
-                    ? "border-primary bg-tint shadow-[0_12px_28px_-12px_rgba(252,108,38,0.55)]"
-                    : "border-line bg-white hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-md"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="service"
-                  value={key}
-                  checked={checked}
-                  onChange={() => selectService(key)}
-                  className="sr-only"
-                />
-                <span className="relative aspect-[1400/988] w-20 shrink-0 overflow-hidden rounded-[10px] bg-paper sm:w-full sm:rounded-none">
-                  <Image
-                    src={`${IMAGE_BASE}/${slug}/1.webp`}
-                    alt=""
-                    fill
-                    sizes="(min-width: 640px) 160px, 80px"
-                    className={`object-cover transition duration-500 group-hover:scale-105 ${
-                      checked ? "" : "saturate-[0.85]"
-                    }`}
-                  />
-                  <span
-                    className="absolute inset-0 hidden bg-gradient-to-t from-ink/25 to-transparent sm:block"
-                    aria-hidden="true"
-                  />
-                </span>
-                <span
-                  className={`absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full border-2 transition ${
-                    checked
-                      ? "scale-100 border-primary bg-primary text-white"
-                      : "scale-90 border-white/90 bg-white/70 text-transparent sm:bg-white/40"
-                  }`}
-                  aria-hidden="true"
-                >
-                  <CheckIcon />
-                </span>
-                <span className="flex min-w-0 flex-col pr-8 sm:p-3 sm:pr-3">
-                  <span className="text-sm font-bold leading-tight tracking-[-0.01em] text-ink sm:text-[15px]">
-                    {serviceName}
-                  </span>
-                  <span className="mt-0.5 text-xs leading-snug text-slate sm:mt-1">
-                    {description}
-                  </span>
-                </span>
-              </label>
-            );
-          })}
-        </div>
-        {errors.service && (
-          <p className="mt-2 text-[13px] font-medium text-red-600">{errors.service}</p>
-        )}
-      </fieldset>
-
-      {questions.map((q, i) => (
-        <fieldset
-          key={`${service}-${q.id}`}
-          data-field={q.id}
-          className={`animate-enter-up [animation-duration:0.5s] ${cardClass(errors[q.id])}`}
-          style={{ ["--enter-delay" as string]: `${i * 70}ms` }}
-        >
-          <legend className="float-left mb-2.5 w-full sm:mb-3">
-            <Step
-              n={i + 2}
-              done={Boolean(answers[q.id])}
-              error={Boolean(errors[q.id])}
+  if (step === 0) {
+    title = "What do you need?";
+    hint = "Pick a service to get started.";
+    body = (
+      <div role="radiogroup" aria-labelledby={STEP_TITLE_ID} className="grid gap-2.5">
+        {SERVICE_ORDER.map((key) => {
+          const { name: serviceName, description, thumb } = SERVICES[key];
+          return (
+            <OptionTile
+              key={key}
+              name="service"
+              value={key}
+              checked={service === key}
+              onSelect={() => selectService(key)}
+              onTap={advanceSoon}
             >
-              {q.label}
-            </Step>
-          </legend>
-          <div className="clear-both" />
-          <ChipGroup
-            name={`${service}-${q.id}`}
-            options={q.options}
-            value={answers[q.id]}
-            onChange={(value) => {
-              setAnswers((prev) => ({ ...prev, [q.id]: value }));
-              setErrors((prev) => ({ ...prev, [q.id]: "" }));
-            }}
-          />
-          {errors[q.id] && (
-            <p className="mt-2 text-[13px] font-medium text-red-600">{errors[q.id]}</p>
-          )}
-        </fieldset>
-      ))}
-
-      <div className={cardClass()}>
-        <label htmlFor="pricing-name" className="mb-2.5 block sm:mb-3">
-          <Step n={nameStep} done={Boolean(name.trim())}>
-            <span>
-              Your name{" "}
-              <span className="text-xs font-medium text-slate sm:text-sm">(optional)</span>
-            </span>
-          </Step>
+              <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-btn bg-paper">
+                <Image src={`${THUMB_BASE}/${thumb}.jpg`} alt="" fill sizes="56px" className="object-cover" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[0.9375rem] font-semibold leading-tight text-ink">
+                  {serviceName}
+                </span>
+                <span className="mt-0.5 block text-xs leading-snug text-slate">{description}</span>
+              </span>
+            </OptionTile>
+          );
+        })}
+      </div>
+    );
+  } else if (question) {
+    title = question.label;
+    hint = "Choose the option that fits best.";
+    body = (
+      <div role="radiogroup" aria-labelledby={STEP_TITLE_ID} className="grid gap-2.5 sm:grid-cols-2">
+        {question.options.map((option) => (
+          <OptionTile
+            key={option}
+            name={`${service}-${question.id}`}
+            value={option}
+            checked={answers[question.id] === option}
+            onSelect={() => setAnswers((prev) => ({ ...prev, [question.id]: option }))}
+            onTap={advanceSoon}
+          >
+            <span className="text-[0.9375rem] font-medium text-ink">{option}</span>
+          </OptionTile>
+        ))}
+      </div>
+    );
+  } else {
+    title = "Almost done!";
+    hint = "Check your answers and we'll send the pricing on WhatsApp.";
+    const rows = service
+      ? [
+          { label: "Service", value: SERVICES[service].name, step: 0 },
+          ...questions.map((q, i) => ({ label: q.summary, value: answers[q.id], step: i + 1 })),
+        ]
+      : [];
+    body = (
+      <>
+        <label htmlFor="pricing-name" className="block text-sm font-semibold text-ink">
+          Your name <span className="font-normal text-slate">(optional)</span>
         </label>
         <input
           id="pricing-name"
@@ -419,20 +328,115 @@ export default function PricingForm({
           value={name}
           onChange={(event) => setName(event.target.value)}
           placeholder="e.g. Rahul Sharma"
-          className="w-full rounded-btn border border-line bg-paper px-3.5 py-2.5 text-base text-ink transition placeholder:text-slate/70 focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/15 sm:py-2.5 sm:text-sm"
+          className="mt-2 w-full rounded-btn border border-line bg-paper px-3.5 py-3 text-base text-ink transition placeholder:text-slate/70 focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/15 sm:text-sm"
         />
+
+        <div className="mt-5 rounded-card bg-paper px-4 py-1">
+          <dl className="divide-y divide-line">
+            {rows.map((row) => (
+              <div key={row.label} className="flex items-center gap-3 py-2.5">
+                <dt className="text-sm text-slate">{row.label}</dt>
+                <dd className="ml-auto flex items-center gap-3 text-right text-sm font-semibold text-ink">
+                  {row.value}
+                  <button
+                    type="button"
+                    onClick={() => goTo(row.step)}
+                    className="text-xs font-semibold text-primary hover:text-ink"
+                    aria-label={`Change ${row.label.toLowerCase()}`}
+                  >
+                    Change
+                  </button>
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </>
+    );
+  }
+
+  const buttonClass =
+    "group inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-btn bg-primary px-6 py-3 text-[0.9375rem] font-semibold text-white shadow-[0_14px_30px_-12px_rgba(252,108,38,0.7)] transition hover:bg-primary/90 active:scale-[0.98] disabled:bg-line disabled:text-slate disabled:shadow-none sm:text-base";
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      noValidate
+      className="flex min-h-[min(32rem,calc(92dvh-2.5rem))] flex-col"
+    >
+      {/* App bar — right padding leaves room for the modal's close button */}
+      <div className="-mt-2 flex items-center gap-1 pr-10 sm:-mt-5">
+        <button
+          type="button"
+          onClick={() => goTo(Math.max(step - 1, 0))}
+          disabled={step === 0}
+          aria-label="Previous step"
+          className="-ml-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink transition hover:bg-tint disabled:invisible"
+        >
+          <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+        </button>
+        <div className="min-w-0">
+          <Heading className="text-base font-semibold leading-tight tracking-[-0.01em] text-ink">
+            Get the pricing
+          </Heading>
+          <p className="text-xs text-slate" aria-live="polite">
+            Step {step + 1} of {totalSteps}
+          </p>
+        </div>
       </div>
 
-      {/* Sticky action bar on mobile; bleeds over the parent's p-5 padding */}
-      <div className="sticky bottom-0 z-10 -mx-5 -mb-5 mt-2 flex flex-col gap-2.5 border-t border-line bg-white/95 px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-12px_24px_-16px_rgba(1,18,60,0.25)] backdrop-blur-md sm:static sm:mx-0 sm:mb-0 sm:gap-3 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none sm:backdrop-blur-none">
-        <button
-          type="submit"
-          className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-btn bg-primary px-6 py-3 text-[0.9375rem] font-bold sm:min-h-13 sm:text-base tracking-[-0.01em] text-white shadow-[0_14px_30px_-12px_rgba(252,108,38,0.7)] transition hover:-translate-y-0.5 hover:bg-primary/90 active:translate-y-0"
-        >
-          <WhatsAppIcon />
-          Get the pricing
-        </button>
-        <p className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] font-medium text-slate sm:gap-x-4 sm:text-xs">
+      <div
+        className="mt-3 flex gap-1.5"
+        role="progressbar"
+        aria-label="Form progress"
+        aria-valuemin={1}
+        aria-valuemax={totalSteps}
+        aria-valuenow={step + 1}
+      >
+        {Array.from({ length: totalSteps }, (_, i) => (
+          <span
+            key={i}
+            className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
+              i <= step ? "bg-primary" : "bg-line"
+            }`}
+          />
+        ))}
+      </div>
+
+      {/* Clips the sideways slide so it never adds a horizontal scrollbar */}
+      <div className="-mx-2 mt-6 overflow-x-clip px-2 pb-1">
+        <div key={step} className={direction === "next" ? "animate-step-next" : "animate-step-back"}>
+          <StepHeading
+            ref={titleRef}
+            id={STEP_TITLE_ID}
+            tabIndex={-1}
+            className="text-xl font-semibold leading-snug text-ink focus:outline-none sm:text-2xl"
+          >
+            {title}
+          </StepHeading>
+          {hint && <p className="mt-1 text-sm text-slate">{hint}</p>}
+          <div className="mt-5">{body}</div>
+        </div>
+      </div>
+
+      <div className="mt-auto pt-6">
+        {isLast ? (
+          <button key="submit" type="submit" className={buttonClass}>
+            <WhatsAppIcon />
+            Get the pricing on WhatsApp
+          </button>
+        ) : (
+          <button
+            key="next"
+            type="button"
+            onClick={() => goTo(step + 1)}
+            disabled={!canContinue}
+            className={buttonClass}
+          >
+            Continue
+          </button>
+        )}
+        <p className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] font-medium text-slate sm:gap-x-4 sm:text-xs">
           {["No spam", "No commitment", "Quick reply"].map((item) => (
             <span key={item} className="inline-flex items-center gap-1">
               <span className="text-primary">

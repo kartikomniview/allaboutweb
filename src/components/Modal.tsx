@@ -44,6 +44,11 @@ export default function Modal({
         tabIndex={-1}
         className="animate-enter-up [animation-duration:0.35s] relative max-h-[92dvh] w-full overflow-y-auto rounded-t-panel bg-white shadow-2xl focus:outline-none sm:max-w-xl sm:rounded-panel"
       >
+        {/* Bottom-sheet grab handle on mobile (decorative) */}
+        <span
+          className="absolute left-1/2 top-2 h-1 w-10 -translate-x-1/2 rounded-full bg-line sm:hidden"
+          aria-hidden="true"
+        />
         <button
           type="button"
           onClick={() => router.back()}

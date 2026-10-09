@@ -45,15 +45,15 @@ export default function Testimonials() {
               </div>
               <Quote className="h-7 w-7 text-tint" fill="currentColor" aria-hidden="true" />
             </div>
-            <blockquote className="mt-4 flex-1 text-[0.9375rem] leading-7 text-ink">
+            <blockquote className="mt-4 flex-1 text-sm leading-6.5 text-ink sm:text-[0.9375rem] sm:leading-7">
               “{t.quote}”
             </blockquote>
             <figcaption className="mt-5 flex items-center gap-3 border-t border-line pt-4">
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-sm font-bold text-white">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-sm font-semibold text-white">
                 {initials(t.name)}
               </span>
               <span>
-                <span className="block text-sm font-bold text-ink">{t.name}</span>
+                <span className="block text-sm font-semibold text-ink">{t.name}</span>
                 <span className="block text-xs text-slate">
                   {t.business} · {t.city}
                 </span>

@@ -61,7 +61,7 @@ export default function HScroll({
         ref={trackRef}
         role="region"
         aria-label={label}
-        className={`no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-4 pt-1 sm:-mx-6 sm:scroll-px-6 sm:gap-4 sm:px-6 ${
+        className={`no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto overflow-y-hidden overscroll-x-contain px-4 pb-4 pt-1 sm:-mx-6 sm:scroll-px-6 sm:gap-4 sm:px-6 ${
           gridClassName ?? ""
         }`}
       >

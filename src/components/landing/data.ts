@@ -18,6 +18,12 @@ import { pricingHref, whatsappUrl } from "@/lib/contact";
 
 const S3 = "https://aawsite.s3.ap-south-1.amazonaws.com/website/landing";
 
+/** Square tile photo kept in `public/icon/services/compressed/<id>.jpg` */
+const thumb = (id: string) => `/icon/services/compressed/${id}.jpg`;
+
+/** 4:3 card photo for a secondary service, kept in `public/icon/moreservices/<id>.webp` */
+const moreImage = (id: string) => `/icon/moreservices/${id}.webp`;
+
 const enquire = (service: string) =>
   whatsappUrl(`Hi AllAboutWeb, I'm interested in ${service}. Please share the details.`);
 
@@ -32,7 +38,7 @@ export type Service = {
   price: string;
   icon: LucideIcon;
   image?: string;
-  /** Square photo for the mobile quick-access grid (`${S3}/thumbs/<id>.webp`) */
+  /** Square photo for the mobile quick-access grid (see `thumb()`) */
   thumb?: string;
   href: string;
   badge?: string;
@@ -48,7 +54,8 @@ export const FEATURED_SERVICES: Service[] = [
     description: "A fast, mobile-friendly website that shows up on Google and brings enquiries.",
     price: "9,999",
     icon: Globe,
-    image: `${S3}/services/websites/1.webp`,
+    thumb: thumb("website-development"),
+    image: `${S3}/services/websites/2.webp`,
     href: pricingHref("website"),
     features: ["Works on every phone", "Shows on Google", "WhatsApp button"],
   },
@@ -59,6 +66,7 @@ export const FEATURED_SERVICES: Service[] = [
     description: "All your products and prices in one link customers can browse on their phone.",
     price: "4,999",
     icon: LayoutGrid,
+    thumb: thumb("e-catalog"),
     image: `${S3}/services/e-catalog/1.webp`,
     href: pricingHref("ecatalog"),
     badge: "Most popular",
@@ -71,6 +79,7 @@ export const FEATURED_SERVICES: Service[] = [
     description: "A neat, branded catalog customers can save, print or forward on WhatsApp.",
     price: "2,999",
     icon: FileText,
+    thumb: thumb("product-catalog-pdf"),
     image: `${S3}/services/pdf-catalog/1.webp`,
     href: pricingHref("pdf"),
     features: ["Print ready", "Send on WhatsApp", "Easy to update"],
@@ -86,6 +95,8 @@ export const MORE_SERVICES: Service[] = [
     description: "One focused page that turns ad clicks into enquiries.",
     price: "4,999",
     icon: MousePointerClick,
+    thumb: thumb("landing-page"),
+    image: moreImage("landing-page"),
     href: enquire("a Landing Page"),
   },
   {
@@ -95,6 +106,8 @@ export const MORE_SERVICES: Service[] = [
     description: "Sell online with cart, payments and order management.",
     price: "24,999",
     icon: ShoppingBag,
+    thumb: thumb("ecommerce-store"),
+    image: moreImage("ecommerce-store"),
     href: enquire("an E-commerce Store"),
   },
   {
@@ -104,6 +117,8 @@ export const MORE_SERVICES: Service[] = [
     description: "Logo, brand colours and visiting card design.",
     price: "2,499",
     icon: Palette,
+    thumb: thumb("logo-branding"),
+    image: moreImage("logo-branding"),
     href: enquire("Logo & Branding"),
   },
   {
@@ -113,6 +128,8 @@ export const MORE_SERVICES: Service[] = [
     description: "Get found on Google Maps by customers near you.",
     price: "1,999",
     icon: MapPin,
+    thumb: thumb("google-business-profile"),
+    image: moreImage("google-business-profile"),
     href: enquire("Google Business Profile setup"),
   },
   {
@@ -122,6 +139,8 @@ export const MORE_SERVICES: Service[] = [
     description: "Posts and banners for Instagram, Facebook and WhatsApp.",
     price: "2,999",
     icon: Megaphone,
+    thumb: thumb("social-media-creatives"),
+    image: moreImage("social-media-creatives"),
     href: enquire("Social Media Creatives"),
   },
 ];

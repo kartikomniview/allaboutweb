@@ -24,7 +24,7 @@ export default function Hero() {
       <div className="mx-auto max-w-6xl px-4 pb-10 pt-4 sm:px-6 sm:pb-16 sm:pt-10 header:px-8 lg:grid lg:grid-cols-[1fr_1.05fr] lg:items-center lg:gap-14 lg:pb-24 lg:pt-14">
         <div>
           <h1
-            className="animate-enter-up max-w-xl text-[1.875rem] font-extrabold leading-[1.12] sm:text-5xl sm:leading-[1.08] lg:text-[3.5rem]"
+            className="animate-enter-up max-w-xl text-[1.625rem] font-bold leading-[1.15] sm:text-5xl sm:leading-[1.08] lg:text-[3.5rem]"
             style={enter(0)}
           >
             Websites &amp; digital catalogs that{" "}
@@ -32,7 +32,7 @@ export default function Hero() {
           </h1>
 
           <p
-            className="animate-enter-up mt-3 max-w-lg text-[0.9375rem] leading-6.5 text-slate sm:mt-6 sm:text-lg sm:leading-8"
+            className="animate-enter-up mt-3 max-w-lg text-sm leading-6 text-slate sm:mt-6 sm:text-lg sm:leading-8"
             style={enter(160)}
           >
             We design <strong>websites</strong>, <strong>shareable e-catalogs</strong> and{" "}
@@ -68,7 +68,7 @@ export default function Hero() {
             {STATS.map((stat) => (
               <div key={stat.label} className="flex flex-col-reverse px-4 py-3.5">
                 <dt className="text-xs text-slate">{stat.label}</dt>
-                <dd className="text-lg font-bold text-ink">{stat.value}</dd>
+                <dd className="text-lg font-semibold text-ink">{stat.value}</dd>
               </div>
             ))}
           </dl>
@@ -81,7 +81,7 @@ export default function Hero() {
         {/* Mobile / tablet: app-style quick access to every service */}
         <div className="mt-7 lg:hidden">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-ink">Our services</h2>
+            <h2 className="text-[0.9375rem] font-semibold text-ink">Our services</h2>
             <a href="#services" className="text-sm font-semibold text-primary">
               View all
             </a>
@@ -106,7 +106,7 @@ export default function Hero() {
             {STATS.map((stat) => (
               <div key={stat.label} className="flex flex-col-reverse bg-white px-4 py-3">
                 <dt className="text-xs text-slate">{stat.label}</dt>
-                <dd className="text-base font-bold text-ink">{stat.value}</dd>
+                <dd className="text-base font-semibold text-ink">{stat.value}</dd>
               </div>
             ))}
           </dl>

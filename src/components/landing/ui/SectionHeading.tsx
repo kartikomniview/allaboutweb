@@ -32,13 +32,13 @@ export default function SectionHeading({
       <div className={action ? "max-w-2xl" : undefined}>
         <p
           data-reveal="up"
-          className="text-[0.6875rem] font-bold uppercase tracking-[0.16em] text-primary sm:text-xs"
+          className="text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-primary sm:text-xs"
         >
           {eyebrow}
         </p>
         <h2
           data-reveal="up"
-          className={`mt-2 text-[1.5rem] font-bold leading-[1.2] [--reveal-delay:80ms] sm:mt-3 sm:text-4xl sm:leading-[1.15] lg:text-[2.625rem] ${
+          className={`mt-2 text-[1.3125rem] font-semibold leading-[1.25] [--reveal-delay:80ms] sm:mt-3 sm:text-4xl sm:leading-[1.15] lg:text-[2.625rem] ${
             dark ? "text-white" : "text-ink"
           }`}
         >

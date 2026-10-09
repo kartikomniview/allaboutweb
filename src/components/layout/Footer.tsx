@@ -38,7 +38,7 @@ export default function Footer() {
           </div>
 
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-ink">Company</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink">Company</p>
             <ul className="mt-3 flex flex-col">
               {COMPANY_LINKS.map((link) => (
                 <li key={link.href}>
@@ -51,7 +51,7 @@ export default function Footer() {
           </div>
 
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-ink">Services</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink">Services</p>
             <ul className="mt-3 flex flex-col">
               {ALL_SERVICES.map((service) => (
                 <li key={service.id}>
@@ -64,7 +64,7 @@ export default function Footer() {
           </div>
 
           <div className="col-span-2 sm:col-span-1">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-ink">Contact</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink">Contact</p>
             <ul className="mt-3 flex flex-col gap-1">
               <li>
                 <a href={`tel:+${WHATSAPP_NUMBER}`} className={`${linkClass} inline-flex items-center gap-2`}>

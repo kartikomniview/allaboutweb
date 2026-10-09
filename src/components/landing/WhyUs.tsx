@@ -46,7 +46,7 @@ export default function WhyUs() {
             <span className="inline-flex items-center justify-center rounded-btn bg-white p-2.5 text-primary shadow-card transition group-hover:bg-primary group-hover:text-white">
               <Icon className="h-5 w-5" aria-hidden="true" />
             </span>
-            <h3 className="mt-3 text-sm font-bold leading-snug text-ink sm:mt-4 sm:text-lg">{title}</h3>
+            <h3 className="mt-3 text-sm font-semibold leading-snug text-ink sm:mt-4 sm:text-lg">{title}</h3>
             <p className="mt-1 text-xs leading-5 text-slate sm:mt-2 sm:text-[0.9375rem] sm:leading-7">
               {description}
             </p>

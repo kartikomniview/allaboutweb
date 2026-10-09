@@ -20,18 +20,18 @@ function WorkCard({ item }: { item: WorkItem }) {
           sizes="(min-width: 768px) 33vw, 82vw"
           className="object-cover object-top transition duration-500 group-hover:scale-105"
         />
-        <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[0.6875rem] font-bold uppercase tracking-wider text-ink shadow-sm">
+        <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[0.6875rem] font-semibold uppercase tracking-wider text-ink shadow-sm">
           {category}
         </span>
         {badge && (
-          <span className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-primary px-2.5 py-1 text-[0.6875rem] font-bold uppercase tracking-wider text-white shadow-sm">
+          <span className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-primary px-2.5 py-1 text-[0.6875rem] font-semibold uppercase tracking-wider text-white shadow-sm">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" aria-hidden="true" />
             {badge}
           </span>
         )}
       </div>
       <div className="flex flex-1 flex-col p-4 sm:p-5">
-        <h3 className="text-base font-bold text-ink sm:text-lg">{title}</h3>
+        <h3 className="text-[0.9375rem] font-semibold text-ink sm:text-lg">{title}</h3>
         <p className="mt-1.5 text-sm leading-6 text-slate">{description}</p>
         {link && (
           <span className="mt-auto inline-flex items-center gap-1 pt-4 text-sm font-semibold text-primary">

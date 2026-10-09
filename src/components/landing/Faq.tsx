@@ -84,7 +84,7 @@ export default function Faq() {
             data-reveal="up"
             className="mt-8 hidden rounded-card border border-line bg-white p-6 shadow-card lg:block"
           >
-            <p className="font-bold text-ink">Still have a question?</p>
+            <p className="font-semibold text-ink">Still have a question?</p>
             <p className="mt-1 text-sm text-slate">
               Message us on WhatsApp and we&apos;ll get back to you.
             </p>
@@ -108,7 +108,7 @@ export default function Faq() {
               style={revealDelay(i * 70)}
               className="group rounded-card border border-line bg-white shadow-card transition open:border-primary/40"
             >
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-4 text-[0.9375rem] font-semibold text-ink marker:content-none hover:text-primary sm:p-5 sm:text-base [&::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-4 text-sm font-semibold text-ink marker:content-none hover:text-primary sm:p-5 sm:text-base [&::-webkit-details-marker]:hidden">
                 {faq.question}
                 <span
                   className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-tint text-primary transition-transform group-open:rotate-45"

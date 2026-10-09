@@ -24,7 +24,7 @@ export function ServiceCard({ service, className = "" }: { service: Service; cla
             />
           )}
           {badge && (
-            <span className="absolute left-3 top-3 rounded-full bg-primary px-2.5 py-1 text-[0.6875rem] font-bold uppercase tracking-wider text-white shadow-sm">
+            <span className="absolute left-3 top-3 rounded-full bg-primary px-2.5 py-1 text-[0.6875rem] font-semibold uppercase tracking-wider text-white shadow-sm">
               {badge}
             </span>
           )}
@@ -35,7 +35,7 @@ export function ServiceCard({ service, className = "" }: { service: Service; cla
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-btn bg-tint text-primary">
               <Icon className="h-5 w-5" aria-hidden="true" />
             </span>
-            <h3 className="text-base font-bold leading-snug text-ink sm:text-lg">{name}</h3>
+            <h3 className="text-[0.9375rem] font-semibold leading-snug text-ink sm:text-lg">{name}</h3>
           </div>
           <p className="mt-3 text-sm leading-6 text-slate">{description}</p>
 
@@ -53,7 +53,7 @@ export function ServiceCard({ service, className = "" }: { service: Service; cla
           <div className="mt-auto pt-4">
             <div className="flex items-center justify-between border-t border-line pt-4">
               <span className="text-sm text-slate">
-                From <strong className="text-base font-bold text-ink">₹{price}</strong>
+                From <strong className="text-[0.9375rem] font-semibold text-ink sm:text-base">₹{price}</strong>
               </span>
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-ink text-white transition group-hover:bg-primary">
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
@@ -66,26 +66,49 @@ export function ServiceCard({ service, className = "" }: { service: Service; cla
   );
 }
 
-/** Compact icon card for secondary services. */
-export function ServiceMiniCard({ service }: { service: Service }) {
-  const { id, name, description, price, icon: Icon, href } = service;
+/** Compact photo card for secondary services. */
+export function ServiceMiniCard({ service, wide = false }: { service: Service; wide?: boolean }) {
+  const { id, name, description, price, icon: Icon, image, href } = service;
 
   return (
     <SmartLink
       href={href}
-      className="group flex w-full flex-col rounded-card border border-line bg-white p-4 shadow-card transition duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lift"
+      className="group flex w-full flex-col overflow-hidden rounded-card border border-line bg-white shadow-card transition duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lift"
     >
       <article id={id} className="flex flex-1 scroll-mt-24 flex-col">
-        <span className="flex h-11 w-11 items-center justify-center rounded-btn bg-paper text-ink transition group-hover:bg-tint group-hover:text-primary">
-          <Icon className="h-5 w-5" aria-hidden="true" />
-        </span>
-        <h3 className="mt-3 text-sm font-bold leading-snug text-ink sm:text-base">{name}</h3>
-        <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate sm:text-sm sm:leading-6">
-          {description}
-        </p>
-        <p className="mt-auto pt-3 text-xs text-slate">
-          From <strong className="text-sm font-bold text-ink">₹{price}</strong>
-        </p>
+        {/* A full-row card on the 2-column mobile grid gets a letterbox crop */}
+        <div
+          className={`relative overflow-hidden bg-tint ${wide ? "aspect-[16/7] sm:aspect-[4/3]" : "aspect-[4/3]"}`}
+        >
+          {image ? (
+            <>
+              <Image
+                src={image}
+                alt={`${name} by AllAboutWeb`}
+                fill
+                sizes={wide ? "(min-width: 1024px) 20vw, (min-width: 640px) 33vw, 100vw" : "(min-width: 1024px) 20vw, (min-width: 640px) 33vw, 50vw"}
+                className="object-cover transition duration-500 group-hover:scale-105"
+              />
+              <span className="absolute bottom-2 left-2 flex h-8 w-8 items-center justify-center rounded-btn bg-white/95 text-primary shadow-sm">
+                <Icon className="h-4 w-4" aria-hidden="true" />
+              </span>
+            </>
+          ) : (
+            <span className="flex h-full items-center justify-center text-primary/70">
+              <Icon className="h-9 w-9" strokeWidth={1.5} aria-hidden="true" />
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-1 flex-col p-3 sm:p-4">
+          <h3 className="text-sm font-semibold leading-snug text-ink sm:text-base">{name}</h3>
+          <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate sm:text-sm sm:leading-6">
+            {description}
+          </p>
+          <p className="mt-auto pt-3 text-xs text-slate">
+            From <strong className="text-sm font-semibold text-ink">₹{price}</strong>
+          </p>
+        </div>
       </article>
     </SmartLink>
   );

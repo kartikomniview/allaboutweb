@@ -68,7 +68,7 @@ export default function Pricing() {
             }`}
           >
             {popular && (
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-primary px-3 py-1 text-xs font-bold uppercase tracking-wider text-white">
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-primary px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white">
                 Most popular
               </span>
             )}
@@ -81,7 +81,7 @@ export default function Pricing() {
               >
                 <Icon className="h-5 w-5" aria-hidden="true" />
               </span>
-              <h3 className="text-base font-bold sm:text-lg">{label}</h3>
+              <h3 className="text-[0.9375rem] font-semibold sm:text-lg">{label}</h3>
             </div>
 
             <p className={`mt-4 text-sm ${popular ? "text-white/70" : "text-slate"}`}>{tagline}</p>
@@ -94,7 +94,7 @@ export default function Pricing() {
               >
                 Starting at
               </span>
-              <p className="text-[1.75rem] font-extrabold sm:text-4xl">₹{price}</p>
+              <p className="text-2xl font-bold sm:text-4xl">₹{price}</p>
             </div>
 
             <ul className="mt-5 space-y-2.5 text-sm sm:mt-6 sm:space-y-3 sm:text-[0.9375rem]">
