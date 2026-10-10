@@ -14,8 +14,6 @@ import {
   X,
   Check,
   MessageCircle,
-  Phone,
-  ShieldCheck,
   Sparkles,
   Home,
   LayoutGrid,
@@ -33,7 +31,6 @@ import {
   DIWALI_BANNERS,
   DIWALI_OFFERS,
   DIWALI_PICK_IDS,
-  FAQS,
   FESTIVE_GIFT,
   FESTIVE_RIBBON,
   INITIAL_WISHLIST_IDS,
@@ -47,6 +44,8 @@ import {
 } from './data';
 import type { CatalogProduct } from '@/lib/adminProducts';
 import CatalogPage, { DEFAULT_CATALOG_FILTERS, type CatalogFilters } from './CatalogPage';
+import DemoWhatsAppDialog from './DemoWhatsAppDialog';
+import StoreInfoPage from './StoreInfoPage';
 import {
   CATALOG_PATH,
   CatalogContext,
@@ -176,23 +175,27 @@ export default function FurnitureCatalogApp({
     return () => clearInterval(timer);
   }, []);
 
+  // Demo WhatsApp: the enquiry text waiting for the visitor to enter their own number
+  const [demoWhatsAppMessage, setDemoWhatsAppMessage] = useState<string | null>(null);
+  const openWhatsApp = (url: string) => {
+    setDemoWhatsAppMessage(new URL(url).searchParams.get('text') ?? '');
+  };
+  const onWhatsAppLinkClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    openWhatsApp(e.currentTarget.href);
+  };
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
   };
 
   const handleClaimDiwaliOffer = (banner: DiwaliBanner) => {
-    showToast(`🪔 Claiming: ${banner.headline}`);
-    setTimeout(() => {
-      window.open(getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.banner(banner)), '_blank');
-    }, 400);
+    openWhatsApp(getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.banner(banner)));
   };
 
   const handleClaimOffer = (offer: DiwaliOffer) => {
-    showToast(`🪔 Claiming ${offer.title} (${offer.benefit})`);
-    setTimeout(() => {
-      window.open(getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.offer(offer)), '_blank');
-    }, 400);
+    openWhatsApp(getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.offer(offer)));
   };
 
   const handleSelectCategory = (cat: MainCategory, sub?: string) => {
@@ -259,6 +262,8 @@ export default function FurnitureCatalogApp({
       inAppNavigationRef.current = true;
     },
     hasInAppHistory: () => inAppNavigationRef.current,
+    openWhatsApp,
+    onWhatsAppLinkClick,
   };
 
   return (
@@ -302,7 +307,7 @@ export default function FurnitureCatalogApp({
               </span>
             </div>
             <button
-              onClick={() => window.open(getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.festiveRibbon()), '_blank')}
+              onClick={() => openWhatsApp(getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.festiveRibbon()))}
               className="bg-amber-400 hover:bg-amber-300 text-neutral-900 font-bold px-2.5 py-0.5 rounded-full text-[9px] shrink-0 transition-transform active:scale-95 shadow-2xs ml-1.5 flex items-center gap-1"
             >
               <span>Claim</span>
@@ -362,7 +367,6 @@ export default function FurnitureCatalogApp({
               <MapPin className="w-3 h-3 text-[#8B5A2B]" />
               <span className="font-semibold text-neutral-900">{STORE.deliveryArea}</span>
               <span className="text-neutral-400">·</span>
-              <span className="text-emerald-700 font-medium">{STORE.deliveryPerk}</span>
             </div>
             <span className="text-[10px] text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded-full flex items-center gap-1">
               <DiyaIcon className="w-3 h-3" />
@@ -424,6 +428,7 @@ export default function FurnitureCatalogApp({
                   <p className="text-[11px] text-neutral-500">Need something custom made? Send a photo to our carpenter on WhatsApp.</p>
                   <a
                     href={getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.searchNotFound(searchQuery))}
+                    onClick={onWhatsAppLinkClick}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#25D366] text-white text-xs font-semibold rounded-xl shadow-xs"
@@ -461,7 +466,7 @@ export default function FurnitureCatalogApp({
                               if (story.action === 'offers') {
                                 document.getElementById('diwali-offers-section')?.scrollIntoView({ behavior: 'smooth' });
                               } else if (story.action === 'whatsapp') {
-                                window.open(getWhatsAppUrl(), '_blank');
+                                openWhatsApp(getWhatsAppUrl());
                               } else {
                                 handleSelectCategory(story.category);
                               }
@@ -585,7 +590,7 @@ export default function FurnitureCatalogApp({
                           icon: Gift,
                           title: FESTIVE_GIFT.title,
                           sub: 'Free gift',
-                          onClick: () => window.open(getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.festiveGift()), '_blank'),
+                          onClick: () => openWhatsApp(getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.festiveGift())),
                         },
                       ].map(({ id, icon: Icon, title, sub, onClick }) => (
                         <button
@@ -667,6 +672,7 @@ export default function FurnitureCatalogApp({
                     </div>
                     <a
                       href={getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.customDimensions())}
+                      onClick={onWhatsAppLinkClick}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs active:scale-98 transition-all"
@@ -739,6 +745,7 @@ export default function FurnitureCatalogApp({
                       {/* Bulk WhatsApp Inquiry Action */}
                       <a
                         href={getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.wishlistPackage(wishlistedProducts))}
+                        onClick={onWhatsAppLinkClick}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="bg-[#25D366] hover:bg-[#20bd5a] text-white p-3 rounded-2xl flex items-center justify-between font-semibold text-xs shadow-md active:scale-98 transition-all"
@@ -763,99 +770,8 @@ export default function FurnitureCatalogApp({
                 </div>
               )}
 
-              {/* TAB 4: WHATSAPP CONCIERGE & HELP CENTER */}
-              {activeTab === 'help' && (
-                <div className="space-y-3.5 pt-1">
-                  <div>
-                    <h2 className="text-sm font-bold text-[#111111]">Customer Concierge</h2>
-                    <p className="text-[11px] text-neutral-500">Fast assistance for Indian homeowners & interior orders</p>
-                  </div>
-
-                  {/* Primary WhatsApp Card */}
-                  <div className="bg-gradient-to-br from-[#25D366] to-[#128C7E] rounded-3xl p-4 text-white shadow-lg space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="inline-flex items-center gap-1 bg-white/20 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                        {STORE.whatsappSupport.status}
-                      </span>
-                      <span className="text-[10px] text-white/80">{STORE.whatsappSupport.replyTime}</span>
-                    </div>
-
-                    <h3 className="text-base font-bold">{STORE.whatsappSupport.title}</h3>
-                    <p className="text-[11px] text-white/90 leading-snug">
-                      {STORE.whatsappSupport.description}
-                    </p>
-
-                    <a
-                      href={getWhatsAppUrl()}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-2 w-full bg-white text-[#128C7E] hover:bg-neutral-100 py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs active:scale-95 transition-all"
-                    >
-                      <WhatsAppIcon className="w-4 h-4" />
-                      <span>Start WhatsApp Chat</span>
-                    </a>
-                  </div>
-
-                  {/* Toll-Free Call Card */}
-                  <div className="bg-white rounded-2xl p-3.5 flex items-center justify-between shadow-xs">
-                    <div className="flex items-center gap-3">
-                      <span className="p-2 rounded-xl bg-neutral-100 text-neutral-700">
-                        <Phone className="w-4 h-4" />
-                      </span>
-                      <div>
-                        <p className="text-xs font-bold text-neutral-900">Direct Phone Support</p>
-                        <p className="text-[11px] text-neutral-500">{STORE.phone.display} ({STORE.phone.hours})</p>
-                      </div>
-                    </div>
-                    <a
-                      href={`tel:${STORE.phone.tel}`}
-                      className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-semibold rounded-xl"
-                    >
-                      Call Now
-                    </a>
-                  </div>
-
-                  {/* Bengaluru Showroom Experience */}
-                  <div className="bg-white rounded-2xl p-3.5 space-y-2 shadow-xs">
-                    <div className="flex items-start gap-2.5">
-                      <span className="p-2 rounded-xl bg-[#FAF5EE] text-[#8B5A2B] shrink-0">
-                        <MapPin className="w-4 h-4" />
-                      </span>
-                      <div>
-                        <h4 className="text-xs font-bold text-neutral-900">{STORE.showroom.title}</h4>
-                        <p className="text-[11px] text-neutral-600 mt-0.5">
-                          {STORE.showroom.address}
-                        </p>
-                        <p className="text-[10px] text-neutral-400 mt-1">{STORE.showroom.hours}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Warranty & Wood Certificate */}
-                  <div className="bg-white rounded-2xl p-3.5 space-y-2 shadow-xs">
-                    <div className="flex items-center gap-2 text-xs font-bold text-neutral-900">
-                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                      <span>{STORE.warranty.title}</span>
-                    </div>
-                    <p className="text-[11px] text-neutral-600 leading-relaxed">
-                      {STORE.warranty.description}
-                    </p>
-                  </div>
-
-                  {/* FAQ Quick Accordion */}
-                  <div className="space-y-1.5 pt-1">
-                    <h4 className="text-xs font-bold text-neutral-900">Common Questions</h4>
-                    {FAQS.map((item) => (
-                      <div key={item.q}className="bg-white rounded-xl p-2.5 shadow-2xs text-[11px] space-y-0.5">
-                        <p className="font-semibold text-neutral-900">{item.q}</p>
-                        <p className="text-neutral-500 leading-snug">{item.a}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                </div>
-              )}
+              {/* TAB 4: STORE INFO & WHATSAPP — its own component (StoreInfoPage.tsx) */}
+              {activeTab === 'help' && <StoreInfoPage />}
             </>
           )}
 
@@ -943,6 +859,11 @@ export default function FurnitureCatalogApp({
 
         {/* PRODUCT PAGE (when a product route is open) */}
         {children}
+
+        {/* DEMO WHATSAPP — asks for the visitor's number, above everything */}
+        {demoWhatsAppMessage !== null && (
+          <DemoWhatsAppDialog message={demoWhatsAppMessage} onClose={() => setDemoWhatsAppMessage(null)} />
+        )}
 
         {/* FLOATING TOAST NOTIFICATION — above product pages too */}
         {toastMessage && (

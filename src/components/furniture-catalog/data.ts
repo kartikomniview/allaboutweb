@@ -27,34 +27,25 @@ export const CATEGORY_TAB_LABELS: Record<MainCategory, string> = {
 // Store details
 // ---------------------------------------------------------------------------
 
+// Demo store profile. Everything below is a PLACEHOLDER (dummy address, phone, email,
+// rating, photo) — replace with the client's real details when setting up their catalog.
 export const STORE = {
   name: 'MyStore',
   initial: 'M',
   tagline: 'Solid Wood',
   deliveryArea: 'Local Region Delivery',
   deliveryPerk: 'Free Doorstep Assembly',
-  phone: {
-    display: '1800-123-4567',
-    tel: '18001234567',
-    hours: '10 AM - 8 PM',
-  },
-  showroom: {
-    title: 'Showroom & Experience Center',
-    address: '100 Feet Road, Indiranagar, Bengaluru, Karnataka 560038',
-    hours: 'Open daily: 10:30 AM to 8:30 PM',
-  },
-  whatsappSupport: {
-    status: 'Online Now',
-    replyTime: 'Avg reply: 2 mins',
-    title: 'Chat with Master Carpenter',
-    description:
-      'Ask for real workshop timber photos, wood polish samples, custom sizes, or delivery timelines.',
-  },
-  warranty: {
-    title: '10-Year Replacement Guarantee',
-    description:
-      'Every piece is built with kiln-dried seasoned hardwood. Protected by industrial anti-termite vac-treatment. Guaranteed not to bend, warp, or crack under normal household use.',
-  },
+  // Store info tab (/help)
+  category: 'Solid Wood Furniture Store',
+  since: 2012,
+  rating: 4.8,
+  reviewCount: 1250,
+  // Optional store photo (path in public/ or an S3 URL); empty shows a placeholder.
+  coverImage: '',
+  address: 'Shop No. 12, Example Furniture Market, MG Road, Your City – 560001',
+  hours: 'Mon – Sun · 10:30 AM – 8:30 PM',
+  phone: { display: '+91 98765 43210', tel: '+919876543210' },
+  email: 'hello@mystore.example',
 };
 
 // Strip at the very top linking back to the AllAboutWeb site.

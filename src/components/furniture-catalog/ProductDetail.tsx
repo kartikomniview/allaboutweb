@@ -20,7 +20,7 @@ const MAX_HIGHLIGHTS = 3;
 // underneath), so "back" returns to the same tab and scroll position.
 export default function ProductDetail({ product }: { product: CatalogProduct }) {
   const router = useRouter();
-  const { wishlist, toggleWishlist, hasInAppHistory } = useCatalog();
+  const { wishlist, toggleWishlist, hasInAppHistory, onWhatsAppLinkClick } = useCatalog();
   const isWishlisted = wishlist.includes(product.id);
 
   const images = [...new Set([product.mainImageUrl, ...product.images].filter(Boolean))];
@@ -221,6 +221,7 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
         <div className="border-t border-neutral-100 bg-white px-4 py-3 pb-safe">
           <a
             href={getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.productFestivePrice(product))}
+            onClick={onWhatsAppLinkClick}
             target="_blank"
             rel="noopener noreferrer"
             className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] py-3 text-sm font-bold text-white shadow-sm hover:bg-[#20bd5a] active:scale-[0.98] transition-all"

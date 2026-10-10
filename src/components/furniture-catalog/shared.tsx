@@ -34,6 +34,13 @@ export type CatalogContextValue = {
   /** Records that a product page was opened from inside the catalog, so "back" can use history. */
   markInAppNavigation: () => void;
   hasInAppHistory: () => boolean;
+  /**
+   * Demo WhatsApp: takes a `getWhatsAppUrl(...)` link and, instead of messaging the store,
+   * asks the visitor for their own number and opens the enquiry in their own chat.
+   */
+  openWhatsApp: (url: string) => void;
+  /** onClick for `<a href={getWhatsAppUrl(...)}>` links — same as openWhatsApp. */
+  onWhatsAppLinkClick: (e: React.MouseEvent<HTMLAnchorElement>) => void;
 };
 
 export const CatalogContext = createContext<CatalogContextValue | null>(null);

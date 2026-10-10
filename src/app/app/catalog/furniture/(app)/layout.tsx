@@ -27,11 +27,12 @@ const DESCRIPTION =
 const SHARE_TITLE = "This Diwali, get your own e-catalog — see the live demo";
 const SHARE_DESCRIPTION =
   "No hosting, no domain — we manage everything. Just send your products and get a live catalog link with always-updated prices.";
+// JPG, not WebP: WhatsApp shows the large preview card more reliably for JPG/PNG.
 const SHARE_IMAGE = {
-  url: "https://aawsite.s3.ap-south-1.amazonaws.com/website/landing/sharing/diwali-e-catalog.webp",
+  url: "https://aawsite.s3.ap-south-1.amazonaws.com/website/landing/sharing/diwali-e-catalog.jpg",
   width: 1024,
   height: 541,
-  type: "image/webp",
+  type: "image/jpeg",
   alt: "This Diwali, get your catalog & showcase your products — AllAboutWeb e-catalog",
 };
 
