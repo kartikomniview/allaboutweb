@@ -52,3 +52,23 @@
 .furniture-catalog ::-webkit-scrollbar-thumb:hover {
   background: #a3a3a3;
 }
+
+/* Product page slides in over the catalog */
+@keyframes fc-page-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.furniture-catalog .fc-page-enter {
+  animation: fc-page-in 0.22s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .furniture-catalog .fc-page-enter {
+    animation: none;
+  }
+}

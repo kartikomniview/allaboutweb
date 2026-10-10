@@ -4,7 +4,7 @@
 // The catalog's products come from Firestore (managed in /admin/ecatalog).
 // PRODUCTS below is only the starter set for the admin "Import" button.
 
-import { RotateCcw, ShieldCheck, Truck, type LucideIcon } from 'lucide-react';
+import { BadgePercent, RotateCcw, ShieldCheck, Sofa, Truck, UtensilsCrossed, type LucideIcon } from 'lucide-react';
 import type { CatalogProduct } from '@/lib/adminProducts';
 
 export type MainCategory = 'Sofa' | 'Wardrobe' | 'Dresser' | 'Bed' | 'Dining' | 'CenterTable' | 'Chair';
@@ -3426,39 +3426,47 @@ export const PRODUCTS: CatalogProduct[] = [
 
 // Category cards for the home view. The catalog adds the design count and
 // "From" price from the live products, so they stay correct as products change.
-export const CATEGORY_CARDS: { key: MainCategory; title: string; tagline: string }[] = [
+// `image` is the furniture cut-out on white, shared with the story highlights (`public/e-catalog/highlights/`).
+export const CATEGORY_CARDS: { key: MainCategory; title: string; tagline: string; image: string }[] = [
   {
     key: 'Sofa',
+    image: '/e-catalog/highlights/sofas.webp',
     title: 'Sofas & Couches',
     tagline: 'L-shape sofas, recliners, sofa cum beds and solid wood diwans.'
   },
   {
     key: 'Wardrobe',
+    image: '/e-catalog/highlights/wardrobes.webp',
     title: 'Wardrobes',
     tagline: '2, 3 and 4-door wardrobes, sliding wardrobes and kids wardrobes.'
   },
   {
     key: 'Dresser',
+    image: '/e-catalog/highlights/dresser.webp',
     title: 'Dressers & Dressing Tables',
     tagline: 'Dressing tables with mirrors, vanities and chests of drawers.'
   },
   {
     key: 'Bed',
+    image: '/e-catalog/highlights/beds.webp',
     title: 'Beds',
     tagline: 'King, queen and single beds, hydraulic storage beds and bunk beds.'
   },
   {
     key: 'Dining',
+    image: '/e-catalog/highlights/dining.webp',
     title: 'Dining Tables & Sets',
     tagline: '2 to 8-seater dining sets, benches and bar stools.'
   },
   {
     key: 'CenterTable',
+    image: '/e-catalog/highlights/tables.webp',
     title: 'Center Tables',
     tagline: 'Rectangular, round, nesting, storage and lift-top center tables.'
   },
   {
     key: 'Chair',
+    image: '/e-catalog/highlights/chair.webp',
     title: 'Chairs & Armchairs',
     tagline: 'Armchairs, rocking chairs, study chairs and dining chairs.'
   }
@@ -3473,7 +3481,10 @@ export interface DiwaliBanner {
   description: string;
   highlight: string;
   ctaText: string;
+  /** Fallback colour while the image loads */
   gradient: string;
+  /** 16:9 photo with empty space on the left for the text, in `public/e-catalog/banners/` */
+  image: string;
   categoryLink: MainCategory;
   categoryName: string;
 }
@@ -3488,6 +3499,7 @@ export const DIWALI_BANNERS: DiwaliBanner[] = [
     highlight: 'Free Doorstep Assembly in Local Region',
     ctaText: 'Claim Festive Offer',
     gradient: 'from-[#7C2D12] via-[#9A3412] to-[#B45309]',
+    image: '/e-catalog/banners/diwali-maha-utsav.webp',
     categoryLink: 'Sofa',
     categoryName: 'Living Room'
   },
@@ -3500,6 +3512,7 @@ export const DIWALI_BANNERS: DiwaliBanner[] = [
     highlight: 'Guaranteed Festive Delivery in Local Region',
     ctaText: 'View Combo Offer',
     gradient: 'from-[#854D0E] via-[#A16207] to-[#713F12]',
+    image: '/e-catalog/banners/diwali-shubh-combo.webp',
     categoryLink: 'CenterTable',
     categoryName: 'Combos'
   },
@@ -3512,6 +3525,7 @@ export const DIWALI_BANNERS: DiwaliBanner[] = [
     highlight: 'Includes Free Pure Brass Diya Gift Set',
     ctaText: 'Explore Dining Deals',
     gradient: 'from-[#78350F] via-[#92400E] to-[#B45309]',
+    image: '/e-catalog/banners/diwali-puja-dining.webp',
     categoryLink: 'Dining',
     categoryName: 'Dining Sets'
   }
@@ -3525,6 +3539,7 @@ export interface DiwaliOffer {
   desc: string;
   minOrder: string;
   tag: string;
+  icon: LucideIcon;
 }
 
 export const DIWALI_OFFERS: DiwaliOffer[] = [
@@ -3534,7 +3549,8 @@ export const DIWALI_OFFERS: DiwaliOffer[] = [
     benefit: 'Instant ₹2,500 Off',
     desc: 'Direct markdown on furniture orders above ₹25,000',
     minOrder: 'Applied automatically on booking',
-    tag: 'Festive Special'
+    tag: 'Festive Special',
+    icon: BadgePercent
   },
   {
     id: 'diwali-combo-savings',
@@ -3542,7 +3558,8 @@ export const DIWALI_OFFERS: DiwaliOffer[] = [
     benefit: 'Extra 10% Off Bundles',
     desc: 'Extra savings on Sofa + Coffee Table pairings',
     minOrder: 'Automatic bundle discount',
-    tag: 'Combo Offer'
+    tag: 'Combo Offer',
+    icon: Sofa
   },
   {
     id: 'diwali-dining-puja',
@@ -3550,7 +3567,8 @@ export const DIWALI_OFFERS: DiwaliOffer[] = [
     benefit: 'Flat ₹4,000 Off Sets',
     desc: 'Discounted on 6-Seater Royal Teak Dining Tables',
     minOrder: 'Family dining collection',
-    tag: 'Festive Feast'
+    tag: 'Festive Feast',
+    icon: UtensilsCrossed
   }
 ];
 
@@ -3591,25 +3609,25 @@ export const INITIAL_WISHLIST_IDS = ['sofa-1', 'dining-1'];
 // ---------------------------------------------------------------------------
 
 // Round "story" shortcuts at the top of the home screen.
+// `image` is a square product shot on white, kept in `public/e-catalog/highlights/`.
 export type StoryHighlight =
-  | { title: string; icon: string; action: 'offers' }
-  | { title: string; icon: string; action: 'whatsapp' }
-  | { title: string; icon: string; action: 'category'; category: MainCategory };
+  | { title: string; image: string; action: 'offers' }
+  | { title: string; image: string; action: 'whatsapp' }
+  | { title: string; image: string; action: 'category'; category: MainCategory };
+
+const highlight = (name: string) => `/e-catalog/highlights/${name}.webp`;
 
 export const STORY_HIGHLIGHTS: StoryHighlight[] = [
-  { title: 'Diwali Deals', icon: '🪔', action: 'offers' },
-  { title: 'Sofas', icon: '🛋️', action: 'category', category: 'Sofa' },
-  { title: 'Wardrobes', icon: '🚪', action: 'category', category: 'Wardrobe' },
-  { title: 'Dressers', icon: '🪞', action: 'category', category: 'Dresser' },
-  { title: 'Beds', icon: '🛏️', action: 'category', category: 'Bed' },
-  { title: 'Dining', icon: '🍽️', action: 'category', category: 'Dining' },
-  { title: 'Tables', icon: '☕', action: 'category', category: 'CenterTable' },
-  { title: 'Chairs', icon: '🪑', action: 'category', category: 'Chair' },
-  { title: 'Custom', icon: '✨', action: 'whatsapp' },
+  { title: 'Diwali Deals', image: highlight('diwali-deals'), action: 'offers' },
+  { title: 'Sofas', image: highlight('sofas'), action: 'category', category: 'Sofa' },
+  { title: 'Wardrobes', image: highlight('wardrobes'), action: 'category', category: 'Wardrobe' },
+  { title: 'Dressers', image: highlight('dresser'), action: 'category', category: 'Dresser' },
+  { title: 'Beds', image: highlight('beds'), action: 'category', category: 'Bed' },
+  { title: 'Dining', image: highlight('dining'), action: 'category', category: 'Dining' },
+  { title: 'Tables', image: highlight('tables'), action: 'category', category: 'CenterTable' },
+  { title: 'Chairs', image: highlight('chair'), action: 'category', category: 'Chair' },
+  { title: 'Custom', image: highlight('custom'), action: 'whatsapp' },
 ];
-
-// "Popular:" quick-search chips.
-export const POPULAR_SEARCHES = ['L-Shape', 'King Size', 'Hydraulic', 'Sliding', 'Dressing Table', 'Recliner', 'Sheesham'];
 
 export const CUSTOM_ORDER_CARD = {
   title: 'Need Custom Dimensions?',
