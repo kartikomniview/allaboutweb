@@ -81,7 +81,7 @@ export default function Hero() {
         {/* Mobile / tablet: app-style quick access to every service */}
         <div className="mt-7 lg:hidden">
           <div className="flex items-center justify-between">
-            <h2 className="text-[0.9375rem] font-semibold text-ink">Our services</h2>
+            <h2 className="text-[0.9375rem] font-bold text-ink">Our services</h2>
             <a href="#services" className="text-sm font-semibold text-primary">
               View all
             </a>
@@ -101,15 +101,6 @@ export default function Hero() {
             ))}
             <ServiceTile href="#services" label="All services" icon={Grid2x2} highlight />
           </nav>
-
-          <dl className="mt-7 grid grid-cols-3 gap-px overflow-hidden rounded-card border border-line bg-line shadow-card">
-            {STATS.map((stat) => (
-              <div key={stat.label} className="flex flex-col-reverse bg-white px-4 py-3">
-                <dt className="text-xs text-slate">{stat.label}</dt>
-                <dd className="text-base font-semibold text-ink">{stat.value}</dd>
-              </div>
-            ))}
-          </dl>
         </div>
       </div>
     </section>

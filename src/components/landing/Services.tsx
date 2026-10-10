@@ -14,12 +14,6 @@ export default function Services() {
       <SectionHeading
         eyebrow="Our services"
         title="Everything your business needs online"
-        description={
-          <>
-            Pick one service or combine them — <strong>clear starting prices</strong>, final
-            quote based on what you need.
-          </>
-        }
         action={
           <Link
             href={PRICING_PATH}
@@ -32,7 +26,7 @@ export default function Services() {
       />
 
       <div className="mt-6 sm:mt-10">
-        <p className="mb-3 text-sm font-semibold text-ink md:hidden">Popular</p>
+        <p className="mb-3 text-sm font-bold text-ink md:hidden">Popular</p>
         <HScroll
           label="Popular services"
           gridClassName="md:mx-0 md:grid md:grid-cols-3 md:gap-6 md:overflow-visible md:px-0"
@@ -51,7 +45,7 @@ export default function Services() {
       </div>
 
       <div className="mt-6 sm:mt-10">
-        <h3 className="text-sm font-semibold text-ink sm:text-lg">More services</h3>
+        <h3 className="text-sm font-bold text-ink sm:text-lg">More services</h3>
         <div className="mt-3 grid grid-cols-2 gap-3 sm:mt-4 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
           {MORE_SERVICES.map((service, i) => {
             // An odd last card spans the full row on the 2-column mobile grid

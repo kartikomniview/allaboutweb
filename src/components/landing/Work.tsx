@@ -8,17 +8,17 @@ import SectionHeading from "./ui/SectionHeading";
 import SmartLink from "./ui/SmartLink";
 
 function WorkCard({ item }: { item: WorkItem }) {
-  const { id, category, title, description, image, link, badge } = item;
+  const { id, category, title, image, link, badge } = item;
 
   const body = (
     <article id={id} className="flex flex-1 scroll-mt-24 flex-col">
-      <div className="relative aspect-[4/3] overflow-hidden bg-paper">
+      <div className="relative aspect-[7/5] overflow-hidden bg-paper">
         <Image
           src={image}
           alt={`${title} — ${category} by AllAboutWeb`}
           fill
           sizes="(min-width: 768px) 33vw, 82vw"
-          className="object-cover object-top transition duration-500 group-hover:scale-105"
+          className="object-cover transition duration-500 group-hover:scale-105"
         />
         <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[0.6875rem] font-semibold uppercase tracking-wider text-ink shadow-sm">
           {category}
@@ -30,12 +30,13 @@ function WorkCard({ item }: { item: WorkItem }) {
           </span>
         )}
       </div>
-      <div className="flex flex-1 flex-col p-4 sm:p-5">
-        <h3 className="text-[0.9375rem] font-semibold text-ink sm:text-lg">{title}</h3>
-        <p className="mt-1.5 text-sm leading-6 text-slate">{description}</p>
+      <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5 sm:py-4">
+        <div className="min-w-0">
+          <h3 className="truncate text-[0.9375rem] font-bold leading-snug text-ink sm:text-lg">{title}</h3>
+          {link && <p className="text-xs font-semibold text-primary sm:text-sm">{link.label}</p>}
+        </div>
         {link && (
-          <span className="mt-auto inline-flex items-center gap-1 pt-4 text-sm font-semibold text-primary">
-            {link.label}
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink text-white transition group-hover:bg-primary">
             <ArrowUpRight
               className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
               aria-hidden="true"
@@ -64,12 +65,6 @@ export default function Work() {
       <SectionHeading
         eyebrow="Our work"
         title="Recent projects"
-        description={
-          <>
-            Websites and catalogs built for <strong>real businesses</strong> — open them and
-            see for yourself.
-          </>
-        }
       />
 
       <HScroll

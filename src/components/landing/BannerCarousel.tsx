@@ -90,7 +90,7 @@ export default function BannerCarousel({
               <span className="inline-block rounded-full bg-primary px-2.5 py-1 text-[0.6875rem] font-semibold uppercase tracking-wider text-white">
                 {banner.eyebrow}
               </span>
-              <p className="mt-2.5 max-w-md text-lg font-semibold leading-tight text-white sm:mt-3 sm:text-3xl">
+              <p className="mt-2.5 max-w-md text-lg font-bold leading-tight text-white sm:mt-3 sm:text-3xl">
                 {banner.title}
               </p>
               <p className="mt-1.5 hidden max-w-md text-[0.8125rem] text-white/80 min-[400px]:block sm:mt-2 sm:text-base">

@@ -1,11 +1,11 @@
 import Image from "next/image";
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import type { Service } from "../data";
 import SmartLink from "./SmartLink";
 
-/** Large image card for a featured service. */
+/** Image-first app-style card for a featured service. */
 export function ServiceCard({ service, className = "" }: { service: Service; className?: string }) {
-  const { id, name, description, price, icon: Icon, image, href, badge, features } = service;
+  const { id, name, price, image, href, badge } = service;
 
   return (
     <SmartLink
@@ -13,14 +13,14 @@ export function ServiceCard({ service, className = "" }: { service: Service; cla
       className={`group flex flex-col overflow-hidden rounded-card border border-line bg-white shadow-card transition duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lift ${className}`}
     >
       <article id={id} className="flex flex-1 scroll-mt-24 flex-col">
-        <div className="relative aspect-[16/10] overflow-hidden bg-paper">
+        <div className="relative aspect-[7/5] overflow-hidden bg-paper">
           {image && (
             <Image
               src={image}
               alt={`${name} by AllAboutWeb`}
               fill
               sizes="(min-width: 768px) 33vw, 80vw"
-              className="object-cover object-top transition duration-500 group-hover:scale-105"
+              className="object-cover transition duration-500 group-hover:scale-105"
             />
           )}
           {badge && (
@@ -30,45 +30,25 @@ export function ServiceCard({ service, className = "" }: { service: Service; cla
           )}
         </div>
 
-        <div className="flex flex-1 flex-col p-4 sm:p-5">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-btn bg-tint text-primary">
-              <Icon className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <h3 className="text-[0.9375rem] font-semibold leading-snug text-ink sm:text-lg">{name}</h3>
+        <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5 sm:py-4">
+          <div className="min-w-0">
+            <h3 className="truncate text-[0.9375rem] font-bold leading-snug text-ink sm:text-lg">{name}</h3>
+            <p className="text-xs text-slate sm:text-sm">
+              From <strong className="font-bold text-ink">₹{price}</strong>
+            </p>
           </div>
-          <p className="mt-3 text-sm leading-6 text-slate">{description}</p>
-
-          {features && (
-            <ul className="mt-3 flex flex-col gap-1.5">
-              {features.map((feature) => (
-                <li key={feature} className="flex items-center gap-2 text-sm text-ink">
-                  <Check className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-                  {feature}
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <div className="mt-auto pt-4">
-            <div className="flex items-center justify-between border-t border-line pt-4">
-              <span className="text-sm text-slate">
-                From <strong className="text-[0.9375rem] font-semibold text-ink sm:text-base">₹{price}</strong>
-              </span>
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-ink text-white transition group-hover:bg-primary">
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-              </span>
-            </div>
-          </div>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink text-white transition group-hover:bg-primary">
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+          </span>
         </div>
       </article>
     </SmartLink>
   );
 }
 
-/** Compact photo card for secondary services. */
+/** Compact image-first card for secondary services. */
 export function ServiceMiniCard({ service, wide = false }: { service: Service; wide?: boolean }) {
-  const { id, name, description, price, icon: Icon, image, href } = service;
+  const { id, name, price, icon: Icon, image, href } = service;
 
   return (
     <SmartLink
@@ -81,18 +61,13 @@ export function ServiceMiniCard({ service, wide = false }: { service: Service; w
           className={`relative overflow-hidden bg-tint ${wide ? "aspect-[16/7] sm:aspect-[4/3]" : "aspect-[4/3]"}`}
         >
           {image ? (
-            <>
-              <Image
-                src={image}
-                alt={`${name} by AllAboutWeb`}
-                fill
-                sizes={wide ? "(min-width: 1024px) 20vw, (min-width: 640px) 33vw, 100vw" : "(min-width: 1024px) 20vw, (min-width: 640px) 33vw, 50vw"}
-                className="object-cover transition duration-500 group-hover:scale-105"
-              />
-              <span className="absolute bottom-2 left-2 flex h-8 w-8 items-center justify-center rounded-btn bg-white/95 text-primary shadow-sm">
-                <Icon className="h-4 w-4" aria-hidden="true" />
-              </span>
-            </>
+            <Image
+              src={image}
+              alt={`${name} by AllAboutWeb`}
+              fill
+              sizes={wide ? "(min-width: 1024px) 20vw, (min-width: 640px) 33vw, 100vw" : "(min-width: 1024px) 20vw, (min-width: 640px) 33vw, 50vw"}
+              className="object-cover transition duration-500 group-hover:scale-105"
+            />
           ) : (
             <span className="flex h-full items-center justify-center text-primary/70">
               <Icon className="h-9 w-9" strokeWidth={1.5} aria-hidden="true" />
@@ -100,13 +75,10 @@ export function ServiceMiniCard({ service, wide = false }: { service: Service; w
           )}
         </div>
 
-        <div className="flex flex-1 flex-col p-3 sm:p-4">
-          <h3 className="text-sm font-semibold leading-snug text-ink sm:text-base">{name}</h3>
-          <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate sm:text-sm sm:leading-6">
-            {description}
-          </p>
-          <p className="mt-auto pt-3 text-xs text-slate">
-            From <strong className="text-sm font-semibold text-ink">₹{price}</strong>
+        <div className="flex flex-1 flex-col px-3 py-2.5 sm:px-4 sm:py-3">
+          <h3 className="line-clamp-1 text-sm font-bold leading-snug text-ink sm:text-base">{name}</h3>
+          <p className="mt-0.5 text-xs text-slate">
+            From <strong className="font-bold text-ink">₹{price}</strong>
           </p>
         </div>
       </article>

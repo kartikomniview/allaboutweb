@@ -5,8 +5,6 @@ import Services from "@/components/landing/Services";
 import Work from "@/components/landing/Work";
 import Process from "@/components/landing/Process";
 import Pricing from "@/components/landing/Pricing";
-import Testimonials from "@/components/landing/Testimonials";
-import WhyUs from "@/components/landing/WhyUs";
 import Faq from "@/components/landing/Faq";
 import LeadForm from "@/components/landing/LeadForm";
 import RevealObserver from "@/components/landing/RevealObserver";
@@ -51,8 +49,6 @@ export default function Home() {
         <Work />
         <Process />
         <Pricing />
-        <Testimonials />
-        <WhyUs />
         <Faq />
         <LeadForm />
       </main>

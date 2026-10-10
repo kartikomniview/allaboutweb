@@ -84,7 +84,7 @@ export default function Faq() {
             data-reveal="up"
             className="mt-8 hidden rounded-card border border-line bg-white p-6 shadow-card lg:block"
           >
-            <p className="font-semibold text-ink">Still have a question?</p>
+            <p className="font-bold text-ink">Still have a question?</p>
             <p className="mt-1 text-sm text-slate">
               Message us on WhatsApp and we&apos;ll get back to you.
             </p>
