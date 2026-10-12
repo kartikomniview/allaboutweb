@@ -3592,8 +3592,8 @@ export const DEALS_COUNTDOWN_START = { days: 2, hours: 14, mins: 38, secs: 45 };
 // Products shown in "Diwali Dhamaka Deals", in order.
 export const DIWALI_PICK_IDS = ['sofa-2', 'dining-1', 'center-table-1', 'chair-1'];
 
-// Products already saved when the demo first loads.
-export const INITIAL_WISHLIST_IDS = ['sofa-1', 'dining-1'];
+// Products already in the cart when the demo first loads.
+export const INITIAL_CART_IDS = ['sofa-1', 'dining-1'];
 
 // ---------------------------------------------------------------------------
 // Home screen
@@ -3695,16 +3695,47 @@ export const WHATSAPP_MESSAGES = {
   searchNotFound: (query: string) =>
     `${hello} I was searching for "${query}". Can you make this custom in teak or sheesham?`,
 
-  wishlistPackage: (items: CatalogProduct[]) =>
-    `${hello} I have saved ${items.length} items in my wishlist:\n` +
-    items.map((p) => `• ${p.productName} (${formatINR(p.price)})`).join('\n') +
-    `\n\nCan you give a package offer and delivery time for all of these?`,
+  cartOrder: (items: CatalogProduct[], total: number) =>
+    `${hello} I would like to order these items:\n` +
+    items.map((p) => `• ${p.productName} — ${formatINR(p.price)}`).join('\n') +
+    `\n\nTotal: ${formatINR(total)}\n` +
+    `Please confirm availability, the best price and delivery time to my address.`,
 };
 
-// Categories and their known subcategories, used by the admin product form.
-export const CATALOG_CATEGORIES: { name: MainCategory; subcategories: string[] }[] = MAIN_CATEGORIES.map((name) => ({
+// ---------------------------------------------------------------------------
+// Category & subcategory master lists
+// ---------------------------------------------------------------------------
+
+// Every subcategory for each category, in display order. The admin product form only
+// offers these, so add a new subcategory here (and its thumbnail, see below) first.
+// Built from the live products in Firestore plus the starter set.
+export const CATEGORY_SUBCATEGORIES: Record<MainCategory, string[]> = {
+  Sofa: ['L-Shape Sofa', '3-Seater Sofa', '2-Seater Sofa', 'Diwan & Daybed', 'Sofa Cum Bed', 'Recliner Sofa', 'Sofa Set'],
+  Wardrobe: ['2-Door Wardrobe', '3-Door Wardrobe', '4-Door Wardrobe', 'Sliding Door Wardrobe', 'Kids Wardrobe'],
+  Dresser: ['Dressing Table with Mirror', 'Chest of Drawers', 'Vanity Table with Stool', 'Wall-Mounted Dresser'],
+  Bed: ['King Size Bed', 'Queen Size Bed', 'Hydraulic Storage Bed', 'Single Bed', 'Four Poster Bed', 'Bunk Bed'],
+  Dining: ['2-Seater Dining Set', '4-Seater Dining Set', '6-Seater Dining Set', '8-Seater Dining Set', 'Dining Bench', 'Bar Stool'],
+  CenterTable: ['Rectangular Center Table', 'Round Center Table', 'Nesting Tables', 'Storage Center Table', 'Lift-Top Center Table'],
+  Chair: ['Living Room Armchair', 'Lounge Armchair', 'Accent Chair', 'Dining Chair', 'Study & Office Chair', 'Rocking Chair'],
+};
+
+// Thumbnail for a subcategory: public/e-catalog/subcategories/<slug>.webp,
+// e.g. "Diwan & Daybed" -> diwan-daybed.webp. Drop a file there to add one.
+export const subcategoryImage = (name: string) =>
+  `/e-catalog/subcategories/${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}.webp`;
+
+export type CatalogCategory = {
+  name: MainCategory;
+  label: string;
+  /** Thumbnail in public/ (the Home "Browse by Category" photo). */
+  image: string;
+  subcategories: { name: string; image: string }[];
+};
+
+// Categories with their label, thumbnail and subcategories — used by the admin.
+export const CATALOG_CATEGORIES: CatalogCategory[] = MAIN_CATEGORIES.map((name) => ({
   name,
-  subcategories: Array.from(
-    new Set(PRODUCTS.filter((p) => p.categoryName === name).map((p) => p.subcategoryName))
-  ),
+  label: CATEGORY_TAB_LABELS[name],
+  image: CATEGORY_CARDS.find((card) => card.key === name)?.image ?? '',
+  subcategories: CATEGORY_SUBCATEGORIES[name].map((sub) => ({ name: sub, image: subcategoryImage(sub) })),
 }));

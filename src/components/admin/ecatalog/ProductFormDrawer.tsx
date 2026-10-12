@@ -9,10 +9,13 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import {
+  Check,
   ChevronDown,
   CircleCheck,
   FileText,
+  Frame,
   ImagePlus,
   Images,
   IndianRupee,
@@ -30,7 +33,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { CATALOG_CATEGORIES } from "@/components/furniture-catalog/data";
+import { CATALOG_CATEGORIES, subcategoryImage } from "@/components/furniture-catalog/data";
 import { AuthError } from "@/lib/adminAuth";
 import {
   IMAGE_TYPES,
@@ -47,7 +50,9 @@ import {
   type ProductInput,
 } from "@/lib/adminProducts";
 import { Button, Spinner } from "../ui";
+import ConfirmDialog from "./ConfirmDialog";
 import ImagePromptDialog from "./ImagePromptDialog";
+import ThumbSelect, { type ThumbOption } from "./ThumbSelect";
 import { useOverlay } from "./useOverlay";
 
 // Compact control sizing: 16px text on phones (avoids iOS zoom), 13px from sm up.
@@ -118,7 +123,7 @@ function toInput(form: FormState): ProductInput | string {
 
   if (!form.productName.trim()) return "Enter a product name.";
   if (!form.categoryName) return "Choose a category.";
-  if (!form.subcategoryName.trim()) return "Enter a subcategory.";
+  if (!form.subcategoryName.trim()) return "Choose a subcategory.";
   if (form.price.trim() === "" || !Number.isFinite(price) || price < 0) return "Enter a valid price.";
   if (!Number.isFinite(originalPrice) || originalPrice < price) return "MRP cannot be lower than the price.";
   if (!Number.isFinite(rating) || rating < 0 || rating > 5) return "Rating must be between 0 and 5.";
@@ -403,6 +408,7 @@ function ImageManager({
   const [pending, setPending] = useState<PendingUpload[]>([]);
   const [rejected, setRejected] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const previewsRef = useRef(new Set<string>());
 
@@ -528,8 +534,11 @@ function ImageManager({
   );
 
   const empty = images.length === 0 && pending.length === 0;
-  const tileBtn =
-    "inline-flex h-6 items-center gap-1 rounded-[5px] bg-white/95 px-1.5 text-[10px] font-semibold text-ink shadow-sm transition-colors";
+  const tile = "flex flex-col overflow-hidden rounded-[10px] border bg-white transition-shadow";
+  const tileFooter = "grid grid-cols-2 gap-1.5 border-t border-line bg-paper/70 p-1.5";
+  const footerBtn =
+    "inline-flex h-8 items-center justify-center gap-1.5 rounded-[7px] text-[12px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25";
+  const footerBtnIdle = "bg-white text-slate ring-1 ring-inset ring-line hover:text-ink hover:ring-[#cfd4df]";
 
   return (
     <>
@@ -575,45 +584,64 @@ function ImageManager({
           {picker}
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5" {...dropProps}>
-          {images.map((url) => {
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3" {...dropProps}>
+          {images.map((url, n) => {
             const isMain = url === mainImageUrl;
             const isPlain = url === plainImageUrl;
             return (
-              <div key={url} className="group relative aspect-square overflow-hidden rounded-[8px] border border-line bg-paper">
-                {/* eslint-disable-next-line @next/next/no-img-element -- admin thumbnail */}
-                <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" />
-                <div className="absolute left-1 top-1 flex flex-col items-start gap-0.5">
-                  {isMain && (
-                    <span className="rounded-[4px] bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-white">Main</span>
-                  )}
-                  {isPlain && (
-                    <span className="rounded-[4px] bg-ink/80 px-1.5 py-0.5 text-[10px] font-semibold text-white">Plain</span>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => onRemove(url)}
-                  className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-[5px] bg-white/95 text-ink opacity-0 shadow-sm transition hover:text-red-600 focus:opacity-100 group-hover:opacity-100"
-                  aria-label="Remove image"
-                  title="Remove"
-                >
-                  <X className="h-3 w-3" aria-hidden />
-                </button>
-                <div className="absolute inset-x-1 bottom-1 flex gap-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
-                  {!isMain && (
-                    <button type="button" onClick={() => onSetMain(url)} className={`${tileBtn} hover:text-primary`}>
-                      <Star className="h-2.5 w-2.5" aria-hidden />
-                      Main
-                    </button>
+              <div
+                key={url}
+                className={`group ${tile} ${isMain ? "border-primary ring-[3px] ring-primary/15" : "border-line hover:shadow-[0_2px_8px_rgba(1,18,60,0.08)]"}`}
+              >
+                <div className="relative aspect-square bg-paper">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- admin thumbnail */}
+                  <img src={url} alt={`Product image ${n + 1}`} className="h-full w-full object-cover" loading="lazy" />
+                  {(isMain || isPlain) && (
+                    <div className="absolute left-2 top-2 flex flex-wrap gap-1">
+                      {isMain && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+                          <Star className="h-2.5 w-2.5 fill-current" aria-hidden />
+                          Cover
+                        </span>
+                      )}
+                      {isPlain && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-ink/85 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+                          <Frame className="h-2.5 w-2.5" aria-hidden />
+                          Plain
+                        </span>
+                      )}
+                    </div>
                   )}
                   <button
                     type="button"
-                    onClick={() => onSetPlain(isPlain ? "" : url)}
-                    className={`${tileBtn} hover:text-primary`}
-                    aria-pressed={isPlain}
+                    onClick={() => setConfirmRemove(url)}
+                    className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-white/95 text-ink shadow-sm ring-1 ring-ink/5 transition hover:bg-red-50 hover:text-red-600 focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                    aria-label={`Remove image ${n + 1}`}
+                    title="Remove"
                   >
-                    {isPlain ? "Unset plain" : "Plain"}
+                    <X className="h-3.5 w-3.5" aria-hidden />
+                  </button>
+                </div>
+                <div className={tileFooter}>
+                  <button
+                    type="button"
+                    onClick={() => !isMain && onSetMain(url)}
+                    aria-pressed={isMain}
+                    title={isMain ? "Cover on product cards" : "Use as the cover on product cards"}
+                    className={`${footerBtn} ${isMain ? "cursor-default bg-primary text-white shadow-sm" : `${footerBtnIdle} hover:text-primary`}`}
+                  >
+                    <Star className={`h-3.5 w-3.5 ${isMain ? "fill-current" : ""}`} aria-hidden />
+                    Main
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSetPlain(isPlain ? "" : url)}
+                    aria-pressed={isPlain}
+                    title={isPlain ? "Click to unset the plain-background shot" : "Mark as the plain-background shot"}
+                    className={`${footerBtn} ${isPlain ? "bg-ink text-white shadow-sm hover:bg-ink/90" : footerBtnIdle}`}
+                  >
+                    {isPlain ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Frame className="h-3.5 w-3.5" aria-hidden />}
+                    Plain
                   </button>
                 </div>
               </div>
@@ -621,33 +649,52 @@ function ImageManager({
           })}
 
           {pending.map((item) => (
-            <div key={item.id} className="relative aspect-square overflow-hidden rounded-[8px] border border-line bg-paper">
-              {/* eslint-disable-next-line @next/next/no-img-element -- local preview while uploading */}
-              <img src={item.preview} alt="" className={`h-full w-full object-cover ${item.error ? "opacity-30" : "opacity-60"}`} />
-              {item.error ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-white/70 p-1.5 text-center">
-                  <p className="line-clamp-2 text-[10px] font-medium leading-tight text-red-700" title={item.error}>
-                    {item.error}
-                  </p>
-                  <div className="flex gap-1">
-                    <button type="button" onClick={() => retry(item)} className={`${tileBtn} ring-1 ring-line`}>
-                      <RotateCcw className="h-2.5 w-2.5" aria-hidden />
-                      Retry
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => dropPending(item.id)}
-                      className={`${tileBtn} ring-1 ring-line`}
-                      aria-label="Dismiss failed upload"
-                    >
-                      <X className="h-2.5 w-2.5" aria-hidden />
-                    </button>
+            <div key={item.id} className={`${tile} ${item.error ? "border-red-200" : "border-line"}`}>
+              <div className="relative aspect-square bg-paper">
+                {/* eslint-disable-next-line @next/next/no-img-element -- local preview while uploading */}
+                <img src={item.preview} alt="" className={`h-full w-full object-cover ${item.error ? "opacity-30" : "opacity-60"}`} />
+                {item.error ? (
+                  <div className="absolute inset-0 grid place-items-center bg-white/70 p-3 text-center">
+                    <p className="line-clamp-3 text-[11px] font-medium leading-snug text-red-700" title={item.error}>
+                      {item.error}
+                    </p>
                   </div>
+                ) : (
+                  <div className="absolute inset-0 grid place-items-center">
+                    <Spinner className="h-5 w-5 text-primary" />
+                  </div>
+                )}
+              </div>
+              {item.error ? (
+                <div className={tileFooter}>
+                  <button type="button" onClick={() => retry(item)} className={`${footerBtn} ${footerBtnIdle}`}>
+                    <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+                    Retry
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => dropPending(item.id)}
+                    className={`${footerBtn} ${footerBtnIdle} hover:text-red-600`}
+                    aria-label="Dismiss failed upload"
+                  >
+                    <X className="h-3.5 w-3.5" aria-hidden />
+                    Dismiss
+                  </button>
                 </div>
               ) : (
-                <div className="absolute inset-x-1.5 bottom-1.5">
-                  <div className="h-1 overflow-hidden rounded-full bg-white/80" role="progressbar" aria-valuenow={Math.round(item.progress * 100)}>
-                    <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${Math.max(item.progress, 0.04) * 100}%` }} />
+                <div className="flex items-center gap-2 border-t border-line bg-paper/70 p-1.5">
+                  <div className="flex h-8 flex-1 items-center gap-2 px-1.5">
+                    <div
+                      className="h-1.5 flex-1 overflow-hidden rounded-full bg-line"
+                      role="progressbar"
+                      aria-label="Upload progress"
+                      aria-valuenow={Math.round(item.progress * 100)}
+                    >
+                      <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${Math.max(item.progress, 0.04) * 100}%` }} />
+                    </div>
+                    <span className="w-8 text-right text-[11px] font-semibold tabular-nums text-slate">
+                      {Math.round(item.progress * 100)}%
+                    </span>
                   </div>
                 </div>
               )}
@@ -659,12 +706,15 @@ function ImageManager({
               type="button"
               onClick={() => inputRef.current?.click()}
               disabled={!canUpload}
-              className={`flex aspect-square flex-col items-center justify-center gap-1 rounded-[8px] border border-dashed text-[11px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                dragging ? "border-primary bg-tint/60 text-primary" : "border-[#cfd4df] text-slate hover:border-primary/50 hover:text-primary"
+              className={`flex min-h-40 flex-col items-center justify-center gap-2 rounded-[10px] border border-dashed p-3 text-center transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                dragging ? "border-primary bg-tint/60 text-primary" : "border-[#cfd4df] bg-paper/50 text-slate hover:border-primary/50 hover:bg-tint/30 hover:text-primary"
               }`}
             >
-              <Plus className="h-4 w-4" aria-hidden />
-              Add
+              <span className="grid h-9 w-9 place-items-center rounded-full bg-white text-primary shadow-[0_1px_2px_rgba(1,18,60,0.08)] ring-1 ring-line">
+                <ImagePlus className="h-4 w-4" aria-hidden />
+              </span>
+              <span className="text-[12px] font-semibold">Add images</span>
+              <span className="text-[11px] font-normal text-slate">Drop or paste here</span>
             </button>
           )}
           {picker}
@@ -689,7 +739,7 @@ function ImageManager({
         {!empty && (
           <p className="text-slate">
             <span className="font-semibold text-ink">Main</span> is the cover on product cards.{" "}
-            <span className="font-semibold text-ink">Plain</span> is the plain-background shot. Paste images with Ctrl+V.
+            <span className="font-semibold text-ink">Plain</span> marks the plain-background shot.
           </p>
         )}
         {autoSave ? (
@@ -698,6 +748,31 @@ function ImageManager({
           !empty && <span className="text-slate">Images are saved when you create the product.</span>
         )}
       </div>
+
+      {/* Portaled: the drawer's slide-in transform would otherwise contain the fixed overlay. */}
+      {confirmRemove &&
+        createPortal(
+          <ConfirmDialog
+            title="Remove image?"
+            confirmLabel="Remove image"
+            busy={false}
+            onConfirm={() => {
+              onRemove(confirmRemove);
+              setConfirmRemove(null);
+            }}
+            onCancel={() => setConfirmRemove(null)}
+          >
+            <span className="flex items-start gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element -- admin thumbnail */}
+              <img src={confirmRemove} alt="" className="h-16 w-16 shrink-0 rounded-[8px] bg-paper object-contain ring-1 ring-line" />
+              <span>
+                The image is deleted permanently and can&apos;t be restored.
+                {confirmRemove === mainImageUrl && images.length > 1 && " It's the cover, so the next image becomes the cover."}
+              </span>
+            </span>
+          </ConfirmDialog>,
+          document.body,
+        )}
     </>
   );
 }
@@ -819,10 +894,38 @@ export default function ProductFormDrawer({
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
 
-  const categories = CATALOG_CATEGORIES.some((c) => c.name === form.categoryName)
-    ? CATALOG_CATEGORIES
-    : [...CATALOG_CATEGORIES, { name: form.categoryName, subcategories: [] }];
-  const subcategories = categories.find((c) => c.name === form.categoryName)?.subcategories ?? [];
+  // Dropdown options come from the master lists in furniture-catalog/data.ts. A value
+  // saved before it was in the list (or removed from it) is still shown, flagged.
+  const notInList = "Not in the master list";
+  const masterCategory = CATALOG_CATEGORIES.find((c) => c.name === form.categoryName);
+  const categoryOptions: ThumbOption[] = CATALOG_CATEGORIES.map((c) => ({ value: c.name, label: c.label, image: c.image }));
+  if (form.categoryName && !masterCategory) {
+    categoryOptions.push({ value: form.categoryName, label: form.categoryName, note: notInList });
+  }
+  const subcategoryOptions: ThumbOption[] = (masterCategory?.subcategories ?? []).map((s) => ({
+    value: s.name,
+    label: s.name,
+    image: s.image,
+  }));
+  if (form.subcategoryName && !subcategoryOptions.some((o) => o.value === form.subcategoryName)) {
+    subcategoryOptions.push({
+      value: form.subcategoryName,
+      label: form.subcategoryName,
+      image: subcategoryImage(form.subcategoryName),
+      note: notInList,
+    });
+  }
+
+  // A new category clears a subcategory that doesn't belong to it.
+  const changeCategory = (name: string) =>
+    setForm((f) => {
+      const subs = CATALOG_CATEGORIES.find((c) => c.name === name)?.subcategories ?? [];
+      return {
+        ...f,
+        categoryName: name,
+        subcategoryName: subs.some((s) => s.name === f.subcategoryName) ? f.subcategoryName : "",
+      };
+    });
   const off = discountPercent(Number(form.price) || 0, Number(form.originalPrice) || 0);
 
   const updateColor = (i: number, patch: Partial<ProductColor>) =>
@@ -970,34 +1073,32 @@ export default function ProductFormDrawer({
 
             <Section title="Organization" icon={Layers} description="Where it appears in the catalog">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Field label="Category" required>
-                  <select
+                {/* Not <Field>: its <label> would re-open the dropdown when an option is clicked. */}
+                <div className="min-w-0">
+                  <span id="category-label" className="mb-1 flex items-center gap-0.5 text-xs font-medium text-ink/80">
+                    Category<span className="text-primary" aria-hidden>*</span>
+                  </span>
+                  <ThumbSelect
+                    labelledBy="category-label"
                     value={form.categoryName}
-                    onChange={(e) => set("categoryName", e.target.value)}
-                    className={`${inputClass} pr-7`}
-                  >
-                    {categories.map((c) => (
-                      <option key={c.name} value={c.name}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="Subcategory" required>
-                  <input
-                    value={form.subcategoryName}
-                    onChange={(e) => set("subcategoryName", e.target.value)}
-                    className={inputClass}
-                    list="subcategory-options"
-                    placeholder="Pick or type new"
-                    maxLength={60}
+                    options={categoryOptions}
+                    onChange={changeCategory}
+                    placeholder="Choose a category"
                   />
-                  <datalist id="subcategory-options">
-                    {subcategories.map((s) => (
-                      <option key={s} value={s} />
-                    ))}
-                  </datalist>
-                </Field>
+                </div>
+                <div className="min-w-0">
+                  <span id="subcategory-label" className="mb-1 flex items-center gap-0.5 text-xs font-medium text-ink/80">
+                    Subcategory<span className="text-primary" aria-hidden>*</span>
+                  </span>
+                  <ThumbSelect
+                    labelledBy="subcategory-label"
+                    value={form.subcategoryName}
+                    options={subcategoryOptions}
+                    onChange={(v) => set("subcategoryName", v)}
+                    placeholder={form.categoryName ? "Choose a subcategory" : "Choose a category first"}
+                    disabled={!subcategoryOptions.length}
+                  />
+                </div>
               </div>
               <div>
                 <span className="mb-1 block text-xs font-medium text-ink/80">Tags</span>

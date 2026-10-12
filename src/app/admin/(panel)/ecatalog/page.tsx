@@ -48,6 +48,8 @@ type Toast = { id: number; text: string; tone: "ok" | "error" };
 
 // Rows rendered at a time; the next batch appears as the admin scrolls.
 const PAGE_SIZE = 20;
+// The list opens on the first category; "All" is the last chip.
+const DEFAULT_CATEGORY: string = CATALOG_CATEGORIES[0]?.name ?? "All";
 
 // List or grid (grid by default), remembered in this browser. Storage can be
 // unavailable (private mode, blocked site data), so every access is guarded.
@@ -139,7 +141,7 @@ export default function ManageEcatalogPage() {
   const [refreshing, setRefreshing] = useState(false);
 
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("All");
+  const [category, setCategory] = useState(DEFAULT_CATEGORY);
   const [status, setStatus] = useState<StatusFilter>("all");
   // The page only renders in the browser (after the session check), so storage is available here.
   const [view, setView] = useState<ViewMode>(readViewMode);
@@ -310,11 +312,11 @@ export default function ManageEcatalogPage() {
 
   function clearFilters() {
     setQuery("");
-    setCategory("All");
+    setCategory(DEFAULT_CATEGORY);
     setStatus("all");
   }
 
-  const hasFilters = query.trim() !== "" || category !== "All" || status !== "all";
+  const hasFilters = query.trim() !== "" || category !== DEFAULT_CATEGORY || status !== "all";
   const tabs: { key: StatusFilter; label: string }[] = [
     { key: "all", label: "All" },
     { key: "published", label: "Published" },
@@ -497,11 +499,11 @@ export default function ManageEcatalogPage() {
           aria-label="Filter by category"
           className="flex gap-1.5 overflow-x-auto border-b border-line px-3 pb-3 [scrollbar-width:none] sm:flex-wrap sm:px-4 sm:pb-4 [&::-webkit-scrollbar]:hidden"
         >
-          {[{ name: "All", label: "All", count: matching.length }, ...categoryNames.map((name) => ({
+          {[...categoryNames.map((name) => ({
             name,
             label: CATEGORY_TAB_LABELS[name as MainCategory] ?? name,
             count: categoryCounts.get(name) ?? 0,
-          }))].map(({ name, label, count }) => {
+          })), { name: "All", label: "All", count: matching.length }].map(({ name, label, count }) => {
             const selected = category === name;
             return (
               <button

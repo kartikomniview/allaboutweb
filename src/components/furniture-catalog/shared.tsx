@@ -23,14 +23,19 @@ export const getWhatsAppUrl = (product?: CatalogProduct, customMessage?: string)
 };
 
 export const CATALOG_PATH = '/app/catalog/furniture';
+export const CART_PATH = `${CATALOG_PATH}/cart`;
 export const productPath = (id: string) => `${CATALOG_PATH}/product/${encodeURIComponent(id)}`;
 
 // Shared with the product pages, which render on top of the (still mounted) catalog
-// so saved items, the open tab and the scroll position survive opening a product.
+// so the cart, the open tab and the scroll position survive opening a product.
 export type CatalogContextValue = {
   products: CatalogProduct[];
-  wishlist: string[];
-  toggleWishlist: (id: string, e: React.MouseEvent) => void;
+  /** Product ids in the cart, in the order they were added. */
+  cart: string[];
+  isInCart: (id: string) => boolean;
+  addToCart: (id: string) => void;
+  removeFromCart: (id: string) => void;
+  clearCart: () => void;
   /** Records that a product page was opened from inside the catalog, so "back" can use history. */
   markInAppNavigation: () => void;
   hasInAppHistory: () => boolean;
@@ -545,7 +550,7 @@ export const ProductVisual: React.FC<{ product: CatalogProduct; sizes: string }>
   );
 
 // Image-first product card: a square photo with a small badge, then just name + price.
-// The card links to the product's own page (where it can be saved).
+// The card links to the product's own page (where it can be added to the cart).
 export const ProductCard: React.FC<{ product: CatalogProduct }> = ({ product }) => {
   const { markInAppNavigation } = useCatalog();
   // The first tag is the card badge.
@@ -560,7 +565,7 @@ export const ProductCard: React.FC<{ product: CatalogProduct }> = ({ product }) 
         onClick={markInAppNavigation}
         className="flex flex-col active:scale-[0.99] transition-transform duration-300"
       >
-        <div className="relative aspect-square overflow-hidden rounded-2xl bg-gradient-to-b from-[#FDFBF7] to-[#F5ECE0] shadow-[0_2px_12px_rgba(0,0,0,0.05)] group-hover:shadow-[0_14px_32px_rgba(139,90,43,0.13)] transition-shadow duration-300">
+        <div className="relative aspect-square overflow-hidden rounded-md bg-gradient-to-b from-[#FDFBF7] to-[#F5ECE0] shadow-[0_2px_12px_rgba(0,0,0,0.05)] group-hover:shadow-[0_14px_32px_rgba(139,90,43,0.13)] transition-shadow duration-300">
           <ProductVisual product={product} sizes="(min-width: 640px) 200px, 50vw" />
 
           {badge && (

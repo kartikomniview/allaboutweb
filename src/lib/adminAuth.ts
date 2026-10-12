@@ -60,6 +60,9 @@ export async function saveBrowserCredential(email: string, password: string): Pr
 const getToken = () => localStorage.getItem(TOKEN_KEY);
 const clearToken = () => localStorage.removeItem(TOKEN_KEY);
 
+// For server actions that check the admin session with the API themselves.
+export const sessionCredentials = () => ({ token: getToken() ?? "", deviceId: getDeviceId() });
+
 // Calls the admin API with this device's id and session token attached.
 export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (!API_BASE) {

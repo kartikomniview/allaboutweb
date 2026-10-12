@@ -51,6 +51,9 @@ export default function RootLayout({ children, modal }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      // globals.css sets smooth scrolling; this tells Next.js to switch it off
+      // during route changes so new pages don't visibly glide into place.
+      data-scroll-behavior="smooth"
       className={`${openSans.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">

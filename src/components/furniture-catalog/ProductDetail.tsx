@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Check, Heart, Layers, Ruler, Share2, Star, Trees, Truck } from 'lucide-react';
+import { ArrowLeft, Check, Layers, Ruler, Share2, ShoppingCart, Star, Trees, Truck } from 'lucide-react';
 import type { CatalogProduct } from '@/lib/adminProducts';
 import { TRUST_POINTS, WHATSAPP_MESSAGES, formatINR } from './data';
 import {
+  CART_PATH,
   CATALOG_PATH,
   ProductVisual,
   WhatsAppIcon,
@@ -20,8 +21,8 @@ const MAX_HIGHLIGHTS = 3;
 // underneath), so "back" returns to the same tab and scroll position.
 export default function ProductDetail({ product }: { product: CatalogProduct }) {
   const router = useRouter();
-  const { wishlist, toggleWishlist, hasInAppHistory, onWhatsAppLinkClick } = useCatalog();
-  const isWishlisted = wishlist.includes(product.id);
+  const { isInCart, addToCart, hasInAppHistory, onWhatsAppLinkClick } = useCatalog();
+  const inCart = isInCart(product.id);
 
   const images = [...new Set([product.mainImageUrl, ...product.images].filter(Boolean))];
   const [activeImage, setActiveImage] = useState(0);
@@ -110,18 +111,9 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
               <button onClick={goBack} className={iconButton} aria-label="Back">
                 <ArrowLeft className="h-4.5 w-4.5" />
               </button>
-              <div className="flex items-center gap-2">
-                <button onClick={share} className={iconButton} aria-label="Share product">
-                  <Share2 className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={(e) => toggleWishlist(product.id, e)}
-                  className={iconButton}
-                  aria-label={isWishlisted ? 'Remove from saved' : 'Save item'}
-                >
-                  <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-red-500 text-red-500' : ''}`} />
-                </button>
-              </div>
+              <button onClick={share} className={iconButton} aria-label="Share product">
+                <Share2 className="h-4 w-4" />
+              </button>
             </div>
 
             {images.length > 1 && (
@@ -217,17 +209,42 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
           </div>
         </div>
 
-        {/* Sticky enquiry button */}
-        <div className="border-t border-neutral-100 bg-white px-4 py-3 pb-safe">
+        {/* Sticky footer: name & price on the left, cart + WhatsApp on the right.
+            Flat buttons of one height with barely-rounded (4px) corners. */}
+        <div className="flex items-center gap-2 border-t border-neutral-200 bg-white px-4 py-2.5 pb-safe">
+          <div className="min-w-0 flex-1 pr-1">
+            <p className="truncate text-[11px] text-neutral-500">{product.productName}</p>
+            <p className="flex items-baseline gap-1.5 tabular-nums">
+              <span className="text-[17px] font-bold leading-tight text-[#111111]">{formatINR(product.price)}</span>
+              {discount > 0 && (
+                <>
+                  <span className="truncate text-[11px] text-neutral-400 line-through">{formatINR(product.originalPrice)}</span>
+                  <span className="shrink-0 text-[11px] font-semibold text-emerald-700">{discount}% off</span>
+                </>
+              )}
+            </p>
+          </div>
+          <button
+            onClick={() => (inCart ? router.push(CART_PATH) : addToCart(product.id))}
+            className={`flex h-11 shrink-0 items-center justify-center gap-2 rounded-[4px] px-4 text-[12px] font-semibold uppercase tracking-[0.06em] transition-colors ${
+              inCart
+                ? 'border border-[#111111] bg-white text-[#111111] hover:bg-neutral-50'
+                : 'bg-[#111111] text-white hover:bg-[#2b2b2b]'
+            }`}
+          >
+            {inCart ? <Check className="h-4 w-4" strokeWidth={2.5} /> : <ShoppingCart className="h-4 w-4" />}
+            {inCart ? 'Go to cart' : 'Add to cart'}
+          </button>
           <a
             href={getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.productFestivePrice(product))}
             onClick={onWhatsAppLinkClick}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] py-3 text-sm font-bold text-white shadow-sm hover:bg-[#20bd5a] active:scale-[0.98] transition-all"
+            aria-label="Enquire on WhatsApp"
+            title="Enquire on WhatsApp"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[4px] bg-[#25D366] text-white transition-colors hover:bg-[#1fb855]"
           >
-            <WhatsAppIcon className="h-4 w-4" />
-            Enquire on WhatsApp
+            <WhatsAppIcon className="h-5 w-5" />
           </a>
         </div>
       </section>

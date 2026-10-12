@@ -1,7 +1,8 @@
 // Client for the admin products API (backend-api/ → Firestore `products`).
 // Browser-only: requests carry the admin session from adminAuth.
 
-import { apiRequest } from "./adminAuth";
+import { apiRequest, sessionCredentials } from "./adminAuth";
+import { refreshCatalog } from "./catalogActions";
 
 export type ProductColor = { name: string; hex: string };
 
@@ -78,6 +79,14 @@ export function normalizeProduct(raw: Record<string, unknown>): Product {
   };
 }
 
+// The public catalog caches its products; drop that cache after every change
+// so the catalog shows it on its next load. Best effort: if this fails, the
+// catalog still picks the change up within CATALOG_REVALIDATE_SECONDS.
+function refreshPublicCatalog() {
+  const { token, deviceId } = sessionCredentials();
+  refreshCatalog(token, deviceId).catch(() => {});
+}
+
 export async function listProducts(): Promise<Product[]> {
   const data = await apiRequest<{ products: Record<string, unknown>[] }>("/products");
   return sortProducts(data.products.map(normalizeProduct));
@@ -88,6 +97,7 @@ export async function createProduct(input: ProductInput): Promise<Product> {
     method: "POST",
     body: JSON.stringify(input),
   });
+  refreshPublicCatalog();
   return normalizeProduct(data.product);
 }
 
@@ -96,21 +106,25 @@ export async function updateProduct(id: string, input: ProductInput): Promise<Pr
     method: "PUT",
     body: JSON.stringify(input),
   });
+  refreshPublicCatalog();
   return normalizeProduct(data.product);
 }
 
 export async function deleteProduct(id: string): Promise<void> {
   await apiRequest(`/products/${encodeURIComponent(id)}`, { method: "DELETE" });
+  refreshPublicCatalog();
 }
 
 // Creates products with fixed ids; ids that already exist are skipped.
 export async function importProducts(
   products: CatalogProduct[],
 ): Promise<{ created: number; skipped: number }> {
-  return apiRequest("/products/import", {
+  const result = await apiRequest<{ created: number; skipped: number }>("/products/import", {
     method: "POST",
     body: JSON.stringify({ products }),
   });
+  refreshPublicCatalog();
+  return result;
 }
 
 export function productToInput(p: Product): ProductInput {

@@ -57,7 +57,7 @@ export const metadata: Metadata = {
 // Products come from the admin panel (Firestore) through the public API and
 // are refreshed in the background every minute (see getCatalogProducts).
 // The catalog lives in this layout so it stays mounted while product pages
-// (`children`) open on top of it — tab, scroll and saved items are kept.
+// (`children`) open on top of it — tab, scroll and cart are kept.
 export default async function FurnitureCatalogLayout({
   children,
 }: LayoutProps<"/app/catalog/furniture">) {

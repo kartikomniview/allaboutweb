@@ -46,17 +46,20 @@ export function ProductThumb({
   product,
   className = "h-10 w-10",
   rounded = "rounded-lg",
+  fit = "cover",
 }: {
   product: Product;
   className?: string;
   rounded?: string;
+  /** "contain" shows the whole photo, letterboxed on the gray background. */
+  fit?: "cover" | "contain";
 }) {
   if (product.mainImageUrl) {
     return (
-      <span className={`relative shrink-0 overflow-hidden bg-paper ring-1 ring-inset ring-ink/[0.06] ${rounded} ${className}`}>
+      <span className={`relative block shrink-0 overflow-hidden ${fit === "contain" ? "bg-[#eef0f4]" : "bg-paper"} ring-1 ring-inset ring-ink/[0.06] ${rounded} ${className}`}>
         {/* Plain img: an unexpected URL in Firestore must not crash the list the way next/image would. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={product.mainImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+        <img src={product.mainImageUrl} alt="" loading="lazy" className={`h-full w-full ${fit === "contain" ? "object-contain" : "object-cover"}`} />
       </span>
     );
   }
@@ -250,22 +253,26 @@ export function ProductGrid({ products, onEdit, onDelete, onToggleActive, toggli
           >
             <button type="button" onClick={() => onEdit(p)} className="flex flex-1 flex-col text-left">
               <div className="relative w-full">
-                <ProductThumb product={p} className="aspect-[4/3] w-full" rounded="rounded-none" />
-                <span className="absolute bottom-2 left-2">
-                  <StatusBadge active={p.isActive} />
-                </span>
+                <ProductThumb product={p} className="aspect-square w-full" rounded="rounded-none" fit="contain" />
+                {/* Only flag the exception: published is the normal state. */}
+                {!p.isActive && (
+                  <span className="absolute bottom-2 left-2">
+                    <StatusBadge active={false} />
+                  </span>
+                )}
               </div>
-              <div className="flex flex-1 flex-col gap-1 p-3">
-                <p className="line-clamp-2 text-[13px] font-semibold leading-snug text-ink group-hover:text-primary">
+              <div className="flex flex-1 flex-col gap-0.5 p-3">
+                <p className="truncate text-[13px] font-semibold leading-snug text-ink group-hover:text-primary" title={p.productName}>
                   {p.productName || <span className="italic text-slate">Untitled product</span>}
                 </p>
-                <p className="truncate text-xs text-slate">
+                <p
+                  className="truncate text-xs text-slate"
+                  title={[p.categoryName, p.subcategoryName].filter(Boolean).join(" · ")}
+                >
                   {p.categoryName}
                   {p.subcategoryName && ` · ${p.subcategoryName}`}
                 </p>
-                <div className="mt-auto pt-1.5">
-                  <Price product={p} align="left" />
-                </div>
+                <p className="mt-auto pt-1 text-sm font-semibold tabular-nums text-ink">{formatINR(p.price)}</p>
               </div>
             </button>
 
@@ -306,11 +313,11 @@ export function ProductGridSkeleton({ cards = 10 }: { cards?: number }) {
     >
       {Array.from({ length: cards }, (_, i) => (
         <li key={i} className="overflow-hidden rounded-card border border-line bg-white">
-          <Skeleton className="aspect-[4/3] w-full rounded-none" />
+          <Skeleton className="aspect-square w-full rounded-none" />
           <div className="flex flex-col gap-2 p-3">
             <Skeleton className="h-3.5 w-4/5" />
-            <Skeleton className="h-3 w-1/2" />
-            <Skeleton className="mt-1 h-3.5 w-1/3" />
+            <Skeleton className="h-3 w-3/5" />
+            <Skeleton className="h-3.5 w-1/3" />
           </div>
         </li>
       ))}

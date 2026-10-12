@@ -9,8 +9,8 @@ import { ECATALOG_PROMO_PATH } from './EcatalogPromo';
 import './furniture-catalog.css';
 import {
   ArrowRight,
-  Heart,
   Search,
+  ShoppingCart,
   X,
   Check,
   MessageCircle,
@@ -19,7 +19,6 @@ import {
   LayoutGrid,
   MapPin,
   Clock,
-  Trash2,
   Gift,
   Flame
 } from 'lucide-react';
@@ -33,7 +32,7 @@ import {
   DIWALI_PICK_IDS,
   FESTIVE_GIFT,
   FESTIVE_RIBBON,
-  INITIAL_WISHLIST_IDS,
+  INITIAL_CART_IDS,
   STORE,
   STORY_HIGHLIGHTS,
   TRUST_POINTS,
@@ -43,10 +42,12 @@ import {
   type MainCategory,
 } from './data';
 import type { CatalogProduct } from '@/lib/adminProducts';
+import CartPage from './CartPage';
 import CatalogPage, { DEFAULT_CATALOG_FILTERS, type CatalogFilters } from './CatalogPage';
 import DemoWhatsAppDialog from './DemoWhatsAppDialog';
 import StoreInfoPage from './StoreInfoPage';
 import {
+  CART_PATH,
   CATALOG_PATH,
   CatalogContext,
   CategoryBox,
@@ -57,13 +58,13 @@ import {
   type CatalogContextValue,
 } from './shared';
 
-type AppTab = 'home' | 'catalog' | 'wishlist' | 'help';
+type AppTab = 'home' | 'catalog' | 'cart' | 'help';
 
 // Each bottom-nav tab has its own route (pages under app/app/catalog/furniture/(app)).
 export const TAB_PATHS: Record<AppTab, string> = {
   home: CATALOG_PATH,
   catalog: `${CATALOG_PATH}/catalog`,
-  wishlist: `${CATALOG_PATH}/saved`,
+  cart: CART_PATH,
   help: `${CATALOG_PATH}/help`,
 };
 
@@ -72,6 +73,9 @@ const tabFromPath = (pathname: string): AppTab | null =>
 
 // `products` are the published products from the admin panel (loaded by the layout).
 // `children` is the current product page, if any; it renders on top of the catalog.
+// Delay before the e-catalog promo pop-up, both the first time and after each close.
+const PROMO_DELAY_MS = 60_000;
+
 export default function FurnitureCatalogApp({
   products,
   children,
@@ -88,6 +92,33 @@ export default function FurnitureCatalogApp({
   const [activeTab, setActiveTab] = useState<AppTab>(routeTab ?? 'home');
   if (routeTab && routeTab !== activeTab) setActiveTab(routeTab);
 
+  // Each tab opens at the top. Next.js can't do this for us: the tab pages
+  // render nothing (the catalog lives in the layout), so it finds no element to
+  // scroll to and the previous tab's scroll position carried over — landing at
+  // the bottom of a shorter tab. Opening/closing a product keeps the tab, so it
+  // doesn't reset the scroll.
+  // The header's height (it changes when search opens) as --catalog-header-h,
+  // so sticky bars further down, like the Catalog tab's filter chips, sit right under it.
+  const shellRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const header = headerRef.current;
+    const shell = shellRef.current;
+    if (!header || !shell) return;
+    const observer = new ResizeObserver(() =>
+      shell.style.setProperty('--catalog-header-h', `${header.offsetHeight}px`)
+    );
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, []);
+
+  const scrolledTabRef = useRef(activeTab);
+  useEffect(() => {
+    if (scrolledTabRef.current === activeTab) return;
+    scrolledTabRef.current = activeTab;
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [activeTab]);
+
   // Catalog tab filters — kept here so they survive tab switches and can be set from Home
   const [catalogFilters, setCatalogFilters] = useState<CatalogFilters>(DEFAULT_CATALOG_FILTERS);
 
@@ -95,14 +126,15 @@ export default function FurnitureCatalogApp({
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-  // Wishlist & toast
+  // Cart & toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   // Set once a product page is opened from a card, so its back button can use history
   const inAppNavigationRef = useRef(false);
-  // Only ids that exist, so the saved-items badge never counts missing products.
-  const [wishlist, setWishlist] = useState<string[]>(() =>
-    INITIAL_WISHLIST_IDS.filter(id => products.some(p => p.id === id))
+  // Only ids that exist, so the cart badge never counts missing products.
+  const [cart, setCart] = useState<string[]>(() =>
+    INITIAL_CART_IDS.filter(id => products.some(p => p.id === id))
   );
+  const cartCount = cart.length;
 
   // Active banner index for Diwali banner carousel
   const [activeBannerIdx, setActiveBannerIdx] = useState(0);
@@ -116,18 +148,16 @@ export default function FurnitureCatalogApp({
     router.push(TAB_PATHS[tab]);
   };
 
-  // E-catalog promo pop-up: first after 30s, then 1 min after each close.
+  // E-catalog promo pop-up: first after 1 min, then 1 min after each close.
   // It opens as an intercepted route, so this component (and its state) stays mounted behind it.
   // Keyed on "is it open" rather than the pathname, so moving between tabs doesn't restart the timer.
-  const promoShownRef = useRef(false);
   const isPromoOpen = pathname === ECATALOG_PROMO_PATH;
 
   useEffect(() => {
     if (isPromoOpen) return;
     const promoTimer = setTimeout(() => {
-      promoShownRef.current = true;
       router.push(ECATALOG_PROMO_PATH, { scroll: false });
-    }, promoShownRef.current ? 60_000 : 30_000);
+    }, PROMO_DELAY_MS);
     return () => clearTimeout(promoTimer);
   }, [isPromoOpen, router]);
 
@@ -199,24 +229,27 @@ export default function FurnitureCatalogApp({
   };
 
   const handleSelectCategory = (cat: MainCategory, sub?: string) => {
-    setCatalogFilters({ category: cat, subCategory: sub || 'All', color: 'All' });
+    setCatalogFilters({ category: cat, subCategory: sub ?? '' });
     setSearchQuery('');
-    router.push(TAB_PATHS.catalog);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    router.push(TAB_PATHS.catalog); // the tab change scrolls to the top
   };
 
-  const toggleWishlist = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setWishlist(prev => {
-      const exists = prev.includes(id);
-      if (exists) {
-        showToast('Removed from saved items');
-        return prev.filter(i => i !== id);
-      } else {
-        showToast('Added to your wishlist');
-        return [...prev, id];
-      }
-    });
+  const isInCart = (id: string) => cart.includes(id);
+
+  const addToCart = (id: string) => {
+    if (isInCart(id)) return;
+    setCart(prev => [...prev, id]);
+    showToast('Added to cart');
+  };
+
+  const removeFromCart = (id: string) => {
+    setCart(prev => prev.filter(i => i !== id));
+    showToast('Removed from cart');
+  };
+
+  const clearCart = () => {
+    setCart([]);
+    showToast('Cart cleared');
   };
 
   // Global search across category, subcategory, name, tags, wood, material or description
@@ -237,11 +270,6 @@ export default function FurnitureCatalogApp({
     );
   }, [products, searchQuery]);
 
-  // Wishlisted products list
-  const wishlistedProducts = useMemo(() => {
-    return products.filter(p => wishlist.includes(p.id));
-  }, [products, wishlist]);
-
   // Curated 4 top festive picks for the Diwali Dhamaka section
   const diwaliPicks = useMemo(() => {
     return DIWALI_PICK_IDS
@@ -256,8 +284,11 @@ export default function FurnitureCatalogApp({
 
   const catalogContext: CatalogContextValue = {
     products,
-    wishlist,
-    toggleWishlist,
+    cart,
+    isInCart,
+    addToCart,
+    removeFromCart,
+    clearCart,
     markInAppNavigation: () => {
       inAppNavigationRef.current = true;
     },
@@ -271,7 +302,7 @@ export default function FurnitureCatalogApp({
     <div className="min-h-screen bg-white text-[#111111] font-sans antialiased flex flex-col items-center justify-start sm:py-6 sm:px-4">
 
       {/* MOBILE APP DEVICE SHELL */}
-      <div className="w-full bg-[#FAF9F6] flex flex-col relative transition-all duration-300 sm:max-w-[430px] sm:min-h-[880px] sm:rounded-[48px] sm:shadow-[0_25px_80px_rgba(0,0,0,0.4)] sm:ring-8 sm:ring-neutral-800 sm:border-4 sm:border-neutral-700 sm:overflow-hidden">
+      <div ref={shellRef} className="w-full bg-[#FAF9F6] flex flex-col relative transition-all duration-300 sm:max-w-[430px] sm:min-h-[880px] sm:rounded-[48px] sm:shadow-[0_25px_80px_rgba(0,0,0,0.4)] sm:ring-8 sm:ring-neutral-800 sm:border-4 sm:border-neutral-700 sm:overflow-clip">
 
         {/* ALLABOUTWEB PROMO STRIP */}
         <div className="bg-[#111111] text-white px-3 py-2 flex items-center gap-2.5 text-[11px] font-semibold select-none shrink-0 z-50">
@@ -296,7 +327,7 @@ export default function FurnitureCatalogApp({
         </div>
 
         {/* TOP MOBILE APP BAR */}
-        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md shadow-xs">
+        <header ref={headerRef} className="sticky top-0 z-30 bg-white/95 backdrop-blur-md shadow-xs">
           
           {/* Top Diwali Festive Announcement Ribbon */}
           <div className="bg-gradient-to-r from-[#7C2D12] via-[#9A3412] to-[#B45309] text-white px-3 py-1.5 flex items-center justify-between text-[10px] font-medium shadow-2xs select-none">
@@ -347,14 +378,14 @@ export default function FurnitureCatalogApp({
               </button>
 
               <button
-                onClick={() => goToTab('wishlist')}
-                className="relative p-2 rounded-full bg-neutral-100 text-neutral-700 hover:text-[#8B5A2B] transition-colors"
-                aria-label="Wishlist"
+                onClick={() => goToTab('cart')}
+                className={`relative p-2 rounded-full bg-neutral-100 hover:text-[#8B5A2B] transition-colors ${cartCount > 0 ? 'text-[#8B5A2B]' : 'text-neutral-700'}`}
+                aria-label={cartCount > 0 ? `Cart, ${cartCount} items` : 'Cart'}
               >
-                <Heart className={`w-4 h-4 ${wishlist.length > 0 ? 'fill-red-500 text-red-500' : ''}`} />
-                {wishlist.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                    {wishlist.length}
+                <ShoppingCart className="w-4 h-4" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center">
+                    {cartCount}
                   </span>
                 )}
               </button>
@@ -401,7 +432,9 @@ export default function FurnitureCatalogApp({
         </header>
 
         {/* SCROLLABLE MAIN APP BODY (with pb-24 so content never clips behind bottom navigation tab bar) */}
-        <main className="flex-1 overflow-y-auto pb-24 px-3 sm:px-4 pt-2">
+        {/* overflow-x-clip, not overflow-auto: the window scrolls, and a scroll
+            container here would stop sticky elements inside from sticking. */}
+        <main className="flex-1 overflow-x-clip pb-24 px-3 sm:px-4 pt-2">
 
           {/* ACTIVE SEARCH RESULTS SCREEN (When user has typed in search) */}
           {searchResults !== null ? (
@@ -701,74 +734,8 @@ export default function FurnitureCatalogApp({
                 <CatalogPage filters={catalogFilters} onFiltersChange={setCatalogFilters} />
               )}
 
-              {/* TAB 3: WISHLIST (SAVED DESIGNS) */}
-              {activeTab === 'wishlist' && (
-                <div className="space-y-3 pt-1">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-sm font-bold text-[#111111] flex items-center gap-1.5">
-                        <Heart className="w-4 h-4 fill-red-500 text-red-500" />
-                        <span>Saved Furniture ({wishlist.length})</span>
-                      </h2>
-                      <p className="text-[11px] text-neutral-500">Your bookmarked pieces for home interior planning</p>
-                    </div>
-
-                    {wishlist.length > 0 && (
-                      <button
-                        onClick={() => { setWishlist([]); showToast('Wishlist cleared'); }}
-                        className="text-[11px] text-red-600 hover:underline flex items-center gap-1"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        <span>Clear</span>
-                      </button>
-                    )}
-                  </div>
-
-                  {wishlistedProducts.length === 0 ? (
-                    <div className="bg-white rounded-3xl p-8 text-center space-y-3 shadow-xs my-6">
-                      <div className="w-14 h-14 bg-red-50 text-red-400 rounded-full mx-auto flex items-center justify-center">
-                        <Heart className="w-7 h-7" />
-                      </div>
-                      <h3 className="text-sm font-bold text-neutral-900">Your Wishlist is Empty</h3>
-                      <p className="text-[11px] text-neutral-500 max-w-xs mx-auto leading-relaxed">
-                        Tap the heart icon on any sofa, dining table, or chair to save it here for easy WhatsApp price comparisons.
-                      </p>
-                      <button
-                        onClick={() => goToTab('catalog')}
-                        className="px-4 py-2 bg-[#8B5A2B] hover:bg-[#6E3D19] text-white text-xs font-semibold rounded-xl shadow-xs active:scale-95 transition-all"
-                      >
-                        Explore Furniture
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {/* Bulk WhatsApp Inquiry Action */}
-                      <a
-                        href={getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.wishlistPackage(wishlistedProducts))}
-                        onClick={onWhatsAppLinkClick}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-[#25D366] hover:bg-[#20bd5a] text-white p-3 rounded-2xl flex items-center justify-between font-semibold text-xs shadow-md active:scale-98 transition-all"
-                      >
-                        <div className="flex items-center gap-2">
-                          <WhatsAppIcon className="w-4 h-4" />
-                          <span>Get Package Deal on WhatsApp</span>
-                        </div>
-                        <ArrowRight className="w-4 h-4" />
-                      </a>
-
-                      <div className="grid grid-cols-2 gap-x-2.5 gap-y-4">
-                        {wishlistedProducts.map((product) => (
-                          <ProductCard
-                            key={product.id}
-                            product={product}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* TAB 3: CART — its own component (CartPage.tsx) */}
+              {activeTab === 'cart' && <CartPage onBrowse={() => goToTab('catalog')} />}
 
               {/* TAB 4: STORE INFO & WHATSAPP — its own component (StoreInfoPage.tsx) */}
               {activeTab === 'help' && <StoreInfoPage />}
@@ -814,25 +781,25 @@ export default function FurnitureCatalogApp({
               </span>
             </Link>
 
-            {/* Tab 3: Wishlist (Saved) */}
+            {/* Tab 3: Cart */}
             <Link
-              href={TAB_PATHS.wishlist}
+              href={TAB_PATHS.cart}
               onClick={() => setSearchQuery('')}
-              aria-current={activeTab === 'wishlist' && !searchQuery ? 'page' : undefined}
+              aria-current={activeTab === 'cart' && !searchQuery ? 'page' : undefined}
               className={`flex flex-col items-center justify-center flex-1 h-full min-h-[44px] relative transition-all active:scale-95 ${
-                activeTab === 'wishlist' && !searchQuery ? 'text-[#8B5A2B]' : 'text-neutral-500 hover:text-neutral-900'
+                activeTab === 'cart' && !searchQuery ? 'text-[#8B5A2B]' : 'text-neutral-500 hover:text-neutral-900'
               }`}
             >
               <div className="relative">
-                <Heart className={`w-5 h-5 ${activeTab === 'wishlist' && !searchQuery ? 'fill-[#8B5A2B] text-[#8B5A2B]' : 'stroke-[1.75]'}`} />
-                {wishlist.length > 0 && (
-                  <span className="absolute -top-1.5 -right-2.5 bg-red-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-xs">
-                    {wishlist.length}
+                <ShoppingCart className={`w-5 h-5 ${activeTab === 'cart' && !searchQuery ? 'stroke-[2.5]' : 'stroke-[1.75]'}`} />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1.5 -right-2.5 bg-red-600 text-white text-[9px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center shadow-xs">
+                    {cartCount}
                   </span>
                 )}
               </div>
-              <span className={`text-[10px] mt-1 ${activeTab === 'wishlist' && !searchQuery ? 'font-bold' : 'font-medium'}`}>
-                Saved
+              <span className={`text-[10px] mt-1 ${activeTab === 'cart' && !searchQuery ? 'font-bold' : 'font-medium'}`}>
+                Cart
               </span>
             </Link>
 
