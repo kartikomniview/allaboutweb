@@ -1,5 +1,6 @@
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import DemoBanner from "@/components/landing/DemoBanner";
 import Hero from "@/components/landing/Hero";
 import Services from "@/components/landing/Services";
 import Work from "@/components/landing/Work";
@@ -46,7 +47,9 @@ export default function Home() {
       <main>
         <Hero />
         <Services />
+        <DemoBanner variant="ecatalog" />
         <Work />
+        <DemoBanner variant="website" className="pb-12 sm:pb-20 lg:pb-24" />
         <Process />
         <Pricing />
         <Faq />

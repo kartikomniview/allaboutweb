@@ -1,21 +1,21 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  FileStack,
   FileText,
   Globe,
   LayoutGrid,
   Link2,
   MessageCircle,
-  Package,
   Palette,
   PanelsTopLeft,
   Printer,
   RefreshCw,
   Search,
+  Send,
+  Server,
   Smartphone,
 } from "lucide-react";
-import { PRICING_PATH, pricingHref, type ServiceKey } from "@/lib/contact";
+import { PRICING_PATH, SERVICE_PAGES, pricingHref, type ServiceKey } from "@/lib/contact";
 import { revealDelay } from "@/lib/reveal";
 import HScroll from "./ui/HScroll";
 import Section from "./ui/Section";
@@ -27,11 +27,11 @@ const PLANS = [
     service: "pdf" as ServiceKey,
     label: "PDF Catalog",
     icon: FileText,
-    price: "2,999",
+    price: "1,999",
     features: [
-      { icon: FileStack, label: "20 pages" },
       { icon: Palette, label: "Branded" },
       { icon: Printer, label: "Print ready" },
+      { icon: Send, label: "WhatsApp ready" },
       { icon: RefreshCw, label: "2 revisions" },
     ],
   },
@@ -40,12 +40,13 @@ const PLANS = [
     service: "ecatalog" as ServiceKey,
     label: "E-Catalog",
     icon: LayoutGrid,
-    price: "4,999",
+    price: "299",
+    priceSuffix: "/month",
     features: [
-      { icon: Package, label: "100 products" },
       { icon: Link2, label: "Share link" },
       { icon: MessageCircle, label: "WhatsApp" },
-      { icon: RefreshCw, label: "1 mo updates" },
+      { icon: RefreshCw, label: "Update anytime" },
+      { icon: Server, label: "Hosting incl." },
     ],
     popular: true,
   },
@@ -54,7 +55,7 @@ const PLANS = [
     service: "website" as ServiceKey,
     label: "Website",
     icon: Globe,
-    price: "9,999",
+    price: "14,999",
     features: [
       { icon: PanelsTopLeft, label: "5 pages" },
       { icon: Smartphone, label: "Mobile ready" },
@@ -74,7 +75,7 @@ export default function Pricing() {
         className="mt-6 sm:mt-12"
         gridClassName="md:mx-auto md:grid md:max-w-5xl md:grid-cols-3 md:items-center md:gap-6 md:overflow-visible md:px-0"
       >
-        {PLANS.map(({ id, service, label, icon: Icon, price, features, popular }, i) => (
+        {PLANS.map(({ id, service, label, icon: Icon, price, priceSuffix, features, popular }, i) => (
           <div
             key={id}
             data-reveal="up"
@@ -106,6 +107,11 @@ export default function Pricing() {
                     From
                   </span>
                   ₹{price}
+                  {priceSuffix && (
+                    <span className={`text-sm font-semibold ${popular ? "text-white/70" : "text-slate"}`}>
+                      {priceSuffix}
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
@@ -134,6 +140,14 @@ export default function Pricing() {
             >
               Get started
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+            </Link>
+            <Link
+              href={SERVICE_PAGES[service]}
+              className={`mt-2 py-1 text-center text-sm font-semibold transition ${
+                popular ? "text-white/80 hover:text-white" : "text-primary hover:text-ink"
+              }`}
+            >
+              View details →
             </Link>
           </div>
         ))}

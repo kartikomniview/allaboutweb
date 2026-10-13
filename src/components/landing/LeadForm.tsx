@@ -2,7 +2,7 @@ import { Check } from "lucide-react";
 import CtaLink from "@/components/CtaLink";
 import PricingForm from "@/components/PricingForm";
 import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
-import { whatsappUrl } from "@/lib/contact";
+import { whatsappUrl, type ServiceKey } from "@/lib/contact";
 import { revealDelay } from "@/lib/reveal";
 import SectionHeading from "./ui/SectionHeading";
 
@@ -12,7 +12,7 @@ const PROMISES = [
   "Fixed scope, no hidden costs",
 ];
 
-export default function LeadForm() {
+export default function LeadForm({ initialService }: { initialService?: ServiceKey }) {
   return (
     <section id="contact" className="relative isolate scroll-mt-20 overflow-hidden bg-secondary">
       <div
@@ -77,7 +77,7 @@ export default function LeadForm() {
           style={revealDelay(120)}
           className="scroll-mt-24 rounded-panel bg-white p-5 shadow-lift sm:p-8"
         >
-          <PricingForm headingLevel="h3" />
+          <PricingForm initialService={initialService} headingLevel="h3" />
         </div>
       </div>
     </section>

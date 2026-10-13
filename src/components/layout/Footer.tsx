@@ -55,7 +55,7 @@ export default function Footer() {
             <ul className="mt-3 flex flex-col">
               {ALL_SERVICES.map((service) => (
                 <li key={service.id}>
-                  <Link href={`/#${service.id}`} className={linkClass}>
+                  <Link href={service.page ?? `/#${service.id}`} className={linkClass}>
                     {service.name}
                   </Link>
                 </li>

@@ -6,6 +6,13 @@ export type ServiceKey = "website" | "ecatalog" | "pdf";
 
 export const SERVICE_KEYS: ServiceKey[] = ["website", "ecatalog", "pdf"];
 
+/** Detail page for each core service */
+export const SERVICE_PAGES: Record<ServiceKey, string> = {
+  website: "/website-services",
+  ecatalog: "/e-catalog-services",
+  pdf: "/pdf-services",
+};
+
 export function isServiceKey(value: unknown): value is ServiceKey {
   return typeof value === "string" && (SERVICE_KEYS as string[]).includes(value);
 }

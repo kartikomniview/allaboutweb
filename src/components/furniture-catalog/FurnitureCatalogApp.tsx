@@ -20,7 +20,8 @@ import {
   MapPin,
   Clock,
   Gift,
-  Flame
+  Flame,
+  Info
 } from 'lucide-react';
 import {
   AAW_PROMO,
@@ -741,6 +742,12 @@ export default function FurnitureCatalogApp({
               {activeTab === 'help' && <StoreInfoPage />}
             </>
           )}
+
+          {/* DEMO DISCLAIMER — shown at the end of every tab */}
+          <p className="mt-6 flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-neutral-300 bg-white/70 px-3 py-2.5 text-center text-[11px] font-medium text-neutral-500">
+            <Info className="w-3.5 h-3.5 shrink-0 text-[#8B5A2B]" />
+            <span>This is a furniture e-catalog for demo purposes only.</span>
+          </p>
 
         </main>
 

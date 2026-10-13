@@ -14,7 +14,7 @@ import {
   ShoppingBag,
   type LucideIcon,
 } from "lucide-react";
-import { pricingHref, whatsappUrl } from "@/lib/contact";
+import { SERVICE_PAGES, whatsappUrl } from "@/lib/contact";
 
 const S3 = "https://aawsite.s3.ap-south-1.amazonaws.com/website/landing";
 
@@ -36,27 +36,32 @@ export type Service = {
   description: string;
   /** Starting price in ₹, formatted */
   price: string;
+  /** Billing period shown after the price, e.g. "/month" */
+  priceSuffix?: string;
   icon: LucideIcon;
   image?: string;
   /** Square photo for the mobile quick-access grid (see `thumb()`) */
   thumb?: string;
   href: string;
+  /** Dedicated service page, when the service has one */
+  page?: string;
   badge?: string;
   features?: string[];
 };
 
-/** Core services — open the multi-step pricing form for that service. */
+/** Core services — each opens its own service page. */
 export const FEATURED_SERVICES: Service[] = [
   {
     id: "website-development",
     name: "Website Development",
     shortName: "Website",
     description: "A fast, mobile-friendly website that shows up on Google and brings enquiries.",
-    price: "9,999",
+    price: "14,999",
     icon: Globe,
     thumb: thumb("website-development"),
     image: `${S3}/services/websites/2.webp`,
-    href: pricingHref("website"),
+    href: SERVICE_PAGES.website,
+    page: SERVICE_PAGES.website,
     features: ["Works on every phone", "Shows on Google", "WhatsApp button"],
   },
   {
@@ -64,11 +69,13 @@ export const FEATURED_SERVICES: Service[] = [
     name: "E-Catalog",
     shortName: "E-Catalog",
     description: "All your products and prices in one link customers can browse on their phone.",
-    price: "4,999",
+    price: "299",
+    priceSuffix: "/month",
     icon: LayoutGrid,
     thumb: thumb("e-catalog"),
     image: `${S3}/services/e-catalog/1.webp`,
-    href: pricingHref("ecatalog"),
+    href: SERVICE_PAGES.ecatalog,
+    page: SERVICE_PAGES.ecatalog,
     badge: "Most popular",
     features: ["One shareable link", "Update prices anytime", "No app needed"],
   },
@@ -77,11 +84,12 @@ export const FEATURED_SERVICES: Service[] = [
     name: "Product Catalog PDF",
     shortName: "PDF Catalog",
     description: "A neat, branded catalog customers can save, print or forward on WhatsApp.",
-    price: "2,999",
+    price: "1,999",
     icon: FileText,
     thumb: thumb("product-catalog-pdf"),
     image: `${S3}/services/pdf-catalog/1.webp`,
-    href: pricingHref("pdf"),
+    href: SERVICE_PAGES.pdf,
+    page: SERVICE_PAGES.pdf,
     features: ["Print ready", "Send on WhatsApp", "Easy to update"],
   },
 ];
@@ -97,7 +105,8 @@ export const MORE_SERVICES: Service[] = [
     icon: MousePointerClick,
     thumb: thumb("landing-page"),
     image: moreImage("landing-page"),
-    href: enquire("a Landing Page"),
+    href: SERVICE_PAGES.website,
+    page: SERVICE_PAGES.website,
   },
   {
     id: "ecommerce-store",
@@ -108,7 +117,8 @@ export const MORE_SERVICES: Service[] = [
     icon: ShoppingBag,
     thumb: thumb("ecommerce-store"),
     image: moreImage("ecommerce-store"),
-    href: enquire("an E-commerce Store"),
+    href: SERVICE_PAGES.website,
+    page: SERVICE_PAGES.website,
   },
   {
     id: "logo-branding",
@@ -119,7 +129,8 @@ export const MORE_SERVICES: Service[] = [
     icon: Palette,
     thumb: thumb("logo-branding"),
     image: moreImage("logo-branding"),
-    href: enquire("Logo & Branding"),
+    href: SERVICE_PAGES.website,
+    page: SERVICE_PAGES.website,
   },
   {
     id: "google-business-profile",
@@ -160,33 +171,33 @@ export type Banner = {
 export const BANNERS: Banner[] = [
   {
     id: "website",
-    eyebrow: "Websites from ₹9,999",
+    eyebrow: "Websites from ₹14,999",
     title: "Get your business online — the right way",
     description: "Mobile-friendly, shows on Google, enquiries straight to WhatsApp.",
     image: `${S3}/hero/website.webp`,
-    cta: { label: "Get a website", href: pricingHref("website") },
+    cta: { label: "Get a website", href: SERVICE_PAGES.website },
   },
   {
     id: "ecatalog",
-    eyebrow: "E-Catalogs from ₹4,999",
+    eyebrow: "E-Catalogs from ₹299/month",
     title: "Your full product range in one link",
     description: "Customers browse products and prices — no app needed.",
     image: `${S3}/hero/ecatalog.webp`,
-    cta: { label: "Try the live demo", href: "/app/catalog/furniture" },
+    cta: { label: "See e-catalogs", href: SERVICE_PAGES.ecatalog },
   },
   {
     id: "pdf",
-    eyebrow: "PDF Catalogs from ₹2,999",
+    eyebrow: "PDF Catalogs from ₹1,999",
     title: "A catalog customers save and share",
     description: "Branded, print-ready and perfect for WhatsApp.",
     image: `${S3}/hero/pdf.webp`,
-    cta: { label: "Design my catalog", href: pricingHref("pdf") },
+    cta: { label: "Design my catalog", href: SERVICE_PAGES.pdf },
   },
 ];
 
 /** Facts, not claims — every one of these is true today. */
 export const STATS = [
-  { value: "₹2,999", label: "Starting price" },
+  { value: "₹299/mo", label: "Starting price" },
   { value: "1–2 wks", label: "Typical delivery" },
   { value: "1-on-1", label: "Direct contact" },
 ];

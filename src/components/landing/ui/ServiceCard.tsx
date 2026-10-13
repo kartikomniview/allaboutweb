@@ -5,7 +5,7 @@ import SmartLink from "./SmartLink";
 
 /** Image-first app-style card for a featured service. */
 export function ServiceCard({ service, className = "" }: { service: Service; className?: string }) {
-  const { id, name, price, image, href, badge } = service;
+  const { id, name, price, priceSuffix, image, href, badge } = service;
 
   return (
     <SmartLink
@@ -35,6 +35,7 @@ export function ServiceCard({ service, className = "" }: { service: Service; cla
             <h3 className="truncate text-[0.9375rem] font-bold leading-snug text-ink sm:text-lg">{name}</h3>
             <p className="text-xs text-slate sm:text-sm">
               From <strong className="font-bold text-ink">₹{price}</strong>
+              {priceSuffix}
             </p>
           </div>
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink text-white transition group-hover:bg-primary">

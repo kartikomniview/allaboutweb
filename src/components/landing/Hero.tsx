@@ -84,7 +84,7 @@ export default function Hero() {
             {ALL_SERVICES.slice(0, 7).map((service) => (
               <ServiceTile
                 key={service.id}
-                href={`#${service.id}`}
+                href={service.page ?? `#${service.id}`}
                 label={service.shortName}
                 icon={service.icon}
                 image={service.thumb}

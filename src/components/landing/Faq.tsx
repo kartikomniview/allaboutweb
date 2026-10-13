@@ -7,7 +7,9 @@ import { revealDelay } from "@/lib/reveal";
 import Section from "./ui/Section";
 import SectionHeading from "./ui/SectionHeading";
 
-const FAQS: { question: string; answer: ReactNode }[] = [
+export type FaqItem = { question: string; answer: ReactNode };
+
+const FAQS: FaqItem[] = [
   {
     question: "How long does it take to build a website?",
     answer: (
@@ -70,7 +72,13 @@ const FAQS: { question: string; answer: ReactNode }[] = [
   },
 ];
 
-export default function Faq() {
+export default function Faq({
+  items = FAQS,
+  description = "Quick answers to what businesses usually ask us.",
+}: {
+  items?: FaqItem[];
+  description?: ReactNode;
+}) {
   return (
     <Section id="faq" tone="paper">
       <div className="lg:grid lg:grid-cols-[1fr_1.6fr] lg:gap-16">
@@ -78,7 +86,7 @@ export default function Faq() {
           <SectionHeading
             eyebrow="FAQ"
             title="Frequently asked questions"
-            description="Quick answers to what businesses usually ask us."
+            description={description}
           />
           <div
             data-reveal="up"
@@ -101,7 +109,7 @@ export default function Faq() {
         </div>
 
         <div className="mt-6 flex flex-col gap-3 sm:mt-10 lg:mt-0">
-          {FAQS.map((faq, i) => (
+          {items.map((faq, i) => (
             <details
               key={faq.question}
               data-reveal="up"
