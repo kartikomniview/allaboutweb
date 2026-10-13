@@ -531,14 +531,18 @@ export const WhatsAppIcon: React.FC<{ className?: string }> = ({ className = 'w-
 
 // The product's main photo (uploaded in the admin panel), or the drawn
 // placeholder when it has none. The parent must be position: relative.
-export const ProductVisual: React.FC<{ product: CatalogProduct; sizes: string }> = ({ product, sizes }) =>
+export const ProductVisual: React.FC<{ product: CatalogProduct; sizes: string; fit?: 'cover' | 'contain' }> = ({
+  product,
+  sizes,
+  fit = 'cover',
+}) =>
   product.mainImageUrl ? (
     <Image
       src={product.mainImageUrl}
       alt={product.productName}
       fill
       sizes={sizes}
-      className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+      className={`${fit === 'contain' ? 'object-contain' : 'object-cover'} transition-transform duration-500 ease-out group-hover:scale-105`}
     />
   ) : (
     <FriendlyFurniturePlaceholder
@@ -566,7 +570,7 @@ export const ProductCard: React.FC<{ product: CatalogProduct }> = ({ product }) 
         className="flex flex-col active:scale-[0.99] transition-transform duration-300"
       >
         <div className="relative aspect-square overflow-hidden rounded-md bg-gradient-to-b from-[#FDFBF7] to-[#F5ECE0] shadow-[0_2px_12px_rgba(0,0,0,0.05)] group-hover:shadow-[0_14px_32px_rgba(139,90,43,0.13)] transition-shadow duration-300">
-          <ProductVisual product={product} sizes="(min-width: 640px) 200px, 50vw" />
+          <ProductVisual product={product} sizes="(min-width: 640px) 200px, 50vw" fit="contain" />
 
           {badge && (
             <span className="absolute top-2 left-2 max-w-[70%] truncate rounded-full bg-black/45 backdrop-blur-sm px-2 py-0.5 text-[9px] font-semibold text-white">

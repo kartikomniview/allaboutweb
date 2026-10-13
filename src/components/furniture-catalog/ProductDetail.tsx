@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Check, Layers, Ruler, Share2, ShoppingCart, Star, Trees, Truck } from 'lucide-react';
 import type { CatalogProduct } from '@/lib/adminProducts';
 import { TRUST_POINTS, WHATSAPP_MESSAGES, formatINR } from './data';
+import ImageViewer, { rememberImageSize } from './ImageViewer';
 import {
   CART_PATH,
   CATALOG_PATH,
@@ -26,6 +27,9 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
 
   const images = [...new Set([product.mainImageUrl, ...product.images].filter(Boolean))];
   const [activeImage, setActiveImage] = useState(0);
+  // Index of the photo open in the full-screen viewer, or null when it's closed.
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const heroRef = useRef<HTMLDivElement>(null);
   const galleryRef = useRef<HTMLDivElement>(null);
 
   const discount =
@@ -50,7 +54,8 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') goBack();
+      // While the photo viewer is open, Escape closes the viewer (it listens itself).
+      if (e.key === 'Escape' && viewerIndex === null) goBack();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
@@ -71,6 +76,13 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
     if (track?.clientWidth) setActiveImage(Math.round(track.scrollLeft / track.clientWidth));
   };
 
+  // Keep the gallery on the viewer's photo, so closing shrinks back onto the right one.
+  const syncGallery = (idx: number) => {
+    const track = galleryRef.current;
+    track?.scrollTo({ left: idx * track.clientWidth, behavior: 'instant' });
+    setActiveImage(idx);
+  };
+
   const iconButton =
     'flex h-9 w-9 items-center justify-center rounded-full bg-white/85 backdrop-blur-sm text-neutral-800 shadow-sm active:scale-90 transition-transform';
 
@@ -81,16 +93,22 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
         className="fc-page-enter relative flex h-full w-full flex-col bg-[#FAF9F6] sm:max-w-[430px] sm:shadow-2xl"
       >
         <div className="flex-1 overflow-y-auto overscroll-contain">
-          {/* Photo gallery — swipe when there is more than one image */}
-          <div className="relative aspect-square bg-gradient-to-b from-[#FDFBF7] to-[#F5ECE0]">
-            {images.length > 1 ? (
+          {/* Photo gallery — swipe when there is more than one image; tap to open full screen */}
+          <div ref={heroRef} className="relative aspect-square bg-gradient-to-b from-[#FDFBF7] to-[#F5ECE0]">
+            {images.length > 0 ? (
               <div
                 ref={galleryRef}
                 onScroll={handleGalleryScroll}
                 className="flex h-full overflow-x-auto snap-x snap-mandatory overscroll-x-contain no-scrollbar"
               >
                 {images.map((src, idx) => (
-                  <div key={src} className="relative h-full w-full shrink-0 snap-center">
+                  <button
+                    key={src}
+                    type="button"
+                    onClick={() => setViewerIndex(idx)}
+                    aria-label={`View photo ${idx + 1} of ${images.length} full screen`}
+                    className="relative h-full w-full shrink-0 snap-center cursor-zoom-in"
+                  >
                     <Image
                       src={src}
                       alt={idx === 0 ? product.productName : ''}
@@ -98,9 +116,10 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
                       sizes="(min-width: 640px) 430px, 100vw"
                       preload={idx === 0}
                       draggable={false}
+                      onLoad={(e) => rememberImageSize(src, e.currentTarget)}
                       className="object-cover"
                     />
-                  </div>
+                  </button>
                 ))}
               </div>
             ) : (
@@ -248,6 +267,17 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
           </a>
         </div>
       </section>
+
+      {viewerIndex !== null && (
+        <ImageViewer
+          images={images}
+          alt={product.productName}
+          startIndex={viewerIndex}
+          getOriginRect={() => heroRef.current?.getBoundingClientRect() ?? null}
+          onIndexChange={syncGallery}
+          onClose={() => setViewerIndex(null)}
+        />
+      )}
     </div>
   );
 }

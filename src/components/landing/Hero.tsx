@@ -12,15 +12,6 @@ const enter = (ms: number) => ({ "--enter-delay": `${ms}ms` }) as CSSProperties;
 export default function Hero() {
   return (
     <section id="top" className="relative isolate overflow-hidden bg-paper">
-      <div
-        className="absolute inset-0 -z-10 bg-[linear-gradient(to_right,var(--color-line)_1px,transparent_1px),linear-gradient(to_bottom,var(--color-line)_1px,transparent_1px)] bg-[size:48px_48px] [mask-image:radial-gradient(ellipse_70%_60%_at_30%_30%,black_20%,transparent_100%)]"
-        aria-hidden="true"
-      />
-      <div
-        className="absolute -right-32 -top-32 -z-10 h-[28rem] w-[28rem] rounded-full bg-primary/10 blur-3xl"
-        aria-hidden="true"
-      />
-
       <div className="mx-auto max-w-6xl px-4 pb-10 pt-4 sm:px-6 sm:pb-16 sm:pt-10 header:px-8 lg:grid lg:grid-cols-[1fr_1.05fr] lg:items-center lg:gap-14 lg:pb-24 lg:pt-14">
         <div>
           <h1
