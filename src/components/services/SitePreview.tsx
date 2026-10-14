@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { ExternalLink, Monitor, Smartphone } from "lucide-react";
+import { ExternalLink, Monitor, Smartphone, X } from "lucide-react";
+import DemoStart from "./DemoStart";
 import PhoneFrame from "./PhoneFrame";
 
 /** Desktop view renders the site at this size, then scales it down to fit */
@@ -49,6 +50,8 @@ export default function SitePreview({
   const [chosen, setChosen] = useState<View | null>(null);
   const view: View = chosen ?? (smallScreen ? "mobile" : "desktop");
 
+  /** Nothing loads until the visitor presses "Start demo"; the choice carries across views */
+  const [started, setStarted] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0);
@@ -65,6 +68,11 @@ export default function SitePreview({
     if (next === view) return;
     setLoaded(false);
     setChosen(next);
+  };
+
+  const toggleDemo = (next: boolean) => {
+    setLoaded(false);
+    setStarted(next);
   };
 
   const spinner = !loaded && (
@@ -107,6 +115,17 @@ export default function SitePreview({
               </button>
             ))}
           </div>
+          {/* The phone frame has its own close button, so this one is for desktop view only */}
+          {started && view === "desktop" && (
+            <button
+              type="button"
+              onClick={() => toggleDemo(false)}
+              aria-label="Close demo"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line bg-white text-slate transition hover:border-ink hover:bg-ink hover:text-white"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          )}
         </div>
 
         {view === "desktop" ? (
@@ -115,22 +134,21 @@ export default function SitePreview({
             className="relative overflow-hidden bg-paper"
             style={{ height: scale ? DESKTOP_HEIGHT * scale : undefined, aspectRatio: scale ? undefined : "16 / 10" }}
           >
-            {scale > 0 && (
+            {started && scale > 0 && (
               <iframe
                 key="desktop"
                 src={src}
                 title={title}
-                loading="lazy"
                 onLoad={() => setLoaded(true)}
                 className="absolute left-0 top-0 origin-top-left border-0 bg-white"
                 style={{ width: DESKTOP_WIDTH, height: DESKTOP_HEIGHT, transform: `scale(${scale})` }}
               />
             )}
-            {spinner}
+            {started ? spinner : <DemoStart onStart={() => toggleDemo(true)} />}
           </div>
         ) : (
           <div className="bg-paper px-3 py-6 sm:px-4 sm:py-8">
-            <PhoneFrame key="mobile" src={src} title={title} />
+            <PhoneFrame key="mobile" src={src} title={title} started={started} onStartedChange={toggleDemo} />
           </div>
         )}
       </div>
