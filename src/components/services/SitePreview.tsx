@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ExternalLink, Monitor, Smartphone } from "lucide-react";
+import PhoneFrame from "./PhoneFrame";
 
 /** Desktop view renders the site at this size, then scales it down to fit */
 const DESKTOP_WIDTH = 1280;
@@ -128,20 +129,8 @@ export default function SitePreview({
             {spinner}
           </div>
         ) : (
-          <div className="bg-paper px-4 py-6 sm:py-8">
-            <div className="mx-auto w-full max-w-[22rem] rounded-[2.5rem] bg-ink p-2.5 shadow-lift">
-              <div className="relative h-[min(70vh,40rem)] min-h-[30rem] overflow-hidden rounded-[2rem] bg-white">
-                <iframe
-                  key="mobile"
-                  src={src}
-                  title={title}
-                  loading="lazy"
-                  onLoad={() => setLoaded(true)}
-                  className="h-full w-full border-0"
-                />
-                {spinner}
-              </div>
-            </div>
+          <div className="bg-paper px-3 py-6 sm:px-4 sm:py-8">
+            <PhoneFrame key="mobile" src={src} title={title} />
           </div>
         )}
       </div>

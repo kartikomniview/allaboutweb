@@ -9,7 +9,7 @@ import RevealObserver from "@/components/landing/RevealObserver";
 import HScroll from "@/components/landing/ui/HScroll";
 import Section from "@/components/landing/ui/Section";
 import SectionHeading from "@/components/landing/ui/SectionHeading";
-import { PDF_PAGE as PAGE, PDF_SAMPLES } from "@/components/services/content";
+import { PDF_PAGE as PAGE, PDF_SAMPLES, PDF_TEMPLATES } from "@/components/services/content";
 import FeatureGrid, { FeatureRow } from "@/components/services/FeatureGrid";
 import { serviceMetadata } from "@/components/services/metadata";
 import PlanCard from "@/components/services/PlanCard";
@@ -33,19 +33,20 @@ export default function PdfServicesPage() {
             <ShowcaseCaption eyebrow="Recent work" title="Catalogs we've designed" />
             <HScroll
               label="Sample catalog designs"
-              gridClassName="md:mx-0 md:grid md:grid-cols-3 md:gap-6 md:overflow-visible md:px-0"
+              gridClassName="items-start md:mx-0 md:grid md:grid-cols-2 md:gap-6 md:overflow-visible md:px-0"
             >
               {PDF_SAMPLES.map((sample, i) => (
                 <div
                   key={sample.src}
-                  className="relative aspect-[4/5] w-[78%] max-w-sm shrink-0 snap-start overflow-hidden rounded-card border border-line bg-white shadow-card md:w-auto md:max-w-none"
+                  className="w-[85%] shrink-0 snap-start overflow-hidden rounded-card border border-line bg-white shadow-card md:w-auto"
                 >
                   <Image
                     src={sample.src}
                     alt={sample.alt}
-                    fill
-                    sizes="(min-width: 768px) 33vw, 78vw"
-                    className="object-cover transition duration-500 hover:scale-105"
+                    width={1400}
+                    height={988}
+                    sizes="(min-width: 1152px) 560px, (min-width: 768px) 50vw, 85vw"
+                    className="block h-auto w-full transition duration-500 hover:scale-105"
                     priority={i === 0}
                   />
                 </div>
@@ -53,6 +54,32 @@ export default function PdfServicesPage() {
             </HScroll>
           </div>
         </ServiceHero>
+
+        <Section id="templates" tone="paper">
+          <SectionHeading
+            eyebrow="Templates"
+            title="Browse our templates"
+            description="Pick a layout you like and we'll fill it with your products, prices and brand."
+          />
+          <div className="mx-auto mt-6 flex max-w-4xl flex-col gap-4 sm:mt-10 sm:gap-6">
+            {PDF_TEMPLATES.map((template) => (
+              <div
+                key={template.src}
+                data-reveal="up"
+                className="overflow-hidden rounded-card border border-line bg-white shadow-card"
+              >
+                <Image
+                  src={template.src}
+                  alt={template.alt}
+                  width={1400}
+                  height={988}
+                  sizes="(min-width: 896px) 896px, 100vw"
+                  className="block h-auto w-full"
+                />
+              </div>
+            ))}
+          </div>
+        </Section>
 
         <Section id="features">
           <SectionHeading eyebrow="What you get" title="A catalog that sells for you" />

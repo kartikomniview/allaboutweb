@@ -32,7 +32,7 @@ export default function ECatalogServicesPage() {
       <Header />
       <main>
         <ServiceHero page={PAGE}>
-          <div id="demo" className="mx-auto max-w-[22rem] scroll-mt-24 text-center">
+          <div id="demo" className="mx-auto max-w-[24rem] scroll-mt-24 text-center">
             <ShowcaseCaption eyebrow="Live demo" title="Furniture e-catalog — tap around" />
             <PhoneFrame src={DEMO_PATH} title="Live demo of a furniture e-catalog" />
             <CtaLink href={DEMO_PATH} variant="secondary" className="group mt-5 gap-2">

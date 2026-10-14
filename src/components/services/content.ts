@@ -250,9 +250,14 @@ export const PDF_PAGE: ServicePage = {
   ],
 };
 
-/** Sample PDF catalog designs for the gallery */
+/** PDF catalogs we've designed for clients (landscape spreads, served from public/) */
 export const PDF_SAMPLES = [
-  { src: `${S3}/works/pdf-catalog/1.webp`, alt: "Product catalog PDF design by AllAboutWeb" },
-  { src: `${S3}/services/pdf-catalog/1.webp`, alt: "Branded catalog pages designed by AllAboutWeb" },
-  { src: `${S3}/hero/pdf.webp`, alt: "Printed and digital product catalogs by AllAboutWeb" },
+  { src: "/pdf-catalog/designed/1.webp", alt: "Product catalog PDF design by AllAboutWeb" },
+  { src: "/pdf-catalog/designed/2.webp", alt: "Branded catalog pages designed by AllAboutWeb" },
 ];
+
+/** Ready-made PDF catalog templates (landscape spreads, served from public/) */
+export const PDF_TEMPLATES = [1, 2, 3, 4, 5].map((n) => ({
+  src: `/pdf-catalog/${n}.webp`,
+  alt: `PDF catalog template ${n} — product pages with prices, materials and dimensions`,
+}));
