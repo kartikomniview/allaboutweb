@@ -352,18 +352,21 @@ function removeWhere<T>(list: T[], match: (item: T) => boolean): boolean {
   return removed;
 }
 
-function AutoSaveStatus({ state }: { state: ImageSaveState }) {
+/** `label` names what the latest save was for; `seq` replays the pop-in on every save. */
+type ImageSaveStatus = { state: ImageSaveState; label: string; seq: number };
+
+function AutoSaveStatus({ status: { state, label, seq } }: { status: ImageSaveStatus }) {
   if (state === "saving") {
     return (
-      <span className="inline-flex items-center gap-1 text-slate">
-        <Spinner className="h-3 w-3" /> Saving images…
+      <span role="status" className="inline-flex items-center gap-1 text-slate">
+        <Spinner className="h-3 w-3" /> Saving…
       </span>
     );
   }
   if (state === "saved") {
     return (
-      <span className="inline-flex items-center gap-1 text-emerald-700">
-        <CircleCheck className="h-3 w-3" aria-hidden /> Images saved
+      <span key={seq} role="status" className="admin-pop-in inline-flex items-center gap-1 font-medium text-emerald-700">
+        <CircleCheck className="h-3 w-3" aria-hidden /> {label}
       </span>
     );
   }
@@ -403,9 +406,18 @@ function ImageManager({
   onSetPlain: (url: string) => void;
   onBusyChange: (busy: boolean) => void;
   /** Auto-save state for an existing product; null for a new one. */
-  autoSave: ImageSaveState | null;
+  autoSave: ImageSaveStatus | null;
 }) {
   const [pending, setPending] = useState<PendingUpload[]>([]);
+  // Brief confirmation shown on the tile whose Main/Plain button was just clicked.
+  const [flash, setFlash] = useState<{ url: string; text: string; id: number } | null>(null);
+  const flashTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(flashTimer.current), []);
+  const flashTile = (url: string, text: string) => {
+    clearTimeout(flashTimer.current);
+    setFlash((f) => ({ url, text, id: (f?.id ?? 0) + 1 }));
+    flashTimer.current = setTimeout(() => setFlash(null), 1800);
+  };
   const [rejected, setRejected] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
@@ -612,6 +624,17 @@ function ImageManager({
                       )}
                     </div>
                   )}
+                  {flash?.url === url && (
+                    <div className="pointer-events-none absolute inset-x-2 bottom-2 flex justify-center">
+                      <span
+                        key={flash.id}
+                        className="admin-pop-in inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-md"
+                      >
+                        <CircleCheck className="h-3.5 w-3.5" aria-hidden />
+                        {flash.text}
+                      </span>
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={() => setConfirmRemove(url)}
@@ -625,17 +648,24 @@ function ImageManager({
                 <div className={tileFooter}>
                   <button
                     type="button"
-                    onClick={() => !isMain && onSetMain(url)}
+                    onClick={() => {
+                      if (isMain) return flashTile(url, "Already the cover");
+                      onSetMain(url);
+                      flashTile(url, "Set as cover");
+                    }}
                     aria-pressed={isMain}
                     title={isMain ? "Cover on product cards" : "Use as the cover on product cards"}
-                    className={`${footerBtn} ${isMain ? "cursor-default bg-primary text-white shadow-sm" : `${footerBtnIdle} hover:text-primary`}`}
+                    className={`${footerBtn} ${isMain ? "bg-primary text-white shadow-sm" : `${footerBtnIdle} hover:text-primary`}`}
                   >
                     <Star className={`h-3.5 w-3.5 ${isMain ? "fill-current" : ""}`} aria-hidden />
                     Main
                   </button>
                   <button
                     type="button"
-                    onClick={() => onSetPlain(isPlain ? "" : url)}
+                    onClick={() => {
+                      onSetPlain(isPlain ? "" : url);
+                      flashTile(url, isPlain ? "Plain shot cleared" : "Marked as plain");
+                    }}
                     aria-pressed={isPlain}
                     title={isPlain ? "Click to unset the plain-background shot" : "Mark as the plain-background shot"}
                     className={`${footerBtn} ${isPlain ? "bg-ink text-white shadow-sm hover:bg-ink/90" : footerBtnIdle}`}
@@ -743,7 +773,7 @@ function ImageManager({
           </p>
         )}
         {autoSave ? (
-          <AutoSaveStatus state={autoSave} />
+          <AutoSaveStatus status={autoSave} />
         ) : (
           !empty && <span className="text-slate">Images are saved when you create the product.</span>
         )}
@@ -799,7 +829,7 @@ export default function ProductFormDrawer({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [imageSave, setImageSave] = useState<ImageSaveState>("idle");
+  const [imageSave, setImageSave] = useState<ImageSaveStatus>({ state: "idle", label: "", seq: 0 });
   const [promptOpen, setPromptOpen] = useState(false);
   const dirty = JSON.stringify(form) !== JSON.stringify(initial);
 
@@ -820,7 +850,7 @@ export default function ProductFormDrawer({
   }, []);
 
   // Warn before a refresh or tab close would lose unsaved work.
-  const unsafeToLeave = dirty || uploading || imageSave === "saving";
+  const unsafeToLeave = dirty || uploading || imageSave.state === "saving";
   useEffect(() => {
     if (!unsafeToLeave) return;
     const warn = (e: BeforeUnloadEvent) => e.preventDefault();
@@ -837,37 +867,46 @@ export default function ProductFormDrawer({
     onImagesSavedRef.current = onImagesSaved;
   });
 
-  function persistImages(next: ImageFields) {
+  // Saves still queued or running. "Saved" is only shown once the last one lands,
+  // so an earlier save finishing can't report success while a newer one is pending.
+  const queuedSaves = useRef(0);
+
+  function persistImages(next: ImageFields, label: string) {
     if (!lastSaved.current) return; // new product: saved on "Create product"
-    setImageSave("saving");
+    queuedSaves.current += 1;
+    setImageSave((s) => ({ ...s, state: "saving" }));
     imageSaves.current = imageSaves.current.then(async () => {
       const base = lastSaved.current!;
+      let ok = false;
       try {
         const updated = await updateProduct(base.id, { ...productToInput(base), ...next });
         lastSaved.current = updated;
         removeWhere(sessionUploads.current, (url) => updated.images.includes(url));
         setInitial((i) => ({ ...i, ...pickImages(updated) }));
         onImagesSavedRef.current?.(updated);
-        setImageSave("saved");
+        ok = true;
       } catch {
-        setImageSave("error");
+        // Reported below.
       }
+      queuedSaves.current -= 1;
+      if (!ok) setImageSave((s) => ({ ...s, state: "error" }));
+      else if (queuedSaves.current === 0) setImageSave((s) => ({ state: "saved", label, seq: s.seq + 1 }));
     });
   }
 
   // The latest image fields, kept in a ref so async upload callbacks never
   // work from a stale copy of the form.
   const imagesRef = useRef<ImageFields>(pickImages(initial));
-  function changeImages(change: (current: ImageFields) => ImageFields) {
+  function changeImages(change: (current: ImageFields) => ImageFields, label: string) {
     const next = change(imagesRef.current);
     imagesRef.current = next;
     setForm((f) => ({ ...f, ...next }));
-    persistImages(next);
+    persistImages(next, label);
   }
 
   const addImage = (url: string) => {
     sessionUploads.current.push(url);
-    changeImages((c) => ({ ...c, images: [...c.images, url], mainImageUrl: c.mainImageUrl || url }));
+    changeImages((c) => ({ ...c, images: [...c.images, url], mainImageUrl: c.mainImageUrl || url }), "Image added");
   };
 
   const removeImage = (url: string) => {
@@ -878,7 +917,7 @@ export default function ProductFormDrawer({
         mainImageUrl: c.mainImageUrl === url ? (images[0] ?? "") : c.mainImageUrl,
         plainImageUrl: c.plainImageUrl === url ? "" : c.plainImageUrl,
       };
-    });
+    }, "Image removed");
     // Not on any saved product, so it can go right away. Saved images are
     // deleted by the API once the product is saved without them.
     if (removeWhere(sessionUploads.current, (u) => u === url)) discardUploads([url]).catch(() => {});
@@ -1039,8 +1078,10 @@ export default function ProductFormDrawer({
                 folder={form}
                 onUploaded={addImage}
                 onRemove={removeImage}
-                onSetMain={(url) => changeImages((c) => ({ ...c, mainImageUrl: url }))}
-                onSetPlain={(url) => changeImages((c) => ({ ...c, plainImageUrl: url }))}
+                onSetMain={(url) => changeImages((c) => ({ ...c, mainImageUrl: url }), "Cover image updated")}
+                onSetPlain={(url) =>
+                  changeImages((c) => ({ ...c, plainImageUrl: url }), url ? "Plain shot updated" : "Plain shot cleared")
+                }
                 onBusyChange={setUploading}
                 autoSave={product ? imageSave : null}
               />
@@ -1331,7 +1372,7 @@ export default function ProductFormDrawer({
                   variant="primary"
                   size="sm"
                   loading={saving}
-                  disabled={uploading || imageSave === "saving" || (!!product && !dirty)}
+                  disabled={uploading || imageSave.state === "saving" || (!!product && !dirty)}
                 >
                   {saving ? "Saving…" : uploading ? "Uploading…" : product ? "Save changes" : "Create product"}
                 </Button>
