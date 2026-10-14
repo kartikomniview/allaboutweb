@@ -8,8 +8,6 @@ import type { CatalogProduct } from '@/lib/adminProducts';
 import { TRUST_POINTS, WHATSAPP_MESSAGES, formatINR } from './data';
 import ImageViewer, { rememberImageSize } from './ImageViewer';
 import {
-  CART_PATH,
-  CATALOG_PATH,
   ProductVisual,
   WhatsAppIcon,
   getWhatsAppUrl,
@@ -22,7 +20,7 @@ const MAX_HIGHLIGHTS = 3;
 // underneath), so "back" returns to the same tab and scroll position.
 export default function ProductDetail({ product }: { product: CatalogProduct }) {
   const router = useRouter();
-  const { isInCart, addToCart, hasInAppHistory, onWhatsAppLinkClick } = useCatalog();
+  const { href, isInCart, addToCart, hasInAppHistory, onWhatsAppLinkClick } = useCatalog();
   const inCart = isInCart(product.id);
 
   const images = [...new Set([product.mainImageUrl, ...product.images].filter(Boolean))];
@@ -49,7 +47,7 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
   // Opened from a card → go back in history; opened from a shared link → go to the catalog.
   const goBack = () => {
     if (hasInAppHistory()) router.back();
-    else router.push(CATALOG_PATH, { scroll: false });
+    else router.push(href(''), { scroll: false });
   };
 
   useEffect(() => {
@@ -244,7 +242,7 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
             </p>
           </div>
           <button
-            onClick={() => (inCart ? router.push(CART_PATH) : addToCart(product.id))}
+            onClick={() => (inCart ? router.push(href('/cart')) : addToCart(product.id))}
             className={`flex h-11 shrink-0 items-center justify-center gap-2 rounded-[4px] px-4 text-[12px] font-semibold uppercase tracking-[0.06em] transition-colors ${
               inCart
                 ? 'border border-[#111111] bg-white text-[#111111] hover:bg-neutral-50'

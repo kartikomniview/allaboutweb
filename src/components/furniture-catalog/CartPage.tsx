@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { ArrowRight, ShoppingCart, Trash2 } from 'lucide-react';
 import { discountPercent } from '@/lib/adminProducts';
 import { WHATSAPP_MESSAGES, formatINR } from './data';
-import { ProductVisual, WhatsAppIcon, getWhatsAppUrl, productPath, useCatalog } from './shared';
+import { ProductVisual, WhatsAppIcon, getWhatsAppUrl, productSubPath, useCatalog } from './shared';
 
 // Flat, bordered panels with barely-rounded corners (matches the product page footer).
 const panel = 'rounded-md border border-neutral-200 bg-white';
@@ -12,7 +12,7 @@ const panel = 'rounded-md border border-neutral-200 bg-white';
 // The Cart tab (/app/catalog/furniture/cart): the products the shopper added, a price
 // breakdown and one WhatsApp button that sends the whole order.
 export default function CartPage({ onBrowse }: { onBrowse: () => void }) {
-  const { products, cart, removeFromCart, clearCart, markInAppNavigation, onWhatsAppLinkClick } = useCatalog();
+  const { products, href, cart, removeFromCart, clearCart, markInAppNavigation, onWhatsAppLinkClick } = useCatalog();
 
   // Products can be unpublished while they sit in a cart; those are skipped.
   const items = cart.flatMap((id) => products.find((p) => p.id === id) ?? []);
@@ -61,7 +61,7 @@ export default function CartPage({ onBrowse }: { onBrowse: () => void }) {
           return (
             <li key={product.id} className="flex items-center gap-3 p-3">
               <Link
-                href={productPath(product.id)}
+                href={href(productSubPath(product.id))}
                 scroll={false}
                 onClick={markInAppNavigation}
                 className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-[4px] bg-[#F5F1EA]"

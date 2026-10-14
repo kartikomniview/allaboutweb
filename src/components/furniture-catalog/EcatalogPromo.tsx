@@ -1,7 +1,8 @@
 import CtaLink from "@/components/CtaLink";
 import { whatsappUrl } from "@/lib/contact";
 
-export const ECATALOG_PROMO_PATH = "/app/catalog/furniture/get-ecatalog";
+/** Relative to the catalog's base path (/app/catalog/furniture, or /furniture on catalog24.in). */
+export const ECATALOG_PROMO_PATH = "/get-ecatalog";
 
 const POINTS = [
   "Your products, prices and offers in one shareable link",

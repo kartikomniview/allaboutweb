@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:catalog24": "node scripts/dev-catalog24.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

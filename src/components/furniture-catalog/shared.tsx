@@ -6,6 +6,7 @@
 import React, { createContext, useContext } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { CATALOG_DEMO_BASE } from "@/lib/catalogDomain";
 import { WHATSAPP_NUMBER } from "@/lib/contact";
 import type { CatalogProduct } from "@/lib/adminProducts";
 import {
@@ -22,14 +23,28 @@ export const getWhatsAppUrl = (product?: CatalogProduct, customMessage?: string)
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
 };
 
+// The catalog's own route. On catalog24.in the proxy serves it at /furniture instead
+// (see src/proxy.ts), so links are built from a base path held in the catalog context.
 export const CATALOG_PATH = '/app/catalog/furniture';
-export const CART_PATH = `${CATALOG_PATH}/cart`;
-export const productPath = (id: string) => `${CATALOG_PATH}/product/${encodeURIComponent(id)}`;
+const CATALOG_BASES = [CATALOG_PATH, CATALOG_DEMO_BASE];
+
+/** `sub` ('' | '/cart' | '/product/…') under the catalog's base path. */
+export const catalogHref = (basePath: string, sub: string) => `${basePath}${sub}` || '/';
+
+/** The pathname without the catalog's base path: '' for home, '/cart', '/product/…'. */
+export const catalogRelativePath = (pathname: string) => {
+  const base = CATALOG_BASES.find(b => pathname === b || pathname.startsWith(`${b}/`));
+  return base ? pathname.slice(base.length) : pathname;
+};
+
+export const productSubPath = (id: string) => `/product/${encodeURIComponent(id)}`;
 
 // Shared with the product pages, which render on top of the (still mounted) catalog
 // so the cart, the open tab and the scroll position survive opening a product.
 export type CatalogContextValue = {
   products: CatalogProduct[];
+  /** A path inside the catalog for the current domain, e.g. href('/cart'). */
+  href: (sub: string) => string;
   /** Product ids in the cart, in the order they were added. */
   cart: string[];
   isInCart: (id: string) => boolean;
@@ -556,7 +571,7 @@ export const ProductVisual: React.FC<{ product: CatalogProduct; sizes: string; f
 // Image-first product card: a square photo with a small badge, then just name + price.
 // The card links to the product's own page (where it can be added to the cart).
 export const ProductCard: React.FC<{ product: CatalogProduct }> = ({ product }) => {
-  const { markInAppNavigation } = useCatalog();
+  const { href, markInAppNavigation } = useCatalog();
   // The first tag is the card badge.
   const badge = product.tags[0];
   const hasDiscount = product.originalPrice > product.price;
@@ -564,7 +579,7 @@ export const ProductCard: React.FC<{ product: CatalogProduct }> = ({ product }) 
   return (
     <article className="relative group">
       <Link
-        href={productPath(product.id)}
+        href={href(productSubPath(product.id))}
         scroll={false}
         onClick={markInAppNavigation}
         className="flex flex-col active:scale-[0.99] transition-transform duration-300"

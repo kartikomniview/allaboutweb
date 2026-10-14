@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useSyncExternalStore } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { CATALOG_DEMO_BASE } from '@/lib/catalogDomain';
 import { whatsappUrl } from '@/lib/contact';
 import { ECATALOG_PROMO_PATH } from './EcatalogPromo';
 import './furniture-catalog.css';
@@ -48,29 +49,40 @@ import CatalogPage, { DEFAULT_CATALOG_FILTERS, type CatalogFilters } from './Cat
 import DemoWhatsAppDialog from './DemoWhatsAppDialog';
 import StoreInfoPage from './StoreInfoPage';
 import {
-  CART_PATH,
   CATALOG_PATH,
   CatalogContext,
   CategoryBox,
   DiyaIcon,
   ProductCard,
   WhatsAppIcon,
+  catalogHref,
+  catalogRelativePath,
   getWhatsAppUrl,
   type CatalogContextValue,
 } from './shared';
 
 type AppTab = 'home' | 'catalog' | 'cart' | 'help';
 
-// Each bottom-nav tab has its own route (pages under app/app/catalog/furniture/(app)).
-export const TAB_PATHS: Record<AppTab, string> = {
-  home: CATALOG_PATH,
-  catalog: `${CATALOG_PATH}/catalog`,
-  cart: CART_PATH,
-  help: `${CATALOG_PATH}/help`,
+// Each bottom-nav tab has its own route (pages under app/app/catalog/furniture/(app)),
+// given relative to the catalog's base path.
+const TAB_PATHS: Record<AppTab, string> = {
+  home: '',
+  catalog: '/catalog',
+  cart: '/cart',
+  help: '/help',
 };
 
-const tabFromPath = (pathname: string): AppTab | null =>
-  (Object.keys(TAB_PATHS) as AppTab[]).find(tab => TAB_PATHS[tab] === pathname) ?? null;
+const tabFromPath = (pathname: string): AppTab | null => {
+  const relative = catalogRelativePath(pathname);
+  return (Object.keys(TAB_PATHS) as AppTab[]).find(tab => TAB_PATHS[tab] === relative) ?? null;
+};
+
+// The base path never changes while the catalog is open, so there's nothing to subscribe to.
+const subscribeToNothing = () => () => {};
+const browserBasePath = () => {
+  const path = window.location.pathname;
+  return path === CATALOG_DEMO_BASE || path.startsWith(`${CATALOG_DEMO_BASE}/`) ? CATALOG_DEMO_BASE : CATALOG_PATH;
+};
 
 // `products` are the published products from the admin panel (loaded by the layout).
 // `children` is the current product page, if any; it renders on top of the catalog.
@@ -86,6 +98,12 @@ export default function FurnitureCatalogApp({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+
+  // On catalog24.in the catalog is served at /furniture (see src/proxy.ts). Links render
+  // with the internal path on the server and during hydration, then switch to the
+  // base path the browser URL actually shows.
+  const basePath = useSyncExternalStore(subscribeToNothing, browserBasePath, () => CATALOG_PATH);
+  const href = (sub: string) => catalogHref(basePath, sub);
 
   // The open tab comes from the URL. On other routes (a product page, the promo
   // pop-up) there's no tab in the URL, so the last tab stays visible underneath.
@@ -146,21 +164,21 @@ export default function FurnitureCatalogApp({
   // Switching tabs is a navigation; it also leaves search mode.
   const goToTab = (tab: AppTab) => {
     setSearchQuery('');
-    router.push(TAB_PATHS[tab]);
+    router.push(href(TAB_PATHS[tab]));
   };
 
   // E-catalog promo pop-up: first after 1 min, then 1 min after each close.
   // It opens as an intercepted route, so this component (and its state) stays mounted behind it.
   // Keyed on "is it open" rather than the pathname, so moving between tabs doesn't restart the timer.
-  const isPromoOpen = pathname === ECATALOG_PROMO_PATH;
+  const isPromoOpen = catalogRelativePath(pathname) === ECATALOG_PROMO_PATH;
 
   useEffect(() => {
     if (isPromoOpen) return;
     const promoTimer = setTimeout(() => {
-      router.push(ECATALOG_PROMO_PATH, { scroll: false });
+      router.push(catalogHref(basePath, ECATALOG_PROMO_PATH), { scroll: false });
     }, PROMO_DELAY_MS);
     return () => clearTimeout(promoTimer);
-  }, [isPromoOpen, router]);
+  }, [isPromoOpen, router, basePath]);
 
   // Banner carousel is a native scroll-snap track: swipe/trackpad scroll it directly,
   // dots and autoplay scroll it programmatically, and the scroll position drives the dots.
@@ -232,7 +250,7 @@ export default function FurnitureCatalogApp({
   const handleSelectCategory = (cat: MainCategory, sub?: string) => {
     setCatalogFilters({ category: cat, subCategory: sub ?? '' });
     setSearchQuery('');
-    router.push(TAB_PATHS.catalog); // the tab change scrolls to the top
+    router.push(href(TAB_PATHS.catalog)); // the tab change scrolls to the top
   };
 
   const isInCart = (id: string) => cart.includes(id);
@@ -285,6 +303,7 @@ export default function FurnitureCatalogApp({
 
   const catalogContext: CatalogContextValue = {
     products,
+    href,
     cart,
     isInCart,
     addToCart,
@@ -309,7 +328,7 @@ export default function FurnitureCatalogApp({
         <div className="bg-[#111111] text-white px-3 py-2 flex items-center gap-2.5 text-[11px] font-semibold select-none shrink-0 z-50">
           <Link
             href="/"
-            aria-label="Back to AllAboutWeb home"
+            aria-label="Back to home"
             className="flex items-center gap-1 bg-white/10 hover:bg-white/20 px-2 py-1 rounded-full text-[10px] font-bold shrink-0 transition-colors"
           >
             <Home className="w-3 h-3" />
@@ -760,7 +779,7 @@ export default function FurnitureCatalogApp({
             
             {/* Tab 1: Home */}
             <Link
-              href={TAB_PATHS.home}
+              href={href(TAB_PATHS.home)}
               onClick={() => setSearchQuery('')}
               aria-current={activeTab === 'home' && !searchQuery ? 'page' : undefined}
               className={`flex flex-col items-center justify-center flex-1 h-full min-h-[44px] transition-all active:scale-95 ${
@@ -775,7 +794,7 @@ export default function FurnitureCatalogApp({
 
             {/* Tab 2: Catalog */}
             <Link
-              href={TAB_PATHS.catalog}
+              href={href(TAB_PATHS.catalog)}
               onClick={() => setSearchQuery('')}
               aria-current={activeTab === 'catalog' && !searchQuery ? 'page' : undefined}
               className={`flex flex-col items-center justify-center flex-1 h-full min-h-[44px] transition-all active:scale-95 ${
@@ -790,7 +809,7 @@ export default function FurnitureCatalogApp({
 
             {/* Tab 3: Cart */}
             <Link
-              href={TAB_PATHS.cart}
+              href={href(TAB_PATHS.cart)}
               onClick={() => setSearchQuery('')}
               aria-current={activeTab === 'cart' && !searchQuery ? 'page' : undefined}
               className={`flex flex-col items-center justify-center flex-1 h-full min-h-[44px] relative transition-all active:scale-95 ${
@@ -812,7 +831,7 @@ export default function FurnitureCatalogApp({
 
             {/* Tab 4: WhatsApp Support */}
             <Link
-              href={TAB_PATHS.help}
+              href={href(TAB_PATHS.help)}
               onClick={() => setSearchQuery('')}
               aria-current={activeTab === 'help' && !searchQuery ? 'page' : undefined}
               className={`flex flex-col items-center justify-center flex-1 h-full min-h-[44px] transition-all active:scale-95 ${
