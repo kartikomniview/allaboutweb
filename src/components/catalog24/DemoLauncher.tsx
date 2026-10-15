@@ -134,7 +134,7 @@ export default function DemoLauncher({
             </div>
 
             <div
-              className={`flex shrink-0 justify-center gap-3 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] transition delay-100 duration-500 sm:py-5 ${
+              className={`flex shrink-0 justify-center gap-2.5 px-4 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] transition delay-100 duration-500 sm:py-4 ${
                 shown ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
               }`}
             >
@@ -142,14 +142,19 @@ export default function DemoLauncher({
                 ref={closeButtonRef}
                 type="button"
                 onClick={close}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-btn border border-white/30 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10 sm:w-44 sm:flex-none"
+                className="inline-flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-btn border border-white/30 px-3 py-2 text-[0.8125rem] font-semibold text-white transition hover:bg-white/10 sm:w-36 sm:flex-none"
               >
-                <X className="h-4 w-4" aria-hidden="true" />
+                <X className="h-3.5 w-3.5" aria-hidden="true" />
                 Close
               </button>
-              <CtaLink href={fullDemoHref} variant="white" className="flex-1 gap-2 sm:w-44 sm:flex-none">
+              <CtaLink
+                href={fullDemoHref}
+                variant="white"
+                size="sm"
+                className="flex-1 gap-1.5 whitespace-nowrap px-3! text-[0.8125rem]! sm:w-36 sm:flex-none"
+              >
                 View full demo
-                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+                <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
               </CtaLink>
             </div>
           </div>,
