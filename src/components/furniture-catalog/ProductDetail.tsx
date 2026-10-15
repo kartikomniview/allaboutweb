@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import { ArrowLeft, Check, Layers, Ruler, Share2, ShoppingCart, Star, Trees, Truck } from 'lucide-react';
 import type { CatalogProduct } from '@/lib/adminProducts';
 import { TRUST_POINTS, WHATSAPP_MESSAGES, formatINR } from './data';
@@ -19,8 +18,7 @@ const MAX_HIGHLIGHTS = 3;
 // Full-screen product page. It renders on top of the catalog (which stays mounted
 // underneath), so "back" returns to the same tab and scroll position.
 export default function ProductDetail({ product }: { product: CatalogProduct }) {
-  const router = useRouter();
-  const { href, isInCart, addToCart, hasInAppHistory, onWhatsAppLinkClick } = useCatalog();
+  const { href, navigate, isInCart, addToCart, closeProduct: goBack, onWhatsAppLinkClick } = useCatalog();
   const inCart = isInCart(product.id);
 
   const images = [...new Set([product.mainImageUrl, ...product.images].filter(Boolean))];
@@ -43,12 +41,6 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
     { icon: Truck, label: 'Delivery', value: product.stockStatus },
   ].filter((detail) => detail.value);
   const highlights = product.highlights.slice(0, MAX_HIGHLIGHTS);
-
-  // Opened from a card → go back in history; opened from a shared link → go to the catalog.
-  const goBack = () => {
-    if (hasInAppHistory()) router.back();
-    else router.push(href(''), { scroll: false });
-  };
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -242,7 +234,7 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
             </p>
           </div>
           <button
-            onClick={() => (inCart ? router.push(href('/cart')) : addToCart(product.id))}
+            onClick={() => (inCart ? navigate(href('/cart')) : addToCart(product.id))}
             className={`flex h-11 shrink-0 items-center justify-center gap-2 rounded-[4px] px-4 text-[12px] font-semibold uppercase tracking-[0.06em] transition-colors ${
               inCart
                 ? 'border border-[#111111] bg-white text-[#111111] hover:bg-neutral-50'

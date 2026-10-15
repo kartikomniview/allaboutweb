@@ -215,8 +215,8 @@ export default function ImagePromptDialog({ product, onClose }: { product: Promp
           <button
             type="button"
             onClick={handleCopy}
-            className={`inline-flex h-12 w-full items-center justify-center gap-2 rounded-btn text-[15px] font-semibold text-white shadow-[0_1px_2px_rgba(1,18,60,0.12)] transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/25 ${
-              copied ? "bg-emerald-600" : "bg-primary hover:bg-[#e85f1c]"
+            className={`inline-flex h-12 w-full items-center justify-center gap-2 rounded-btn text-[15px] font-semibold text-white shadow-[0_1px_2px_rgba(1,18,60,0.12)] transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-button/25 ${
+              copied ? "bg-emerald-600" : "bg-button hover:bg-button-hover"
             }`}
           >
             {copied ? <Check className="h-5 w-5" aria-hidden /> : <Copy className="h-5 w-5" aria-hidden />}

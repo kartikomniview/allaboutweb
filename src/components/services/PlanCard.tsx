@@ -30,7 +30,7 @@ export default function PlanCard({ page }: { page: ServicePage }) {
 
         <Link
           href={pricingHref(key)}
-          className="group mt-7 flex items-center justify-center gap-2 rounded-btn bg-primary px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-primary/90 sm:text-base"
+          className="group mt-7 flex items-center justify-center gap-2 rounded-btn bg-white px-6 py-3.5 text-sm font-semibold text-button transition hover:bg-paper sm:text-base"
         >
           Get started
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />

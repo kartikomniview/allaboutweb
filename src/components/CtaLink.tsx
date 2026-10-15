@@ -6,9 +6,10 @@ type Size = "sm" | "md" | "lg";
 
 const VARIANT_STYLES: Record<Variant, string> = {
   primary:
-    "bg-primary text-white hover:bg-primary/90",
+    "bg-button text-white hover:bg-button-hover",
   secondary: "border border-line bg-white text-ink hover:bg-tint",
-  white: "bg-white text-secondary hover:bg-paper",
+  // The filled button on dark backgrounds
+  white: "bg-white text-button hover:bg-paper",
   "outline-light": "border border-white/40 text-white hover:bg-white/10",
   whatsapp: "bg-whatsapp text-white hover:bg-whatsapp/90",
 };

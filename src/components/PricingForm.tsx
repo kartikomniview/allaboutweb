@@ -356,7 +356,7 @@ export default function PricingForm({
   }
 
   const buttonClass =
-    "group inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-btn bg-primary px-6 py-3 text-[0.9375rem] font-semibold text-white shadow-[0_14px_30px_-12px_rgba(252,108,38,0.7)] transition hover:bg-primary/90 active:scale-[0.98] disabled:bg-line disabled:text-slate disabled:shadow-none sm:text-base";
+    "group inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-btn bg-button px-6 py-3 text-[0.9375rem] font-semibold text-white shadow-[0_14px_30px_-12px_rgba(20,62,59,0.7)] transition hover:bg-button-hover active:scale-[0.98] disabled:bg-line disabled:text-slate disabled:shadow-none sm:text-base";
 
   return (
     <form

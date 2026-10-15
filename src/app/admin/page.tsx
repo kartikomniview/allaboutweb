@@ -257,7 +257,7 @@ export default function AdminLoginPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="group mt-1 inline-flex h-11 items-center justify-center gap-2 rounded-btn bg-primary px-6 text-[0.9375rem] font-semibold text-white shadow-[0_1px_2px_rgba(1,18,60,0.12),0_10px_24px_-12px_rgba(252,108,38,0.8),inset_0_1px_0_rgba(255,255,255,0.15)] transition hover:bg-[#e85f1c] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/25 disabled:cursor-not-allowed disabled:opacity-70"
+                className="group mt-1 inline-flex h-11 items-center justify-center gap-2 rounded-btn bg-button px-6 text-[0.9375rem] font-semibold text-white shadow-[0_1px_2px_rgba(1,18,60,0.12),0_10px_24px_-12px_rgba(20,62,59,0.8),inset_0_1px_0_rgba(255,255,255,0.15)] transition hover:bg-button-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-button/25 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {submitting ? (
                   <>

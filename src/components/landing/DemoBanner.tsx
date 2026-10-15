@@ -76,7 +76,7 @@ export default function DemoBanner({
             <p className="mt-2 text-sm text-white/70 sm:text-base">{description}</p>
 
             <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-3 sm:mt-7">
-              <span className="inline-flex items-center gap-2 rounded-btn bg-primary px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition group-hover:bg-primary/90 sm:text-base">
+              <span className="inline-flex items-center gap-2 rounded-btn bg-white px-5 py-3 text-sm font-semibold text-button shadow-lg shadow-black/20 transition group-hover:bg-paper sm:text-base">
                 <MousePointerClick className="h-4 w-4" aria-hidden="true" />
                 {cta}
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />

@@ -22,7 +22,7 @@ type Variant = "primary" | "secondary" | "ghost" | "danger" | "danger-ghost";
 type Size = "sm" | "md" | "icon";
 
 const VARIANTS: Record<Variant, string> = {
-  primary: "bg-primary text-white shadow-[0_1px_2px_rgba(1,18,60,0.12),inset_0_1px_0_rgba(255,255,255,0.15)] hover:bg-[#e85f1c]",
+  primary: "bg-button text-white shadow-[0_1px_2px_rgba(1,18,60,0.12),inset_0_1px_0_rgba(255,255,255,0.15)] hover:bg-button-hover",
   secondary: "bg-white text-ink ring-1 ring-inset ring-line shadow-[0_1px_2px_rgba(1,18,60,0.06)] hover:bg-paper",
   ghost: "text-slate hover:bg-ink/[0.05] hover:text-ink",
   danger: "bg-red-600 text-white hover:bg-red-700",
@@ -36,7 +36,7 @@ const SIZES: Record<Size, string> = {
 };
 
 export const buttonClass = (variant: Variant = "secondary", size: Size = "md", extra = "") =>
-  `inline-flex shrink-0 items-center [&_svg]:shrink-0 justify-center rounded-btn font-semibold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50 ${VARIANTS[variant]} ${SIZES[size]} ${extra}`;
+  `inline-flex shrink-0 items-center [&_svg]:shrink-0 justify-center rounded-btn font-semibold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-button/20 disabled:pointer-events-none disabled:opacity-50 ${VARIANTS[variant]} ${SIZES[size]} ${extra}`;
 
 export function Button({
   variant = "secondary",

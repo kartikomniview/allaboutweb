@@ -35,7 +35,7 @@ export default function Hero() {
             className="animate-enter-up mt-5 grid grid-cols-2 gap-2.5 sm:mt-8 sm:flex sm:gap-3"
             style={enter(240)}
           >
-            <CtaLink href={PRICING_PATH} size="lg" className="group gap-2 px-4! shadow-lg shadow-primary/25 sm:px-8!">
+            <CtaLink href={PRICING_PATH} size="lg" className="group gap-2 px-4! shadow-lg shadow-button/25 sm:px-8!">
               Get Free Quote
               <ArrowRight className="hidden h-4 w-4 transition-transform group-hover:translate-x-0.5 min-[400px]:block" aria-hidden="true" />
             </CtaLink>

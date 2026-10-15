@@ -8,6 +8,7 @@ import Logo from "./Logo";
 
 const LINKS = [
   { href: CATALOG_DEMO_BASE, label: "Live Demo" },
+  { href: "/#work", label: "Our Work" },
   { href: "/#features", label: "Features" },
   { href: "/#how-customers-use-it", label: "How It Works" },
   { href: "/#pricing", label: "Pricing" },

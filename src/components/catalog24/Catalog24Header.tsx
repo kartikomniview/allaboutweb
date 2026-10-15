@@ -15,6 +15,7 @@ import Logo from "./Logo";
 
 const NAV_LINKS = [
   { href: "/#demo", label: "Live Demo" },
+  { href: "/#work", label: "Our Work" },
   { href: "/#features", label: "Features" },
   { href: "/#pricing", label: "Pricing" },
   { href: "/#faq", label: "FAQ", wideOnly: true },

@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect, useRef, useSyncExternalStore } fro
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { CATALOG_DEMO_BASE } from '@/lib/catalogDomain';
+import { catalogSiteOriginFor } from '@/lib/catalogDomain';
 import { whatsappUrl } from '@/lib/contact';
 import { ECATALOG_PROMO_PATH } from './EcatalogPromo';
 import './furniture-catalog.css';
@@ -55,6 +55,7 @@ import {
   DiyaIcon,
   ProductCard,
   WhatsAppIcon,
+  catalogBasePath,
   catalogHref,
   catalogRelativePath,
   getWhatsAppUrl,
@@ -79,10 +80,8 @@ const tabFromPath = (pathname: string): AppTab | null => {
 
 // The base path never changes while the catalog is open, so there's nothing to subscribe to.
 const subscribeToNothing = () => () => {};
-const browserBasePath = () => {
-  const path = window.location.pathname;
-  return path === CATALOG_DEMO_BASE || path.startsWith(`${CATALOG_DEMO_BASE}/`) ? CATALOG_DEMO_BASE : CATALOG_PATH;
-};
+const browserBasePath = () => catalogBasePath(window.location.pathname);
+const isInIframe = () => window.self !== window.top;
 
 // `products` are the published products from the admin panel (loaded by the layout).
 // `children` is the current product page, if any; it renders on top of the catalog.
@@ -104,6 +103,15 @@ export default function FurnitureCatalogApp({
   // base path the browser URL actually shows.
   const basePath = useSyncExternalStore(subscribeToNothing, browserBasePath, () => CATALOG_PATH);
   const href = (sub: string) => catalogHref(basePath, sub);
+  // The promo strip's "Home": the site the catalog sits in. At the root of its own subdomain
+  // (yourstore.catalog24.in — a base path only ever seen in the browser) that's catalog24.in.
+  const homeHref = basePath === '' ? catalogSiteOriginFor(window.location) : '/';
+
+  // Running as a live demo inside another page (an iframe): keep the host page's history
+  // clean — navigations replace instead of push — and skip the e-catalog promo pop-up.
+  const embedded = useSyncExternalStore(subscribeToNothing, isInIframe, () => false);
+  const navigate = (url: string, options?: { scroll?: boolean }) =>
+    embedded ? router.replace(url, options) : router.push(url, options);
 
   // The open tab comes from the URL. On other routes (a product page, the promo
   // pop-up) there's no tab in the URL, so the last tab stays visible underneath.
@@ -147,8 +155,8 @@ export default function FurnitureCatalogApp({
 
   // Cart & toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  // Set once a product page is opened from a card, so its back button can use history
-  const inAppNavigationRef = useRef(false);
+  // The page a product was opened from (set by its card), so its back button can return there
+  const inAppNavigationRef = useRef<string | null>(null);
   // Only ids that exist, so the cart badge never counts missing products.
   const [cart, setCart] = useState<string[]>(() =>
     INITIAL_CART_IDS.filter(id => products.some(p => p.id === id))
@@ -164,7 +172,7 @@ export default function FurnitureCatalogApp({
   // Switching tabs is a navigation; it also leaves search mode.
   const goToTab = (tab: AppTab) => {
     setSearchQuery('');
-    router.push(href(TAB_PATHS[tab]));
+    navigate(href(TAB_PATHS[tab]));
   };
 
   // E-catalog promo pop-up: first after 1 min, then 1 min after each close.
@@ -173,12 +181,12 @@ export default function FurnitureCatalogApp({
   const isPromoOpen = catalogRelativePath(pathname) === ECATALOG_PROMO_PATH;
 
   useEffect(() => {
-    if (isPromoOpen) return;
+    if (isPromoOpen || embedded) return;
     const promoTimer = setTimeout(() => {
       router.push(catalogHref(basePath, ECATALOG_PROMO_PATH), { scroll: false });
     }, PROMO_DELAY_MS);
     return () => clearTimeout(promoTimer);
-  }, [isPromoOpen, router, basePath]);
+  }, [isPromoOpen, embedded, router, basePath]);
 
   // Banner carousel is a native scroll-snap track: swipe/trackpad scroll it directly,
   // dots and autoplay scroll it programmatically, and the scroll position drives the dots.
@@ -250,7 +258,7 @@ export default function FurnitureCatalogApp({
   const handleSelectCategory = (cat: MainCategory, sub?: string) => {
     setCatalogFilters({ category: cat, subCategory: sub ?? '' });
     setSearchQuery('');
-    router.push(href(TAB_PATHS.catalog)); // the tab change scrolls to the top
+    navigate(href(TAB_PATHS.catalog)); // the tab change scrolls to the top
   };
 
   const isInCart = (id: string) => cart.includes(id);
@@ -304,15 +312,24 @@ export default function FurnitureCatalogApp({
   const catalogContext: CatalogContextValue = {
     products,
     href,
+    embedded,
+    navigate,
     cart,
     isInCart,
     addToCart,
     removeFromCart,
     clearCart,
     markInAppNavigation: () => {
-      inAppNavigationRef.current = true;
+      inAppNavigationRef.current = window.location.pathname;
     },
-    hasInAppHistory: () => inAppNavigationRef.current,
+    // Opened from a card → back in history (or, embedded, back to that page — there's no
+    // history entry for it); opened from a shared link → the catalog home.
+    closeProduct: () => {
+      const openedFrom = inAppNavigationRef.current;
+      if (!openedFrom) navigate(href(''), { scroll: false });
+      else if (embedded) navigate(openedFrom, { scroll: false });
+      else router.back();
+    },
     openWhatsApp,
     onWhatsAppLinkClick,
   };
@@ -327,7 +344,9 @@ export default function FurnitureCatalogApp({
         {/* ALLABOUTWEB PROMO STRIP */}
         <div className="bg-[#111111] text-white px-3 py-2 flex items-center gap-2.5 text-[11px] font-semibold select-none shrink-0 z-50">
           <Link
-            href="/"
+            href={homeHref}
+            // In a live demo, leave the demo frame rather than loading the site inside it
+            target={embedded ? '_top' : undefined}
             aria-label="Back to home"
             className="flex items-center gap-1 bg-white/10 hover:bg-white/20 px-2 py-1 rounded-full text-[10px] font-bold shrink-0 transition-colors"
           >
@@ -780,6 +799,7 @@ export default function FurnitureCatalogApp({
             {/* Tab 1: Home */}
             <Link
               href={href(TAB_PATHS.home)}
+              replace={embedded}
               onClick={() => setSearchQuery('')}
               aria-current={activeTab === 'home' && !searchQuery ? 'page' : undefined}
               className={`flex flex-col items-center justify-center flex-1 h-full min-h-[44px] transition-all active:scale-95 ${
@@ -795,6 +815,7 @@ export default function FurnitureCatalogApp({
             {/* Tab 2: Catalog */}
             <Link
               href={href(TAB_PATHS.catalog)}
+              replace={embedded}
               onClick={() => setSearchQuery('')}
               aria-current={activeTab === 'catalog' && !searchQuery ? 'page' : undefined}
               className={`flex flex-col items-center justify-center flex-1 h-full min-h-[44px] transition-all active:scale-95 ${
@@ -810,6 +831,7 @@ export default function FurnitureCatalogApp({
             {/* Tab 3: Cart */}
             <Link
               href={href(TAB_PATHS.cart)}
+              replace={embedded}
               onClick={() => setSearchQuery('')}
               aria-current={activeTab === 'cart' && !searchQuery ? 'page' : undefined}
               className={`flex flex-col items-center justify-center flex-1 h-full min-h-[44px] relative transition-all active:scale-95 ${
@@ -832,6 +854,7 @@ export default function FurnitureCatalogApp({
             {/* Tab 4: WhatsApp Support */}
             <Link
               href={href(TAB_PATHS.help)}
+              replace={embedded}
               onClick={() => setSearchQuery('')}
               aria-current={activeTab === 'help' && !searchQuery ? 'page' : undefined}
               className={`flex flex-col items-center justify-center flex-1 h-full min-h-[44px] transition-all active:scale-95 ${

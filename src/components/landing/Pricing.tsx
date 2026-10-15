@@ -134,7 +134,7 @@ export default function Pricing() {
               href={pricingHref(service)}
               className={`group mt-4 inline-flex items-center justify-center gap-2 rounded-btn px-6 py-3 text-sm font-semibold transition ${
                 popular
-                  ? "bg-primary text-white hover:bg-primary/90"
+                  ? "bg-white text-button hover:bg-paper"
                   : "border border-line bg-white text-ink hover:border-primary hover:text-primary"
               }`}
             >

@@ -33,7 +33,7 @@ export default function ServiceHero({ page, children }: { page: ServicePage; chi
           </div>
 
           <div className="animate-enter-up grid shrink-0 grid-cols-2 gap-2.5 sm:flex sm:gap-3" style={enter(120)}>
-            <CtaLink href={pricingHref(key)} className="group gap-2 shadow-lg shadow-primary/25">
+            <CtaLink href={pricingHref(key)} className="group gap-2 shadow-lg shadow-button/25">
               Get Free Quote
               <ArrowRight
                 className="hidden h-4 w-4 transition-transform group-hover:translate-x-0.5 min-[400px]:block"

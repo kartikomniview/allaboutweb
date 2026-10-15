@@ -12,6 +12,9 @@
   --color-line: #e3e6ee;
   --color-tint: #fff0e8;
   --color-whatsapp: #1fb855;
+  /* Filled buttons (CtaLink primary, form submits, admin primary). Accents stay `primary`. */
+  --color-button: #143e3b;
+  --color-button-hover: #0d2b29;
 
   --font-heading: var(--font-open-sans);
   --font-body: var(--font-open-sans);

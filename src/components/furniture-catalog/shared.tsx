@@ -23,18 +23,23 @@ export const getWhatsAppUrl = (product?: CatalogProduct, customMessage?: string)
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
 };
 
-// The catalog's own route. On catalog24.in the proxy serves it at /furniture instead
-// (see src/proxy.ts), so links are built from a base path held in the catalog context.
+// The catalog's own route. The proxy also serves it at /furniture on catalog24.in and at
+// the root of yourstore.catalog24.in (see src/proxy.ts), so links are built from a base
+// path held in the catalog context.
 export const CATALOG_PATH = '/app/catalog/furniture';
 const CATALOG_BASES = [CATALOG_PATH, CATALOG_DEMO_BASE];
+
+/** The base path in the given pathname: one of CATALOG_BASES, or '' when served at the root. */
+export const catalogBasePath = (pathname: string) =>
+  CATALOG_BASES.find(b => pathname === b || pathname.startsWith(`${b}/`)) ?? '';
 
 /** `sub` ('' | '/cart' | '/product/…') under the catalog's base path. */
 export const catalogHref = (basePath: string, sub: string) => `${basePath}${sub}` || '/';
 
 /** The pathname without the catalog's base path: '' for home, '/cart', '/product/…'. */
 export const catalogRelativePath = (pathname: string) => {
-  const base = CATALOG_BASES.find(b => pathname === b || pathname.startsWith(`${b}/`));
-  return base ? pathname.slice(base.length) : pathname;
+  const relative = pathname.slice(catalogBasePath(pathname).length);
+  return relative === '/' ? '' : relative;
 };
 
 export const productSubPath = (id: string) => `/product/${encodeURIComponent(id)}`;
@@ -51,9 +56,18 @@ export type CatalogContextValue = {
   addToCart: (id: string) => void;
   removeFromCart: (id: string) => void;
   clearCart: () => void;
-  /** Records that a product page was opened from inside the catalog, so "back" can use history. */
+  /**
+   * True when the catalog runs in an iframe (a live demo on a landing page). Navigations then
+   * replace the history entry instead of adding one, so the host page's Back closes the demo.
+   * Pass it as `replace` on in-catalog Links.
+   */
+  embedded: boolean;
+  /** router.push, or router.replace when embedded. */
+  navigate: (url: string, options?: { scroll?: boolean }) => void;
+  /** Records that a product page was opened from inside the catalog, so "back" returns there. */
   markInAppNavigation: () => void;
-  hasInAppHistory: () => boolean;
+  /** The product page's back button: to where it was opened from, or the catalog home. */
+  closeProduct: () => void;
   /**
    * Demo WhatsApp: takes a `getWhatsAppUrl(...)` link and, instead of messaging the store,
    * asks the visitor for their own number and opens the enquiry in their own chat.
@@ -571,7 +585,7 @@ export const ProductVisual: React.FC<{ product: CatalogProduct; sizes: string; f
 // Image-first product card: a square photo with a small badge, then just name + price.
 // The card links to the product's own page (where it can be added to the cart).
 export const ProductCard: React.FC<{ product: CatalogProduct }> = ({ product }) => {
-  const { href, markInAppNavigation } = useCatalog();
+  const { href, embedded, markInAppNavigation } = useCatalog();
   // The first tag is the card badge.
   const badge = product.tags[0];
   const hasDiscount = product.originalPrice > product.price;
@@ -581,6 +595,7 @@ export const ProductCard: React.FC<{ product: CatalogProduct }> = ({ product }) 
       <Link
         href={href(productSubPath(product.id))}
         scroll={false}
+        replace={embedded}
         onClick={markInAppNavigation}
         className="flex flex-col active:scale-[0.99] transition-transform duration-300"
       >

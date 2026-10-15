@@ -1,0 +1,6 @@
+{
+  "name": "MyStore - Modern Designer Furniture",
+  "description": "Explore MyStore's exclusive collections of modern furniture, handcrafted wooden dining sets, ergonomic chairs, and curated interior designs with up to 70% off.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
