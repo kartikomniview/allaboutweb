@@ -8,6 +8,7 @@ import { TRUST_POINTS, WHATSAPP_MESSAGES, formatINR } from './data';
 import ImageViewer, { rememberImageSize } from './ImageViewer';
 import {
   ProductVisual,
+  SaveButton,
   WhatsAppIcon,
   getWhatsAppUrl,
   useCatalog,
@@ -120,9 +121,12 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
               <button onClick={goBack} className={iconButton} aria-label="Back">
                 <ArrowLeft className="h-4.5 w-4.5" />
               </button>
-              <button onClick={share} className={iconButton} aria-label="Share product">
-                <Share2 className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <SaveButton product={product} className="h-9 w-9 text-neutral-800" />
+                <button onClick={share} className={iconButton} aria-label="Share product">
+                  <Share2 className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
             {images.length > 1 && (
@@ -245,7 +249,7 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
             {inCart ? 'Go to cart' : 'Add to cart'}
           </button>
           <a
-            href={getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.productFestivePrice(product))}
+            href={getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.product(product))}
             onClick={onWhatsAppLinkClick}
             target="_blank"
             rel="noopener noreferrer"

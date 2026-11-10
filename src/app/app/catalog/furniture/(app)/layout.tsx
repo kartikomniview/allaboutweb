@@ -24,7 +24,7 @@ const DESCRIPTION =
 // This catalog is AllAboutWeb's live demo, so a shared link previews the e-catalog
 // offer (image + pitch) rather than the demo store. The browser tab keeps the store
 // title. Product links override this with their own photo and price.
-const SHARE_TITLE = "This Diwali, get your own e-catalog — see the live demo";
+const SHARE_TITLE = "Get your own e-catalog — see the live demo";
 const SHARE_DESCRIPTION =
   "No hosting, no domain — we manage everything. Just send your products and get a live catalog link with always-updated prices.";
 // JPG, not WebP: WhatsApp shows the large preview card more reliably for JPG/PNG.
@@ -33,7 +33,7 @@ const SHARE_IMAGE = {
   width: 1024,
   height: 541,
   type: "image/jpeg",
-  alt: "This Diwali, get your catalog & showcase your products — AllAboutWeb e-catalog",
+  alt: "Get your catalog & showcase your products — AllAboutWeb e-catalog",
 };
 
 export const metadata: Metadata = {

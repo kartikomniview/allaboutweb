@@ -1,8 +1,7 @@
-import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Catalog | MyStore - Modern Designer Furniture" };
-
-// Catalog tab. The catalog app (in the layout) reads the tab from the URL.
+// The catalog is now the start page, so the old Catalog-tab URL goes there. The proxy
+// then moves this to the short URL on catalog24.in and yourstore.catalog24.in.
 export default function CatalogTabPage() {
-  return null;
+  redirect("/app/catalog/furniture");
 }

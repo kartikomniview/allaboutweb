@@ -1,10 +1,10 @@
 // All static data for the furniture e-catalog: store details, categories,
-// festive offers, home-screen content, help-centre content and WhatsApp
-// message templates. Edit copy here; FurnitureCatalogApp only renders it.
+// help-centre content and WhatsApp message templates. Edit copy here;
+// FurnitureCatalogApp only renders it.
 // The catalog's products come from Firestore (managed in /admin/ecatalog).
 // PRODUCTS below is only the starter set for the admin "Import" button.
 
-import { BadgePercent, RotateCcw, ShieldCheck, Sofa, Truck, UtensilsCrossed, type LucideIcon } from 'lucide-react';
+import { RotateCcw, ShieldCheck, Truck, type LucideIcon } from 'lucide-react';
 import type { CatalogProduct } from '@/lib/adminProducts';
 
 export type MainCategory = 'Sofa' | 'Wardrobe' | 'Dresser' | 'Bed' | 'Dining' | 'CenterTable' | 'Chair';
@@ -102,7 +102,7 @@ export const PRODUCTS: CatalogProduct[] = [
     originalPrice: 38999,
     rating: 4.8,
     reviewCount: 98,
-    tags: ['Festive Deal'],
+    tags: ['Hot Deal'],
     colors: [
       { name: 'Honey Polish', hex: '#9E6B47' },
       { name: 'Navy Blue', hex: '#1F3160' },
@@ -190,7 +190,7 @@ export const PRODUCTS: CatalogProduct[] = [
     originalPrice: 76999,
     rating: 4.8,
     reviewCount: 87,
-    tags: ['Festive Deal'],
+    tags: ['Hot Deal'],
     colors: [
       { name: 'Teak Brown', hex: '#B87C4C' },
       { name: 'Sand Beige', hex: '#D8C7A8' }
@@ -336,7 +336,7 @@ export const PRODUCTS: CatalogProduct[] = [
     originalPrice: 35999,
     rating: 4.6,
     reviewCount: 72,
-    tags: ['Diwali Special'],
+    tags: ['Limited Offer'],
     colors: [
       { name: 'Natural Oak', hex: '#C9A27E' },
       { name: 'Mustard Cushions', hex: '#C68B59' }
@@ -626,7 +626,7 @@ export const PRODUCTS: CatalogProduct[] = [
     originalPrice: 68999,
     rating: 4.6,
     reviewCount: 39,
-    tags: ['Festive Deal'],
+    tags: ['Hot Deal'],
     colors: [
       { name: 'Sand Beige', hex: '#D8C7A8' },
       { name: 'Teal Blue', hex: '#2F6F73' }
@@ -773,7 +773,7 @@ export const PRODUCTS: CatalogProduct[] = [
     originalPrice: 16999,
     rating: 4.7,
     reviewCount: 93,
-    tags: ['Diwali Special'],
+    tags: ['Limited Offer'],
     colors: [
       { name: 'Natural Oak', hex: '#C9A27E' },
       { name: 'Honey Polish', hex: '#C68B59' }
@@ -1005,7 +1005,7 @@ export const PRODUCTS: CatalogProduct[] = [
     originalPrice: 18999,
     rating: 4.6,
     reviewCount: 54,
-    tags: ['Festive Deal'],
+    tags: ['Hot Deal'],
     colors: [
       { name: 'Teak Brown', hex: '#B87C4C' },
       { name: 'Navy Cushions', hex: '#1F3160' }
@@ -1103,7 +1103,7 @@ export const PRODUCTS: CatalogProduct[] = [
     dimensions: '6 ft Length × 3 ft Width × 2.5 ft Height',
     woodType: '100% Solid Central Province Teakwood',
     stockStatus: 'In Stock · Free In-Home Fitting',
-    description: 'Our flagship family dining set. Includes one heavy 6-seater dining table, 4 comfortable chairs, and 1 full-size bench that easily accommodates family and guests during festive meals.',
+    description: 'Our flagship family dining set. Includes one heavy 6-seater dining table, 4 comfortable chairs, and 1 full-size bench that easily accommodates family and guests at mealtimes.',
     highlights: [
       'Complete Set: 1 Large Table + 4 Chairs + 1 Bench',
       'Heat & water resistant table top polish',
@@ -1210,7 +1210,7 @@ export const PRODUCTS: CatalogProduct[] = [
     originalPrice: 64999,
     rating: 4.8,
     reviewCount: 66,
-    tags: ['Festive Deal'],
+    tags: ['Hot Deal'],
     colors: [
       { name: 'Walnut Finish', hex: '#9E6B47' },
       { name: 'Honey Polish', hex: '#C68B59' }
@@ -1219,7 +1219,7 @@ export const PRODUCTS: CatalogProduct[] = [
     dimensions: 'Table: 6 ft × 3 ft × 2.5 ft Height',
     woodType: 'Pure Sheesham Wood',
     stockStatus: 'In Stock · Free In-Home Fitting',
-    description: 'A full 6-seater set with a thick Sheesham table and six cushioned chairs. Made for daily family meals and festive dinners alike.',
+    description: 'A full 6-seater set with a thick Sheesham table and six cushioned chairs. Made for daily family meals and dinner parties alike.',
     highlights: [
       'Complete Set: 1 Table + 6 Cushioned Chairs',
       'Thick 40mm solid wood tabletop',
@@ -1364,7 +1364,7 @@ export const PRODUCTS: CatalogProduct[] = [
     dimensions: 'Table: 8 ft × 3.5 ft × 2.5 ft Height',
     woodType: 'Pure CP Teak Wood',
     stockStatus: 'Made on Order · 20 Days',
-    description: 'A grand 8-seater for joint families and big festive feasts. A heavy teak table with eight high-back chairs carved at the top rail.',
+    description: 'A grand 8-seater for joint families and big family feasts. A heavy teak table with eight high-back chairs carved at the top rail.',
     highlights: [
       'Complete Set: 1 Large Table + 8 Chairs',
       'Seats the whole joint family together',
@@ -1384,7 +1384,7 @@ export const PRODUCTS: CatalogProduct[] = [
     originalPrice: 109999,
     rating: 4.8,
     reviewCount: 18,
-    tags: ['Diwali Special'],
+    tags: ['Limited Offer'],
     colors: [
       { name: 'Teak Brown', hex: '#B87C4C' },
       { name: 'Warm Cream', hex: '#F0ECE1' }
@@ -1734,7 +1734,7 @@ export const PRODUCTS: CatalogProduct[] = [
     originalPrice: 24999,
     rating: 4.8,
     reviewCount: 27,
-    tags: ['Festive Deal'],
+    tags: ['Hot Deal'],
     colors: [
       { name: 'White Marble', hex: '#EDEBE6' },
       { name: 'Wenge Brown', hex: '#4A3426' }
@@ -1821,7 +1821,7 @@ export const PRODUCTS: CatalogProduct[] = [
     originalPrice: 21999,
     rating: 4.7,
     reviewCount: 48,
-    tags: ['Diwali Special'],
+    tags: ['Limited Offer'],
     colors: [
       { name: 'Honey Polish', hex: '#C68B59' },
       { name: 'Walnut Finish', hex: '#9E6B47' }
@@ -2055,7 +2055,7 @@ export const PRODUCTS: CatalogProduct[] = [
     originalPrice: 81999,
     rating: 4.9,
     reviewCount: 58,
-    tags: ['Festive Deal'],
+    tags: ['Hot Deal'],
     colors: [
       { name: 'Honey Polish', hex: '#C68B59' },
       { name: 'Teak Brown', hex: '#B87C4C' }
@@ -2229,7 +2229,7 @@ export const PRODUCTS: CatalogProduct[] = [
     originalPrice: 48999,
     rating: 4.7,
     reviewCount: 44,
-    tags: ['Diwali Special'],
+    tags: ['Limited Offer'],
     colors: [
       { name: 'Walnut Finish', hex: '#9E6B47' },
       { name: 'Frosty White', hex: '#EDEBE6' }
@@ -2345,7 +2345,7 @@ export const PRODUCTS: CatalogProduct[] = [
     originalPrice: 62999,
     rating: 4.7,
     reviewCount: 63,
-    tags: ['Festive Deal'],
+    tags: ['Hot Deal'],
     colors: [
       { name: 'Honey Polish', hex: '#C68B59' },
       { name: 'Walnut Finish', hex: '#9E6B47' }
@@ -2637,7 +2637,7 @@ export const PRODUCTS: CatalogProduct[] = [
     originalPrice: 32999,
     rating: 4.6,
     reviewCount: 61,
-    tags: ['Festive Deal'],
+    tags: ['Hot Deal'],
     colors: [
       { name: 'Walnut Finish', hex: '#9E6B47' },
       { name: 'Frosty White', hex: '#EDEBE6' }
@@ -2811,7 +2811,7 @@ export const PRODUCTS: CatalogProduct[] = [
     originalPrice: 58999,
     rating: 4.6,
     reviewCount: 58,
-    tags: ['Diwali Special'],
+    tags: ['Limited Offer'],
     colors: [
       { name: 'Frosty White', hex: '#EDEBE6' },
       { name: 'Natural Oak', hex: '#C9A27E' }
@@ -3103,7 +3103,7 @@ export const PRODUCTS: CatalogProduct[] = [
     originalPrice: 23999,
     rating: 4.7,
     reviewCount: 38,
-    tags: ['Festive Deal'],
+    tags: ['Hot Deal'],
     colors: [
       { name: 'Natural Oak', hex: '#C9A27E' },
       { name: 'Teak Brown', hex: '#B87C4C' }
@@ -3190,7 +3190,7 @@ export const PRODUCTS: CatalogProduct[] = [
     originalPrice: 36499,
     rating: 4.6,
     reviewCount: 33,
-    tags: ['Diwali Special'],
+    tags: ['Limited Offer'],
     colors: [
       { name: 'Natural Oak', hex: '#C9A27E' },
       { name: 'Wenge Brown', hex: '#4A3426' }
@@ -3364,7 +3364,7 @@ export const PRODUCTS: CatalogProduct[] = [
     originalPrice: 16499,
     rating: 4.6,
     reviewCount: 41,
-    tags: ['Festive Deal'],
+    tags: ['Hot Deal'],
     colors: [
       { name: 'Honey Polish', hex: '#C68B59' },
       { name: 'Walnut Finish', hex: '#9E6B47' }
@@ -3463,168 +3463,10 @@ export const CATEGORY_CARDS: { key: MainCategory; title: string; tagline: string
   }
 ];
 
-// Curated Diwali Festive Banners
-export interface DiwaliBanner {
-  id: string;
-  badge: string;
-  title: string;
-  headline: string;
-  description: string;
-  highlight: string;
-  ctaText: string;
-  /** Fallback colour while the image loads */
-  gradient: string;
-  /** 16:9 photo with empty space on the left for the text, in `public/e-catalog/banners/` */
-  image: string;
-  categoryLink: MainCategory;
-  categoryName: string;
-}
-
-export const DIWALI_BANNERS: DiwaliBanner[] = [
-  {
-    id: 'diwali-maha-utsav',
-    badge: 'DIWALI MAHA UTSAV 2026',
-    title: 'Solid Wood Festive Celebration',
-    headline: 'Up to 45% Off + Extra ₹2,500 Off',
-    description: '100% Real Teak & Sheesham Wood Furniture for Indian Homes.',
-    highlight: 'Free Doorstep Assembly in Local Region',
-    ctaText: 'Claim Festive Offer',
-    gradient: 'from-[#7C2D12] via-[#9A3412] to-[#B45309]',
-    image: '/e-catalog/banners/diwali-maha-utsav.webp',
-    categoryLink: 'Sofa',
-    categoryName: 'Living Room'
-  },
-  {
-    id: 'diwali-shubh-combo',
-    badge: 'SHUBH LABH LIVING COMBO',
-    title: 'Living Room Festive Bundle',
-    headline: 'Save ₹14,000 + Assured Silver Diya',
-    description: 'Nilgiri L-Shape Sofa + Udaipur Real Brass Wire Center Table.',
-    highlight: 'Guaranteed Festive Delivery in Local Region',
-    ctaText: 'View Combo Offer',
-    gradient: 'from-[#854D0E] via-[#A16207] to-[#713F12]',
-    image: '/e-catalog/banners/diwali-shubh-combo.webp',
-    categoryLink: 'CenterTable',
-    categoryName: 'Combos'
-  },
-  {
-    id: 'diwali-puja-dining',
-    badge: 'PUJA & FESTIVE FEAST SPECIAL',
-    title: 'Family Gathering Dining Sets',
-    headline: 'Flat 25% Off Solid Teak Dining',
-    description: 'Royal Teak 6-Seater Table + 4 Chairs + Solid Wood Bench.',
-    highlight: 'Includes Free Pure Brass Diya Gift Set',
-    ctaText: 'Explore Dining Deals',
-    gradient: 'from-[#78350F] via-[#92400E] to-[#B45309]',
-    image: '/e-catalog/banners/diwali-puja-dining.webp',
-    categoryLink: 'Dining',
-    categoryName: 'Dining Sets'
-  }
-];
-
-// Diwali Festive Offers Strip Data (Direct automatic savings, no coupon codes required)
-export interface DiwaliOffer {
-  id: string;
-  title: string;
-  benefit: string;
-  desc: string;
-  minOrder: string;
-  tag: string;
-  icon: LucideIcon;
-}
-
-export const DIWALI_OFFERS: DiwaliOffer[] = [
-  {
-    id: 'diwali-instant-markdown',
-    title: 'Festive Cash Savings',
-    benefit: 'Instant ₹2,500 Off',
-    desc: 'Direct markdown on furniture orders above ₹25,000',
-    minOrder: 'Applied automatically on booking',
-    tag: 'Festive Special',
-    icon: BadgePercent
-  },
-  {
-    id: 'diwali-combo-savings',
-    title: 'Living Room Combo Deal',
-    benefit: 'Extra 10% Off Bundles',
-    desc: 'Extra savings on Sofa + Coffee Table pairings',
-    minOrder: 'Automatic bundle discount',
-    tag: 'Combo Offer',
-    icon: Sofa
-  },
-  {
-    id: 'diwali-dining-puja',
-    title: 'Puja Dining Special',
-    benefit: 'Flat ₹4,000 Off Sets',
-    desc: 'Discounted on 6-Seater Royal Teak Dining Tables',
-    minOrder: 'Family dining collection',
-    tag: 'Festive Feast',
-    icon: UtensilsCrossed
-  }
-];
-
-// Diwali announcement ribbon in the header.
-export const FESTIVE_RIBBON = {
-  label: 'Diwali Mahotsav:',
-  text: 'Flat ₹2,500 Festive Savings on orders above ₹25,000',
-  badge: 'Diwali Special',
-};
-
-// Complimentary gift card shown after the offers strip.
-export const FESTIVE_GIFT = {
-  tag: 'Festive Gift',
-  title: 'Pure Brass Diya Set',
-  description:
-    'Complimentary traditional brass diya set + timber care oil with every festive pre-order!',
-};
-
-// Festive note shown inside the product details sheet.
-export const FESTIVE_PRIVILEGE = {
-  title: 'Diwali Festive Privilege',
-  badge: 'Festive Discount Active',
-  intro: 'Order for local region delivery before Diwali. Includes',
-  perks: ['Free Solid Wood Assembly', 'Free Brass Diya Gift Set'],
-};
-
-// Starting value of the "Diwali Dhamaka Deals" countdown (loops when it hits zero).
-export const DEALS_COUNTDOWN_START = { days: 2, hours: 14, mins: 38, secs: 45 };
-
-// Products shown in "Diwali Dhamaka Deals", in order.
-export const DIWALI_PICK_IDS = ['sofa-2', 'dining-1', 'center-table-1', 'chair-1'];
-
 // Products already in the cart when the demo first loads.
 export const INITIAL_CART_IDS = ['sofa-1', 'dining-1'];
 
-// ---------------------------------------------------------------------------
-// Home screen
-// ---------------------------------------------------------------------------
-
-// Round "story" shortcuts at the top of the home screen.
-// `image` is a square product shot on white, kept in `public/e-catalog/highlights/`.
-export type StoryHighlight =
-  | { title: string; image: string; action: 'offers' }
-  | { title: string; image: string; action: 'whatsapp' }
-  | { title: string; image: string; action: 'category'; category: MainCategory };
-
-const highlight = (name: string) => `/e-catalog/highlights/${name}.webp`;
-
-export const STORY_HIGHLIGHTS: StoryHighlight[] = [
-  { title: 'Diwali Deals', image: highlight('diwali-deals'), action: 'offers' },
-  { title: 'Sofas', image: highlight('sofas'), action: 'category', category: 'Sofa' },
-  { title: 'Wardrobes', image: highlight('wardrobes'), action: 'category', category: 'Wardrobe' },
-  { title: 'Dressers', image: highlight('dresser'), action: 'category', category: 'Dresser' },
-  { title: 'Beds', image: highlight('beds'), action: 'category', category: 'Bed' },
-  { title: 'Dining', image: highlight('dining'), action: 'category', category: 'Dining' },
-  { title: 'Tables', image: highlight('tables'), action: 'category', category: 'CenterTable' },
-  { title: 'Chairs', image: highlight('chair'), action: 'category', category: 'Chair' },
-  { title: 'Custom', image: highlight('custom'), action: 'whatsapp' },
-];
-
-export const CUSTOM_ORDER_CARD = {
-  title: 'Need Custom Dimensions?',
-  description: 'We customize Sheesham and Teak wood to fit your room dimensions.',
-};
-
+// Trust badges on the product page and help tab.
 export const TRUST_POINTS: { icon: LucideIcon; title: string; subtitle: string }[] = [
   { icon: Truck, title: 'Free Delivery', subtitle: 'Local Region' },
   { icon: ShieldCheck, title: '10-Yr Warranty', subtitle: 'Termite Proof' },
@@ -3655,11 +3497,10 @@ export const FAQS: { q: string; a: string }[] = [
 // ---------------------------------------------------------------------------
 
 const hello = `Hello ${STORE.name}!`;
-const festiveHello = `${hello} 🪔 Happy Diwali!`;
 
 export const WHATSAPP_MESSAGES = {
   general: () =>
-    `${hello} I am looking for furniture for my home. Please share your latest festive catalog and prices.`,
+    `${hello} I am looking for furniture for my home. Please share your latest catalog and prices.`,
 
   product: (p: CatalogProduct) =>
     `${hello} I am interested in this item:\n` +
@@ -3670,36 +3511,19 @@ export const WHATSAPP_MESSAGES = {
     `• Size: ${p.dimensions}\n\n` +
     `Please share real photos, color options, and delivery time to my address.`,
 
-  productFestivePrice: (p: CatalogProduct) =>
-    `${festiveHello} I want to claim the Diwali Festive Price for:\n` +
-    `• ${p.productName} (${formatINR(p.price)})\n` +
-    `• Category: ${p.categoryName} - ${p.subcategoryName}\n` +
-    `• Wood: ${p.woodType}\n\n` +
-    `Please confirm the festive discount and local delivery timeline.`,
-
-  festiveRibbon: () =>
-    `${festiveHello} I want to avail the Diwali Mahotsav festive discounts for solid wood furniture. Please share offers and pricing.`,
-
-  banner: (b: DiwaliBanner) =>
-    `${festiveHello} I want to claim the festive offer: "${b.title} - ${b.headline}". Please share available designs and festive pricing.`,
-
-  offer: (o: DiwaliOffer) =>
-    `${festiveHello} I want to avail the festive offer: "${o.title} - ${o.benefit}". Please share details and delivery timeline to my local address.`,
-
-  festiveGift: () =>
-    `${festiveHello} I am booking solid wood furniture and would like to claim the complimentary Pure Brass Diya Gift Set.`,
-
-  customDimensions: () =>
-    'Hello! I need custom dimensions for my room furniture. Can I share photos and measurements?',
-
   searchNotFound: (query: string) =>
     `${hello} I was searching for "${query}". Can you make this custom in teak or sheesham?`,
 
-  cartOrder: (items: CatalogProduct[], total: number) =>
-    `${hello} I would like to order these items:\n` +
+  cartEnquiry: (items: CatalogProduct[], total: number) =>
+    `${hello} I'm interested in these items:\n` +
     items.map((p) => `• ${p.productName} — ${formatINR(p.price)}`).join('\n') +
-    `\n\nTotal: ${formatINR(total)}\n` +
-    `Please confirm availability, the best price and delivery time to my address.`,
+    `\n\nListed total: ${formatINR(total)}\n` +
+    `Could you share your best price, a few more real photos of each, and the delivery time to my area?`,
+
+  savedList: (items: CatalogProduct[]) =>
+    `My saved furniture from ${STORE.name}:\n` +
+    items.map((p) => `• ${p.productName} — ${formatINR(p.price)}`).join('\n') +
+    `\n\nWhich one do you like?`,
 };
 
 // ---------------------------------------------------------------------------

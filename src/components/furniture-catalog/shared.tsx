@@ -6,6 +6,7 @@
 import React, { createContext, useContext } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { Heart } from "lucide-react";
 import { CATALOG_DEMO_BASE } from "@/lib/catalogDomain";
 import { WHATSAPP_NUMBER } from "@/lib/contact";
 import type { CatalogProduct } from "@/lib/adminProducts";
@@ -56,6 +57,12 @@ export type CatalogContextValue = {
   addToCart: (id: string) => void;
   removeFromCart: (id: string) => void;
   clearCart: () => void;
+  /** Saved (wishlist) product ids, in the order they were saved. */
+  saved: string[];
+  isSaved: (id: string) => boolean;
+  /** Saves the product, or removes it when it's already saved. */
+  toggleSaved: (id: string) => void;
+  clearSaved: () => void;
   /**
    * True when the catalog runs in an iframe (a live demo on a landing page). Navigations then
    * replace the history entry instead of adding one, so the host page's Back closes the demo.
@@ -522,35 +529,6 @@ export const FriendlyFurniturePlaceholder: React.FC<{
   );
 };
 
-// Traditional Indian Earthen Diya Lamp Icon (Festive celebration motif)
-export const DiyaIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
-  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={`shrink-0 ${className}`}>
-    {/* Diya Flame */}
-    <path
-      d="M12 2C12 2 9 6.2 9 9.2C9 10.9 10.3 12.2 12 12.2C13.7 12.2 15 10.9 15 9.2C15 6.2 12 2 12 2Z"
-      fill="#F59E0B"
-    />
-    <path
-      d="M12 4.5C12 4.5 10.5 7 10.5 8.8C10.5 9.7 11.2 10.4 12 10.4C12.8 10.4 13.5 9.7 13.5 8.8C13.5 7 12 4.5 12 4.5Z"
-      fill="#FEF08A"
-    />
-    {/* Diya Clay Base */}
-    <path
-      d="M3 13C3.5 18 7.5 21 12 21C16.5 21 20.5 18 21 13C17 14.5 7 14.5 3 13Z"
-      fill="#D97706"
-    />
-    <path
-      d="M2.5 12.5C4.2 14 8 15.2 12 15.2C16 15.2 19.8 14 21.5 12.5C18 11.5 6 11.5 2.5 12.5Z"
-      fill="#B45309"
-    />
-    {/* Base rim */}
-    <path
-      d="M9.5 20.5H14.5L14 22H10L9.5 20.5Z"
-      fill="#78350F"
-    />
-  </svg>
-);
-
 // WhatsApp Brand Icon
 export const WhatsAppIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
   <svg className={`fill-current shrink-0 ${className}`} viewBox="0 0 24 24">
@@ -582,8 +560,33 @@ export const ProductVisual: React.FC<{ product: CatalogProduct; sizes: string; f
     />
   );
 
+// Heart toggle on the product page that saves a product to the Saved tab.
+// `className` sets size and placement.
+export const SaveButton: React.FC<{ product: CatalogProduct; className?: string; iconClassName?: string }> = ({
+  product,
+  className = '',
+  iconClassName = 'h-4 w-4',
+}) => {
+  const { isSaved, toggleSaved } = useCatalog();
+  const saved = isSaved(product.id);
+  return (
+    <button
+      type="button"
+      onClick={() => toggleSaved(product.id)}
+      aria-pressed={saved}
+      aria-label={saved ? `Remove ${product.productName} from saved` : `Save ${product.productName}`}
+      title={saved ? 'Remove from saved' : 'Save'}
+      className={`flex items-center justify-center rounded-full bg-white/85 backdrop-blur-sm shadow-sm transition-transform active:scale-90 ${
+        saved ? 'text-red-500' : 'text-neutral-700'
+      } ${className}`}
+    >
+      <Heart className={`${iconClassName} ${saved ? 'fill-current' : ''}`} />
+    </button>
+  );
+};
+
 // Image-first product card: a square photo with a small badge, then just name + price.
-// The card links to the product's own page (where it can be added to the cart).
+// The card links to the product's own page (where it can be added to the cart or saved).
 export const ProductCard: React.FC<{ product: CatalogProduct }> = ({ product }) => {
   const { href, embedded, markInAppNavigation } = useCatalog();
   // The first tag is the card badge.

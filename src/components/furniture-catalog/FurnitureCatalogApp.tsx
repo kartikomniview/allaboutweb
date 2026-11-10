@@ -1,58 +1,38 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useRef, useSyncExternalStore } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { catalogSiteOriginFor } from '@/lib/catalogDomain';
 import { whatsappUrl } from '@/lib/contact';
-import { ECATALOG_PROMO_PATH } from './EcatalogPromo';
 import './furniture-catalog.css';
 import {
-  ArrowRight,
   Search,
   ShoppingCart,
   X,
   Check,
   MessageCircle,
-  Sparkles,
+  Heart,
   Home,
   LayoutGrid,
   MapPin,
-  Clock,
-  Gift,
-  Flame,
   Info
 } from 'lucide-react';
 import {
   AAW_PROMO,
-  CATEGORY_CARDS,
-  CUSTOM_ORDER_CARD,
-  DEALS_COUNTDOWN_START,
-  DIWALI_BANNERS,
-  DIWALI_OFFERS,
-  DIWALI_PICK_IDS,
-  FESTIVE_GIFT,
-  FESTIVE_RIBBON,
   INITIAL_CART_IDS,
   STORE,
-  STORY_HIGHLIGHTS,
-  TRUST_POINTS,
   WHATSAPP_MESSAGES,
-  type DiwaliBanner,
-  type DiwaliOffer,
-  type MainCategory,
 } from './data';
 import type { CatalogProduct } from '@/lib/adminProducts';
 import CartPage from './CartPage';
 import CatalogPage, { DEFAULT_CATALOG_FILTERS, type CatalogFilters } from './CatalogPage';
 import DemoWhatsAppDialog from './DemoWhatsAppDialog';
+import SavedPage from './SavedPage';
 import StoreInfoPage from './StoreInfoPage';
 import {
   CATALOG_PATH,
   CatalogContext,
-  CategoryBox,
-  DiyaIcon,
   ProductCard,
   WhatsAppIcon,
   catalogBasePath,
@@ -62,13 +42,13 @@ import {
   type CatalogContextValue,
 } from './shared';
 
-type AppTab = 'home' | 'catalog' | 'cart' | 'help';
+type AppTab = 'catalog' | 'saved' | 'cart' | 'help';
 
 // Each bottom-nav tab has its own route (pages under app/app/catalog/furniture/(app)),
-// given relative to the catalog's base path.
+// given relative to the catalog's base path. The catalog is the start page.
 const TAB_PATHS: Record<AppTab, string> = {
-  home: '',
-  catalog: '/catalog',
+  catalog: '',
+  saved: '/saved',
   cart: '/cart',
   help: '/help',
 };
@@ -85,8 +65,6 @@ const isInIframe = () => window.self !== window.top;
 
 // `products` are the published products from the admin panel (loaded by the layout).
 // `children` is the current product page, if any; it renders on top of the catalog.
-// Delay before the e-catalog promo pop-up, both the first time and after each close.
-const PROMO_DELAY_MS = 60_000;
 
 export default function FurnitureCatalogApp({
   products,
@@ -108,7 +86,7 @@ export default function FurnitureCatalogApp({
   const homeHref = basePath === '' ? catalogSiteOriginFor(window.location) : '/';
 
   // Running as a live demo inside another page (an iframe): keep the host page's history
-  // clean — navigations replace instead of push — and skip the e-catalog promo pop-up.
+  // clean — navigations replace instead of push.
   const embedded = useSyncExternalStore(subscribeToNothing, isInIframe, () => false);
   const navigate = (url: string, options?: { scroll?: boolean }) =>
     embedded ? router.replace(url, options) : router.push(url, options);
@@ -116,7 +94,7 @@ export default function FurnitureCatalogApp({
   // The open tab comes from the URL. On other routes (a product page, the promo
   // pop-up) there's no tab in the URL, so the last tab stays visible underneath.
   const routeTab = tabFromPath(pathname);
-  const [activeTab, setActiveTab] = useState<AppTab>(routeTab ?? 'home');
+  const [activeTab, setActiveTab] = useState<AppTab>(routeTab ?? 'catalog');
   if (routeTab && routeTab !== activeTab) setActiveTab(routeTab);
 
   // Each tab opens at the top. Next.js can't do this for us: the tab pages
@@ -163,74 +141,11 @@ export default function FurnitureCatalogApp({
   );
   const cartCount = cart.length;
 
-  // Active banner index for Diwali banner carousel
-  const [activeBannerIdx, setActiveBannerIdx] = useState(0);
-
-  // Dynamic Diwali countdown timer
-  const [timeLeft, setTimeLeft] = useState(DEALS_COUNTDOWN_START);
-
   // Switching tabs is a navigation; it also leaves search mode.
   const goToTab = (tab: AppTab) => {
     setSearchQuery('');
     navigate(href(TAB_PATHS[tab]));
   };
-
-  // E-catalog promo pop-up: first after 1 min, then 1 min after each close.
-  // It opens as an intercepted route, so this component (and its state) stays mounted behind it.
-  // Keyed on "is it open" rather than the pathname, so moving between tabs doesn't restart the timer.
-  const isPromoOpen = catalogRelativePath(pathname) === ECATALOG_PROMO_PATH;
-
-  useEffect(() => {
-    if (isPromoOpen || embedded) return;
-    const promoTimer = setTimeout(() => {
-      router.push(catalogHref(basePath, ECATALOG_PROMO_PATH), { scroll: false });
-    }, PROMO_DELAY_MS);
-    return () => clearTimeout(promoTimer);
-  }, [isPromoOpen, embedded, router, basePath]);
-
-  // Banner carousel is a native scroll-snap track: swipe/trackpad scroll it directly,
-  // dots and autoplay scroll it programmatically, and the scroll position drives the dots.
-  const bannerTrackRef = useRef<HTMLDivElement>(null);
-  const bannerInteractedAtRef = useRef(0);
-
-  const markBannerInteraction = () => {
-    bannerInteractedAtRef.current = Date.now();
-  };
-
-  const scrollToBanner = (idx: number) => {
-    const track = bannerTrackRef.current;
-    if (track) track.scrollTo({ left: idx * track.clientWidth, behavior: 'smooth' });
-  };
-
-  const handleBannerScroll = () => {
-    const track = bannerTrackRef.current;
-    if (!track || !track.clientWidth) return;
-    setActiveBannerIdx(Math.round(track.scrollLeft / track.clientWidth));
-  };
-
-  useEffect(() => {
-    const bannerTimer = setInterval(() => {
-      const track = bannerTrackRef.current;
-      // Hold the slide for a full cycle after the shopper touches the carousel
-      if (!track || !track.clientWidth || Date.now() - bannerInteractedAtRef.current < 5500) return;
-      const next = (Math.round(track.scrollLeft / track.clientWidth) + 1) % DIWALI_BANNERS.length;
-      track.scrollTo({ left: next * track.clientWidth, behavior: 'smooth' });
-    }, 5500);
-    return () => clearInterval(bannerTimer);
-  }, []);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev.secs > 0) return { ...prev, secs: prev.secs - 1 };
-        if (prev.mins > 0) return { ...prev, mins: 59, secs: 59 };
-        if (prev.hours > 0) return { ...prev, hours: prev.hours - 1, mins: 59, secs: 59 };
-        if (prev.days > 0) return { ...prev, days: prev.days - 1, hours: 23, mins: 59, secs: 59 };
-        return { days: 2, hours: 23, mins: 59, secs: 59 };
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   // Demo WhatsApp: the enquiry text waiting for the visitor to enter their own number
   const [demoWhatsAppMessage, setDemoWhatsAppMessage] = useState<string | null>(null);
@@ -245,20 +160,6 @@ export default function FurnitureCatalogApp({
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
-  };
-
-  const handleClaimDiwaliOffer = (banner: DiwaliBanner) => {
-    openWhatsApp(getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.banner(banner)));
-  };
-
-  const handleClaimOffer = (offer: DiwaliOffer) => {
-    openWhatsApp(getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.offer(offer)));
-  };
-
-  const handleSelectCategory = (cat: MainCategory, sub?: string) => {
-    setCatalogFilters({ category: cat, subCategory: sub ?? '' });
-    setSearchQuery('');
-    navigate(href(TAB_PATHS.catalog)); // the tab change scrolls to the top
   };
 
   const isInCart = (id: string) => cart.includes(id);
@@ -279,6 +180,26 @@ export default function FurnitureCatalogApp({
     showToast('Cart cleared');
   };
 
+  // Saved (wishlist): starts empty and lasts for the visit, like the cart.
+  const [saved, setSaved] = useState<string[]>([]);
+  const savedCount = saved.length;
+  const isSaved = (id: string) => saved.includes(id);
+
+  const toggleSaved = (id: string) => {
+    if (isSaved(id)) {
+      setSaved(prev => prev.filter(i => i !== id));
+      showToast('Removed from saved');
+    } else {
+      setSaved(prev => [...prev, id]);
+      showToast('Saved');
+    }
+  };
+
+  const clearSaved = () => {
+    setSaved([]);
+    showToast('Saved list cleared');
+  };
+
   // Global search across category, subcategory, name, tags, wood, material or description
   const searchResults = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -297,18 +218,6 @@ export default function FurnitureCatalogApp({
     );
   }, [products, searchQuery]);
 
-  // Curated 4 top festive picks for the Diwali Dhamaka section
-  const diwaliPicks = useMemo(() => {
-    return DIWALI_PICK_IDS
-      .map(id => products.find(p => p.id === id))
-      .filter((p): p is CatalogProduct => Boolean(p));
-  }, [products]);
-
-  // Home "Browse by Category" tiles — only categories that have products
-  const categoryCards = useMemo(() => {
-    return CATEGORY_CARDS.filter(card => products.some(p => p.categoryName === card.key));
-  }, [products]);
-
   const catalogContext: CatalogContextValue = {
     products,
     href,
@@ -319,6 +228,10 @@ export default function FurnitureCatalogApp({
     addToCart,
     removeFromCart,
     clearCart,
+    saved,
+    isSaved,
+    toggleSaved,
+    clearSaved,
     markInAppNavigation: () => {
       inAppNavigationRef.current = window.location.pathname;
     },
@@ -367,29 +280,12 @@ export default function FurnitureCatalogApp({
 
         {/* TOP MOBILE APP BAR */}
         <header ref={headerRef} className="sticky top-0 z-30 bg-white/95 backdrop-blur-md shadow-xs">
-          
-          {/* Top Diwali Festive Announcement Ribbon */}
-          <div className="bg-gradient-to-r from-[#7C2D12] via-[#9A3412] to-[#B45309] text-white px-3 py-1.5 flex items-center justify-between text-[10px] font-medium shadow-2xs select-none">
-            <div className="flex items-center gap-1.5 truncate">
-              <DiyaIcon className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">
-                <strong className="text-amber-200 font-bold">{FESTIVE_RIBBON.label}</strong> {FESTIVE_RIBBON.text}
-              </span>
-            </div>
-            <button
-              onClick={() => openWhatsApp(getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.festiveRibbon()))}
-              className="bg-amber-400 hover:bg-amber-300 text-neutral-900 font-bold px-2.5 py-0.5 rounded-full text-[9px] shrink-0 transition-transform active:scale-95 shadow-2xs ml-1.5 flex items-center gap-1"
-            >
-              <span>Claim</span>
-              <ArrowRight className="w-2.5 h-2.5" />
-            </button>
-          </div>
 
           {/* Brand & Action Row */}
           <div className="px-4 py-2.5 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <div
-                onClick={() => goToTab('home')}
+                onClick={() => goToTab('catalog')}
                 className="cursor-pointer flex items-center gap-1.5"
               >
                 <span className="w-7 h-7 rounded-lg bg-[#8B5A2B] text-white flex items-center justify-center font-bold text-xs shadow-xs">
@@ -438,10 +334,6 @@ export default function FurnitureCatalogApp({
               <span className="font-semibold text-neutral-900">{STORE.deliveryArea}</span>
               <span className="text-neutral-400">·</span>
             </div>
-            <span className="text-[10px] text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded-full flex items-center gap-1">
-              <DiyaIcon className="w-3 h-3" />
-              <span>{FESTIVE_RIBBON.badge}</span>
-            </span>
           </div>
 
           {/* Collapsible Mobile Search Bar */}
@@ -522,261 +414,18 @@ export default function FurnitureCatalogApp({
             </div>
           ) : (
             <>
-              {/* TAB 1: HOME */}
-              {activeTab === 'home' && (
-                <div className="space-y-4 pt-1">
-                  
-                  {/* STORY HIGHLIGHTS (Native Instagram/App category circles with Diwali Deals) */}
-                  <div className="py-1">
-                    <div className="flex items-end gap-4 overflow-x-auto no-scrollbar pt-1 pb-1">
-                      {STORY_HIGHLIGHTS.map((story) => {
-                        const isDiwali = story.action === 'offers';
-                        return (
-                          <button
-                            key={story.title}
-                            onClick={() => {
-                              if (story.action === 'offers') {
-                                document.getElementById('diwali-offers-section')?.scrollIntoView({ behavior: 'smooth' });
-                              } else if (story.action === 'whatsapp') {
-                                openWhatsApp(getWhatsAppUrl());
-                              } else {
-                                handleSelectCategory(story.category);
-                              }
-                            }}
-                            className="flex flex-col items-center gap-1 shrink-0 group"
-                          >
-                            {/* Product photo is larger than the circle so it pops out over the rim.
-                                The photos are on white, so multiply blends that white into the
-                                circle and page behind. Keep transforms off ancestors (they would
-                                isolate the blend and bring the white box back). */}
-                            <div className="relative w-16 h-[4.5rem]">
-                              <div className={`absolute bottom-0 left-1 w-14 h-14 rounded-full p-0.5 ${
-                                isDiwali
-                                  ? 'bg-gradient-to-tr from-amber-500 via-orange-500 to-yellow-300 ring-2 ring-amber-400/50 shadow-md'
-                                  : 'bg-gradient-to-tr from-[#8B5A2B] via-amber-400 to-[#FAF5EE] shadow-xs'
-                              }`}>
-                                <div className={`w-full h-full rounded-full ${isDiwali ? 'bg-amber-50' : 'bg-[#FAF5EE]'}`} />
-                              </div>
-                              <Image
-                                src={story.image}
-                                alt=""
-                                width={72}
-                                height={72}
-                                sizes="72px"
-                                className="absolute bottom-0 left-1/2 w-[4.5rem] h-[4.5rem] -translate-x-1/2 object-contain mix-blend-multiply transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-105 group-active:scale-95"
-                              />
-                            </div>
-                            <span className={`text-[10px] font-semibold text-center tracking-tight ${
-                              isDiwali ? 'text-amber-800 font-bold' : 'text-neutral-800'
-                            }`}>
-                              {story.title}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* DIWALI FESTIVE BANNERS — swipeable snap carousel (touch, trackpad, dots, autoplay) */}
-                  <div className="relative">
-                    <div
-                      ref={bannerTrackRef}
-                      onScroll={handleBannerScroll}
-                      onPointerDown={markBannerInteraction}
-                      onTouchStart={markBannerInteraction}
-                      className="flex overflow-x-auto snap-x snap-mandatory overscroll-x-contain no-scrollbar rounded-3xl shadow-xl"
-                    >
-                      {DIWALI_BANNERS.map((banner, idx) => (
-                        <div
-                          key={banner.id}
-                          className={`relative w-full shrink-0 snap-center aspect-[2/1] overflow-hidden bg-gradient-to-br ${banner.gradient} text-white`}
-                        >
-                          <Image
-                            src={banner.image}
-                            alt=""
-                            fill
-                            sizes="(min-width: 640px) 430px, 100vw"
-                            preload={idx === 0}
-                            draggable={false}
-                            className="object-cover object-right"
-                          />
-                          {/* Darkens the empty left side of the photo so the text stays readable */}
-                          <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/40 to-black/0 pointer-events-none" />
-
-                          <div className="relative z-10 flex h-full max-w-[66%] flex-col items-start justify-between p-4 sm:p-5">
-                            <span className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-xs text-amber-200 text-[9px] font-bold px-2.5 py-0.5 rounded-full">
-                              <DiyaIcon className="w-3 h-3" />
-                              {banner.badge}
-                            </span>
-                            <h2 className="text-lg sm:text-xl font-extrabold leading-tight tracking-tight text-white drop-shadow-xs">
-                              {banner.headline}
-                            </h2>
-                            <button
-                              onClick={() => handleClaimDiwaliOffer(banner)}
-                              className="bg-white text-[#7C2D12] hover:bg-neutral-100 font-bold px-3 py-1.5 rounded-xl text-xs shadow-md active:scale-95 transition-all flex items-center gap-1.5"
-                            >
-                              {banner.ctaText}
-                              <ArrowRight className="w-3 h-3" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Carousel Indicator Dots */}
-                    <div className="flex items-center justify-center gap-1.5 mt-2">
-                      {DIWALI_BANNERS.map((b, idx) => (
-                        <button
-                          key={b.id}
-                          onClick={() => {
-                            markBannerInteraction();
-                            scrollToBanner(idx);
-                          }}
-                          className={`h-1.5 rounded-full transition-all duration-300 ${
-                            activeBannerIdx === idx ? 'w-5 bg-[#8B5A2B]' : 'w-1.5 bg-neutral-300'
-                          }`}
-                          aria-label={`Go to slide ${idx + 1}`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* DIWALI OFFERS STRIP — compact coupon chips, each opens WhatsApp */}
-                  <div id="diwali-offers-section" className="space-y-2 pt-1 scroll-mt-24">
-                    <div className="flex items-center gap-1.5">
-                      <DiyaIcon className="w-4 h-4 text-amber-600" />
-                      <h2 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">Diwali Offers</h2>
-                    </div>
-
-                    <div className="flex items-stretch gap-2 overflow-x-auto no-scrollbar pb-1">
-                      {[
-                        ...DIWALI_OFFERS.map((offer) => ({
-                          id: offer.id,
-                          icon: offer.icon,
-                          title: offer.benefit,
-                          sub: offer.tag,
-                          onClick: () => handleClaimOffer(offer),
-                        })),
-                        {
-                          id: 'festive-gift',
-                          icon: Gift,
-                          title: FESTIVE_GIFT.title,
-                          sub: 'Free gift',
-                          onClick: () => openWhatsApp(getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.festiveGift())),
-                        },
-                      ].map(({ id, icon: Icon, title, sub, onClick }) => (
-                        <button
-                          key={id}
-                          onClick={onClick}
-                          className="flex items-center gap-2 shrink-0 bg-white rounded-xl border border-amber-200/70 pl-2 pr-2.5 py-2 text-left shadow-xs hover:shadow-md active:scale-[0.98] transition-all group"
-                        >
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
-                            <Icon className="w-4 h-4" />
-                          </span>
-                          <span className="min-w-0">
-                            <span className="block whitespace-nowrap text-xs font-extrabold text-[#7C2D12] tracking-tight">{title}</span>
-                            <span className="block whitespace-nowrap text-[10px] font-medium text-neutral-500">{sub}</span>
-                          </span>
-                          <ArrowRight className="w-3 h-3 shrink-0 text-amber-700 group-hover:translate-x-0.5 transition-transform" />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* BROWSE BY CATEGORY — app-style 4-column photo grid */}
-                  <div className="space-y-2">
-                    <div className="flex items-baseline justify-between">
-                      <h2 className="text-[15px] font-bold text-neutral-900">Shop by category</h2>
-                      <button
-                        onClick={() => goToTab('catalog')}
-                        className="text-xs font-medium text-neutral-500 hover:text-[#8B5A2B]"
-                      >
-                        See all
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-4 gap-x-5 gap-y-4 px-1">
-                      {categoryCards.map((cat) => (
-                        <CategoryBox key={cat.key} category={cat.key} onClick={() => handleSelectCategory(cat.key)} />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* DIWALI DHAMAKA FLASH DEALS SECTION (With Dynamic Countdown Timer) */}
-                  <div className="space-y-2 pt-1">
-                    <div className="flex items-center justify-between flex-wrap gap-1">
-                      <div className="flex items-center gap-1.5">
-                        <Flame className="w-4 h-4 text-orange-600" />
-                        <h2 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
-                          Diwali Dhamaka Deals
-                        </h2>
-                      </div>
-                      
-                      {/* Live Festive Countdown Timer */}
-                      <div className="flex items-center gap-1 bg-red-50 text-red-700 px-2 py-0.5 rounded-full text-[10px] font-bold border border-red-200/60">
-                        <Clock className="w-3 h-3 text-red-600 animate-pulse" />
-                        <span>Ends in: {timeLeft.days}d {String(timeLeft.hours).padStart(2, '0')}h {String(timeLeft.mins).padStart(2, '0')}m {String(timeLeft.secs).padStart(2, '0')}s</span>
-                      </div>
-                    </div>
-
-                    {/* One swipeable row; ~2.4 cards visible so the next one peeks in */}
-                    <div className="flex gap-2.5 overflow-x-auto snap-x snap-mandatory overscroll-x-contain no-scrollbar pb-1">
-                      {diwaliPicks.map((product) => (
-                        <div key={product.id} className="w-[40%] shrink-0 snap-start">
-                          <ProductCard product={product} />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* CARPENTER CUSTOMIZATION CARD */}
-                  <div className="bg-[#FAF5EE] rounded-2xl p-3.5 space-y-2 shadow-xs">
-                    <div className="flex items-start gap-3">
-                      <span className="p-2 rounded-xl bg-white text-[#8B5A2B] shadow-2xs shrink-0">
-                        <Sparkles className="w-4 h-4" />
-                      </span>
-                      <div>
-                        <h4 className="font-bold text-xs text-[#111111]">{CUSTOM_ORDER_CARD.title}</h4>
-                        <p className="text-[11px] text-neutral-600 leading-relaxed">
-                          {CUSTOM_ORDER_CARD.description}
-                        </p>
-                      </div>
-                    </div>
-                    <a
-                      href={getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.customDimensions())}
-                      onClick={onWhatsAppLinkClick}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs active:scale-98 transition-all"
-                    >
-                      <WhatsAppIcon className="w-3.5 h-3.5" />
-                      <span>Chat on WhatsApp</span>
-                    </a>
-                  </div>
-
-                  {/* TRUST POINTS (Clean Mobile Badges) */}
-                  <div className="grid grid-cols-3 gap-2 text-center pt-1">
-                    {TRUST_POINTS.map(({ icon: Icon, title, subtitle }) => (
-                      <div key={title} className="bg-white rounded-xl p-2.5 shadow-2xs space-y-1">
-                        <Icon className="w-4 h-4 text-[#8B5A2B] mx-auto" />
-                        <p className="font-bold text-[10px] text-neutral-900 leading-tight">{title}</p>
-                        <p className="text-[9px] text-neutral-500">{subtitle}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                </div>
-              )}
-
-              {/* TAB 2: CATALOG — its own component (CatalogPage.tsx) */}
+              {/* CATALOG (the start page) — its own component (CatalogPage.tsx) */}
               {activeTab === 'catalog' && (
                 <CatalogPage filters={catalogFilters} onFiltersChange={setCatalogFilters} />
               )}
 
-              {/* TAB 3: CART — its own component (CartPage.tsx) */}
+              {/* SAVED (wishlist) — its own component (SavedPage.tsx) */}
+              {activeTab === 'saved' && <SavedPage onBrowse={() => goToTab('catalog')} />}
+
+              {/* CART — its own component (CartPage.tsx) */}
               {activeTab === 'cart' && <CartPage onBrowse={() => goToTab('catalog')} />}
 
-              {/* TAB 4: STORE INFO & WHATSAPP — its own component (StoreInfoPage.tsx) */}
+              {/* STORE INFO & WHATSAPP — its own component (StoreInfoPage.tsx) */}
               {activeTab === 'help' && <StoreInfoPage />}
             </>
           )}
@@ -796,23 +445,7 @@ export default function FurnitureCatalogApp({
         >
           <div className="max-w-md mx-auto h-16 flex items-center justify-around">
             
-            {/* Tab 1: Home */}
-            <Link
-              href={href(TAB_PATHS.home)}
-              replace={embedded}
-              onClick={() => setSearchQuery('')}
-              aria-current={activeTab === 'home' && !searchQuery ? 'page' : undefined}
-              className={`flex flex-col items-center justify-center flex-1 h-full min-h-[44px] transition-all active:scale-95 ${
-                activeTab === 'home' && !searchQuery ? 'text-[#8B5A2B]' : 'text-neutral-500 hover:text-neutral-900'
-              }`}
-            >
-              <Home className={`w-5 h-5 ${activeTab === 'home' && !searchQuery ? 'stroke-[2.5]' : 'stroke-[1.75]'}`} />
-              <span className={`text-[10px] mt-1 ${activeTab === 'home' && !searchQuery ? 'font-bold' : 'font-medium'}`}>
-                Home
-              </span>
-            </Link>
-
-            {/* Tab 2: Catalog */}
+            {/* Tab 1: Catalog */}
             <Link
               href={href(TAB_PATHS.catalog)}
               replace={embedded}
@@ -825,6 +458,30 @@ export default function FurnitureCatalogApp({
               <LayoutGrid className={`w-5 h-5 ${activeTab === 'catalog' && !searchQuery ? 'stroke-[2.5]' : 'stroke-[1.75]'}`} />
               <span className={`text-[10px] mt-1 ${activeTab === 'catalog' && !searchQuery ? 'font-bold' : 'font-medium'}`}>
                 Catalog
+              </span>
+            </Link>
+
+            {/* Tab 2: Saved (wishlist) */}
+            <Link
+              href={href(TAB_PATHS.saved)}
+              replace={embedded}
+              onClick={() => setSearchQuery('')}
+              aria-current={activeTab === 'saved' && !searchQuery ? 'page' : undefined}
+              aria-label={savedCount > 0 ? `Saved, ${savedCount} items` : undefined}
+              className={`flex flex-col items-center justify-center flex-1 h-full min-h-[44px] relative transition-all active:scale-95 ${
+                activeTab === 'saved' && !searchQuery ? 'text-[#8B5A2B]' : 'text-neutral-500 hover:text-neutral-900'
+              }`}
+            >
+              <div className="relative">
+                <Heart className={`w-5 h-5 ${activeTab === 'saved' && !searchQuery ? 'stroke-[2.5]' : 'stroke-[1.75]'}`} />
+                {savedCount > 0 && (
+                  <span className="absolute -top-1.5 -right-2.5 bg-red-600 text-white text-[9px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center shadow-xs">
+                    {savedCount}
+                  </span>
+                )}
+              </div>
+              <span className={`text-[10px] mt-1 ${activeTab === 'saved' && !searchQuery ? 'font-bold' : 'font-medium'}`}>
+                Saved
               </span>
             </Link>
 

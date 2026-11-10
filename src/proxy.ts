@@ -26,7 +26,7 @@ const FURNITURE_ROUTE = "/app/catalog/furniture";
 
 // The furniture demo's own pages, relative to its base path.
 const isStorePath = (path: string) =>
-  path === "/" || ["/catalog", "/cart", "/help", "/get-ecatalog"].includes(path) || path.startsWith("/product/");
+  path === "/" || ["/catalog", "/saved", "/cart", "/help"].includes(path) || path.startsWith("/product/");
 
 // Local dev: `npm run dev:catalog24` serves Catalog24 on every host, for testing from a
 // phone on the LAN. Otherwise open http://catalog24.localhost:3000.

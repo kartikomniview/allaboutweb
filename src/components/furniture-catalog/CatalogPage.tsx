@@ -71,9 +71,9 @@ function SubcategoryChip({
 
 export const DEFAULT_CATALOG_FILTERS: CatalogFilters = { category: "Sofa", subCategory: "" };
 
-// The Catalog tab (/app/catalog/furniture/catalog): category boxes, the design-type
-// filter, and the matching products. The filters live in the catalog app so
-// they survive switching tabs and can be set from Home (category tiles, stories).
+// The Catalog tab, the start page (/app/catalog/furniture): category boxes, the
+// design-type filter, and the matching products. The filters live in the catalog
+// app so they survive switching tabs.
 export default function CatalogPage({
   filters,
   onFiltersChange,

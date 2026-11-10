@@ -10,7 +10,7 @@ import { ProductVisual, WhatsAppIcon, getWhatsAppUrl, productSubPath, useCatalog
 const panel = 'rounded-md border border-neutral-200 bg-white';
 
 // The Cart tab (/app/catalog/furniture/cart): the products the shopper added, a price
-// breakdown and one WhatsApp button that sends the whole order.
+// breakdown and one WhatsApp button that asks the store for its best price on everything.
 export default function CartPage({ onBrowse }: { onBrowse: () => void }) {
   const { products, href, embedded, cart, removeFromCart, clearCart, markInAppNavigation, onWhatsAppLinkClick } =
     useCatalog();
@@ -29,7 +29,7 @@ export default function CartPage({ onBrowse }: { onBrowse: () => void }) {
         <ShoppingCart className="mx-auto h-8 w-8 text-neutral-300" strokeWidth={1.5} />
         <h2 className="text-sm font-semibold text-[#111111]">Your cart is empty</h2>
         <p className="mx-auto max-w-xs text-xs leading-relaxed text-neutral-500">
-          Open any product and tap Add to cart. Then order everything in one WhatsApp message.
+          Open any product and tap Add to cart. Then ask for the best price on everything in one WhatsApp message.
         </p>
         <button
           onClick={onBrowse}
@@ -124,15 +124,15 @@ export default function CartPage({ onBrowse }: { onBrowse: () => void }) {
         </dl>
         {savings > 0 && (
           <p className="mt-3 rounded-[4px] bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
-            You save {formatINR(savings)} on this order
+            You save {formatINR(savings)} on listed prices
           </p>
         )}
       </section>
 
-      {/* Order button — stays visible above the bottom navigation */}
+      {/* Best-price button — stays visible above the bottom navigation */}
       <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10">
         <a
-          href={getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.cartOrder(items, total))}
+          href={getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.cartEnquiry(items, total))}
           onClick={onWhatsAppLinkClick}
           target="_blank"
           rel="noopener noreferrer"
@@ -144,7 +144,7 @@ export default function CartPage({ onBrowse }: { onBrowse: () => void }) {
           </span>
           <span className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.06em]">
             <WhatsAppIcon className="h-4 w-4" />
-            Order on WhatsApp
+            Get Best Price
             <ArrowRight className="h-4 w-4" />
           </span>
         </a>
