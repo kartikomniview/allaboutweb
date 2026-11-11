@@ -1,34 +1,20 @@
-// All static data for the furniture e-catalog: store details, categories,
-// help-centre content and WhatsApp message templates. Edit copy here;
-// FurnitureCatalogApp only renders it.
+// Static data for the store catalogs: the demo store's sample details and help
+// content, and the WhatsApp message templates. Edit copy here; FurnitureCatalogApp
+// only renders it. Categories live in src/lib/taxonomy.ts.
 // The catalog's products come from Firestore (managed in /admin/ecatalog).
 // PRODUCTS below is only the starter set for the admin "Import" button.
 
 import { RotateCcw, ShieldCheck, Truck, type LucideIcon } from 'lucide-react';
 import type { CatalogProduct } from '@/lib/adminProducts';
-
-export type MainCategory = 'Sofa' | 'Wardrobe' | 'Dresser' | 'Bed' | 'Dining' | 'CenterTable' | 'Chair';
-
-// Order of the category tabs on the Catalog screen (and the admin category dropdown).
-export const MAIN_CATEGORIES: MainCategory[] = ['Sofa', 'Wardrobe', 'Dresser', 'Bed', 'Dining', 'CenterTable', 'Chair'];
-
-// Display name for each category, e.g. on the Catalog screen's category switch.
-export const CATEGORY_TAB_LABELS: Record<MainCategory, string> = {
-  Sofa: 'Sofas',
-  Wardrobe: 'Wardrobes',
-  Dresser: 'Dressers',
-  Bed: 'Beds',
-  Dining: 'Dining',
-  CenterTable: 'Center Tables',
-  Chair: 'Chairs',
-};
+import { categoryLabel } from '@/lib/taxonomy';
 
 // ---------------------------------------------------------------------------
 // Store details
 // ---------------------------------------------------------------------------
 
-// Demo store profile. Everything below is a PLACEHOLDER (dummy address, phone, email,
-// rating, photo) — replace with the client's real details when setting up their catalog.
+// Sample store profile. Each store's real details (name, WhatsApp, address...) come
+// from its own settings (see src/lib/catalogStore.ts); only the demo store uses the
+// sample rating and delivery line below.
 export const STORE = {
   name: 'MyStore',
   initial: 'M',
@@ -58,6 +44,11 @@ export const AAW_PROMO = {
 export const formatINR = (amount: number): string => {
   return '₹' + amount.toLocaleString('en-IN');
 };
+
+// Price is optional in the admin panel; products saved without one have price 0.
+export const PRICE_ON_REQUEST = 'Price on request';
+export const hasPrice = (p: { price: number }) => p.price > 0;
+export const formatPrice = (amount: number): string => (amount > 0 ? formatINR(amount) : PRICE_ON_REQUEST);
 
 // Dummy products in the same shape as the admin panel's Firestore products
 // (ProductInput + id). Also used by the admin "import starter products" action.
@@ -3415,58 +3406,10 @@ export const PRODUCTS: CatalogProduct[] = [
   }
 ];
 
-// Category cards for the home view. The catalog adds the design count and
-// "From" price from the live products, so they stay correct as products change.
-// `image` is the furniture cut-out on white, shared with the story highlights (`public/e-catalog/highlights/`).
-export const CATEGORY_CARDS: { key: MainCategory; title: string; tagline: string; image: string }[] = [
-  {
-    key: 'Sofa',
-    image: '/e-catalog/highlights/sofas.webp',
-    title: 'Sofas & Couches',
-    tagline: 'L-shape sofas, recliners, sofa cum beds and solid wood diwans.'
-  },
-  {
-    key: 'Wardrobe',
-    image: '/e-catalog/highlights/wardrobes.webp',
-    title: 'Wardrobes',
-    tagline: '2, 3 and 4-door wardrobes, sliding wardrobes and kids wardrobes.'
-  },
-  {
-    key: 'Dresser',
-    image: '/e-catalog/highlights/dresser.webp',
-    title: 'Dressers & Dressing Tables',
-    tagline: 'Dressing tables with mirrors, vanities and chests of drawers.'
-  },
-  {
-    key: 'Bed',
-    image: '/e-catalog/highlights/beds.webp',
-    title: 'Beds',
-    tagline: 'King, queen and single beds, hydraulic storage beds and bunk beds.'
-  },
-  {
-    key: 'Dining',
-    image: '/e-catalog/highlights/dining.webp',
-    title: 'Dining Tables & Sets',
-    tagline: '2 to 8-seater dining sets, benches and bar stools.'
-  },
-  {
-    key: 'CenterTable',
-    image: '/e-catalog/highlights/tables.webp',
-    title: 'Center Tables',
-    tagline: 'Rectangular, round, nesting, storage and lift-top center tables.'
-  },
-  {
-    key: 'Chair',
-    image: '/e-catalog/highlights/chair.webp',
-    title: 'Chairs & Armchairs',
-    tagline: 'Armchairs, rocking chairs, study chairs and dining chairs.'
-  }
-];
-
 // Products already in the cart when the demo first loads.
 export const INITIAL_CART_IDS = ['sofa-1', 'dining-1'];
 
-// Trust badges on the product page and help tab.
+// Trust badges on the product page and help tab (demo store only: they're furniture claims).
 export const TRUST_POINTS: { icon: LucideIcon; title: string; subtitle: string }[] = [
   { icon: Truck, title: 'Free Delivery', subtitle: 'Local Region' },
   { icon: ShieldCheck, title: '10-Yr Warranty', subtitle: 'Termite Proof' },
@@ -3477,6 +3420,7 @@ export const TRUST_POINTS: { icon: LucideIcon; title: string; subtitle: string }
 // Help screen
 // ---------------------------------------------------------------------------
 
+// Demo store only.
 export const FAQS: { q: string; a: string }[] = [
   {
     q: 'Can I customize the sofa size or wood finish?',
@@ -3496,70 +3440,41 @@ export const FAQS: { q: string; a: string }[] = [
 // WhatsApp message templates (pre-filled text when a customer taps a button)
 // ---------------------------------------------------------------------------
 
-const hello = `Hello ${STORE.name}!`;
+// Each template takes the store's name (the store being browsed).
+const hello = (store: string) => `Hello ${store}!`;
 
 export const WHATSAPP_MESSAGES = {
-  general: () =>
-    `${hello} I am looking for furniture for my home. Please share your latest catalog and prices.`,
+  general: (store: string) =>
+    `${hello(store)} I saw your catalog. Please share your latest products and prices.`,
 
-  product: (p: CatalogProduct) =>
-    `${hello} I am interested in this item:\n` +
+  product: (store: string, p: CatalogProduct) =>
+    `${hello(store)} I am interested in this item:\n` +
     `• Item: ${p.productName}\n` +
-    `• Offer Price: ${formatINR(p.price)}\n` +
-    `• Type: ${p.categoryName} - ${p.subcategoryName}\n` +
-    `• Wood: ${p.woodType}\n` +
-    `• Size: ${p.dimensions}\n\n` +
-    `Please share real photos, color options, and delivery time to my address.`,
+    [
+      hasPrice(p) && `• Offer Price: ${formatINR(p.price)}`,
+      `• Type: ${categoryLabel(p.categoryName)} - ${p.subcategoryName}`,
+      ...(p.specs ?? []).slice(0, 4).map((spec) => `• ${spec.label}: ${spec.value}`),
+      p.dimensions && `• Size: ${p.dimensions}`,
+    ]
+      .filter(Boolean)
+      .join('\n') +
+    '\n\n' +
+    (hasPrice(p)
+      ? `Please share real photos, color options, and delivery time to my address.`
+      : `Please share the price, real photos, color options, and delivery time to my address.`),
 
-  searchNotFound: (query: string) =>
-    `${hello} I was searching for "${query}". Can you make this custom in teak or sheesham?`,
+  searchNotFound: (store: string, query: string) =>
+    `${hello(store)} I was searching for "${query}" in your catalog but couldn't find it. Do you have something like this?`,
 
-  cartEnquiry: (items: CatalogProduct[], total: number) =>
-    `${hello} I'm interested in these items:\n` +
-    items.map((p) => `• ${p.productName} — ${formatINR(p.price)}`).join('\n') +
-    `\n\nListed total: ${formatINR(total)}\n` +
+  cartEnquiry: (store: string, items: CatalogProduct[], total: number) =>
+    `${hello(store)} I'm interested in these items:\n` +
+    items.map((p) => `• ${p.productName} — ${formatPrice(p.price)}`).join('\n') +
+    '\n\n' +
+    (total > 0 ? `Listed total: ${formatINR(total)}\n` : '') +
     `Could you share your best price, a few more real photos of each, and the delivery time to my area?`,
 
-  savedList: (items: CatalogProduct[]) =>
-    `My saved furniture from ${STORE.name}:\n` +
-    items.map((p) => `• ${p.productName} — ${formatINR(p.price)}`).join('\n') +
+  savedList: (store: string, items: CatalogProduct[]) =>
+    `My saved products from ${store}:\n` +
+    items.map((p) => `• ${p.productName} — ${formatPrice(p.price)}`).join('\n') +
     `\n\nWhich one do you like?`,
 };
-
-// ---------------------------------------------------------------------------
-// Category & subcategory master lists
-// ---------------------------------------------------------------------------
-
-// Every subcategory for each category, in display order. The admin product form only
-// offers these, so add a new subcategory here (and its thumbnail, see below) first.
-// Built from the live products in Firestore plus the starter set.
-export const CATEGORY_SUBCATEGORIES: Record<MainCategory, string[]> = {
-  Sofa: ['L-Shape Sofa', '3-Seater Sofa', '2-Seater Sofa', 'Diwan & Daybed', 'Sofa Cum Bed', 'Recliner Sofa', 'Sofa Set'],
-  Wardrobe: ['2-Door Wardrobe', '3-Door Wardrobe', '4-Door Wardrobe', 'Sliding Door Wardrobe', 'Kids Wardrobe'],
-  Dresser: ['Dressing Table with Mirror', 'Chest of Drawers', 'Vanity Table with Stool', 'Wall-Mounted Dresser'],
-  Bed: ['King Size Bed', 'Queen Size Bed', 'Hydraulic Storage Bed', 'Single Bed', 'Four Poster Bed', 'Bunk Bed'],
-  Dining: ['2-Seater Dining Set', '4-Seater Dining Set', '6-Seater Dining Set', '8-Seater Dining Set', 'Dining Bench', 'Bar Stool'],
-  CenterTable: ['Rectangular Center Table', 'Round Center Table', 'Nesting Tables', 'Storage Center Table', 'Lift-Top Center Table'],
-  Chair: ['Living Room Armchair', 'Lounge Armchair', 'Accent Chair', 'Dining Chair', 'Study & Office Chair', 'Rocking Chair'],
-};
-
-// Thumbnail for a subcategory: public/e-catalog/subcategories/<slug>.webp,
-// e.g. "Diwan & Daybed" -> diwan-daybed.webp. Drop a file there to add one.
-export const subcategoryImage = (name: string) =>
-  `/e-catalog/subcategories/${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}.webp`;
-
-export type CatalogCategory = {
-  name: MainCategory;
-  label: string;
-  /** Thumbnail in public/ (the Home "Browse by Category" photo). */
-  image: string;
-  subcategories: { name: string; image: string }[];
-};
-
-// Categories with their label, thumbnail and subcategories — used by the admin.
-export const CATALOG_CATEGORIES: CatalogCategory[] = MAIN_CATEGORIES.map((name) => ({
-  name,
-  label: CATEGORY_TAB_LABELS[name],
-  image: CATEGORY_CARDS.find((card) => card.key === name)?.image ?? '',
-  subcategories: CATEGORY_SUBCATEGORIES[name].map((sub) => ({ name: sub, image: subcategoryImage(sub) })),
-}));

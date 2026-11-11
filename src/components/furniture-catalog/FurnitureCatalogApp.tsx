@@ -21,24 +21,25 @@ import {
 import {
   AAW_PROMO,
   INITIAL_CART_IDS,
-  STORE,
   WHATSAPP_MESSAGES,
 } from './data';
 import type { CatalogProduct } from '@/lib/adminProducts';
+import type { CatalogStore } from '@/lib/catalogStore';
+import { categoryLabel, sortCategoryNames } from '@/lib/taxonomy';
 import CartPage from './CartPage';
 import CatalogPage, { DEFAULT_CATALOG_FILTERS, type CatalogFilters } from './CatalogPage';
 import DemoWhatsAppDialog from './DemoWhatsAppDialog';
 import SavedPage from './SavedPage';
 import StoreInfoPage from './StoreInfoPage';
 import {
-  CATALOG_PATH,
   CatalogContext,
   ProductCard,
   WhatsAppIcon,
   catalogBasePath,
   catalogHref,
   catalogRelativePath,
-  getWhatsAppUrl,
+  storeRoutePath,
+  whatsAppLink,
   type CatalogContextValue,
 } from './shared';
 
@@ -67,9 +68,11 @@ const isInIframe = () => window.self !== window.top;
 // `children` is the current product page, if any; it renders on top of the catalog.
 
 export default function FurnitureCatalogApp({
+  store,
   products,
   children,
 }: {
+  store: CatalogStore;
   products: CatalogProduct[];
   children?: React.ReactNode;
 }) {
@@ -79,7 +82,7 @@ export default function FurnitureCatalogApp({
   // On catalog24.in the catalog is served at /furniture (see src/proxy.ts). Links render
   // with the internal path on the server and during hydration, then switch to the
   // base path the browser URL actually shows.
-  const basePath = useSyncExternalStore(subscribeToNothing, browserBasePath, () => CATALOG_PATH);
+  const basePath = useSyncExternalStore(subscribeToNothing, browserBasePath, () => storeRoutePath(store.slug));
   const href = (sub: string) => catalogHref(basePath, sub);
   // The promo strip's "Home": the site the catalog sits in. At the root of its own subdomain
   // (yourstore.catalog24.in — a base path only ever seen in the browser) that's catalog24.in.
@@ -137,7 +140,8 @@ export default function FurnitureCatalogApp({
   const inAppNavigationRef = useRef<string | null>(null);
   // Only ids that exist, so the cart badge never counts missing products.
   const [cart, setCart] = useState<string[]>(() =>
-    INITIAL_CART_IDS.filter(id => products.some(p => p.id === id))
+    // The demo store opens with a couple of items in the cart to show it off.
+    store.isDemo ? INITIAL_CART_IDS.filter(id => products.some(p => p.id === id)) : []
   );
   const cartCount = cart.length;
 
@@ -147,12 +151,16 @@ export default function FurnitureCatalogApp({
     navigate(href(TAB_PATHS[tab]));
   };
 
-  // Demo WhatsApp: the enquiry text waiting for the visitor to enter their own number
+  // WhatsApp goes to the store's own number. The demo store instead shows the
+  // enquiry and asks the visitor for their own number (DemoWhatsAppDialog).
+  const whatsAppUrl = (text?: string) => whatsAppLink(store.whatsapp, text ?? WHATSAPP_MESSAGES.general(store.name));
   const [demoWhatsAppMessage, setDemoWhatsAppMessage] = useState<string | null>(null);
   const openWhatsApp = (url: string) => {
-    setDemoWhatsAppMessage(new URL(url).searchParams.get('text') ?? '');
+    if (store.isDemo) setDemoWhatsAppMessage(new URL(url).searchParams.get('text') ?? '');
+    else window.open(url, '_blank', 'noopener,noreferrer');
   };
   const onWhatsAppLinkClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!store.isDemo) return; // a normal link to WhatsApp
     e.preventDefault();
     openWhatsApp(e.currentTarget.href);
   };
@@ -200,25 +208,44 @@ export default function FurnitureCatalogApp({
     showToast('Saved list cleared');
   };
 
-  // Global search across category, subcategory, name, tags, wood, material or description
+  // Global search across category (and its label), subcategory, name, tags, search
+  // keywords, colours, specs, material and description. Every word typed must match somewhere, in any
+  // order, so "grey 3 seater sofa" finds a sofa whose words are spread over fields.
   const searchResults = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return null;
+    const words = searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (!words.length) return null;
 
-    return products.filter(item =>
-      [
+    return products.filter(item => {
+      const text = [
         item.categoryName,
+        categoryLabel(item.categoryName),
         item.subcategoryName,
         item.productName,
         ...item.tags,
+        ...(item.keywords ?? []),
+        ...item.colors.map(c => c.name),
+        ...(item.specs ?? []).flatMap(s => [s.label, s.value]),
         item.woodType,
         item.material,
         item.description,
-      ].some(field => field.toLowerCase().includes(q))
-    );
+      ]
+        .join(' ')
+        .toLowerCase();
+      return words.every(word => text.includes(word));
+    });
   }, [products, searchQuery]);
 
+  // "Search sofas, beds, chairs…": the store's first three categories.
+  const searchPlaceholder = useMemo(() => {
+    const labels = sortCategoryNames(products.map(p => p.categoryName).filter(Boolean))
+      .slice(0, 3)
+      .map(name => categoryLabel(name).toLowerCase());
+    return labels.length ? `Search ${labels.join(', ')}…` : 'Search products…';
+  }, [products]);
+
   const catalogContext: CatalogContextValue = {
+    store,
+    whatsAppUrl,
     products,
     href,
     embedded,
@@ -252,9 +279,10 @@ export default function FurnitureCatalogApp({
     <div className="min-h-screen bg-white text-[#111111] font-sans antialiased flex flex-col items-center justify-start sm:py-6 sm:px-4">
 
       {/* MOBILE APP DEVICE SHELL */}
-      <div ref={shellRef} className="w-full bg-[#FAF9F6] flex flex-col relative transition-all duration-300 sm:max-w-[430px] sm:min-h-[880px] sm:rounded-[48px] sm:shadow-[0_25px_80px_rgba(0,0,0,0.4)] sm:ring-8 sm:ring-neutral-800 sm:border-4 sm:border-neutral-700 sm:overflow-clip">
+      <div ref={shellRef} className="w-full bg-white flex flex-col relative transition-all duration-300 sm:max-w-[430px] sm:min-h-[880px] sm:rounded-lg sm:shadow-[0_25px_80px_rgba(0,0,0,0.4)] sm:ring-8 sm:ring-neutral-800 sm:border-4 sm:border-neutral-700 sm:overflow-clip">
 
-        {/* ALLABOUTWEB PROMO STRIP */}
+        {/* ALLABOUTWEB PROMO STRIP (demo store only) */}
+        {store.isDemo && (
         <div className="bg-[#111111] text-white px-3 py-2 flex items-center gap-2.5 text-[11px] font-semibold select-none shrink-0 z-50">
           <Link
             href={homeHref}
@@ -277,6 +305,7 @@ export default function FurnitureCatalogApp({
             <span>WhatsApp Us</span>
           </a>
         </div>
+        )}
 
         {/* TOP MOBILE APP BAR */}
         <header ref={headerRef} className="sticky top-0 z-30 bg-white/95 backdrop-blur-md shadow-xs">
@@ -288,16 +317,18 @@ export default function FurnitureCatalogApp({
                 onClick={() => goToTab('catalog')}
                 className="cursor-pointer flex items-center gap-1.5"
               >
-                <span className="w-7 h-7 rounded-lg bg-[#8B5A2B] text-white flex items-center justify-center font-bold text-xs shadow-xs">
-                  {STORE.initial}
+                <span className="w-7 h-7 rounded-lg bg-neutral-900 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                  {store.initial}
                 </span>
                 <div>
                   <span className="font-bold text-base text-[#111111] tracking-tight leading-none block">
-                    {STORE.name}
+                    {store.name}
                   </span>
-                  <span className="text-[9px] text-[#8B5A2B] font-semibold tracking-wider uppercase block">
-                    {STORE.tagline}
-                  </span>
+                  {store.tagline && (
+                    <span className="text-[9px] text-primary font-semibold tracking-wider uppercase block">
+                      {store.tagline}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -306,7 +337,7 @@ export default function FurnitureCatalogApp({
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setIsSearchOpen(!isSearchOpen)}
-                className={`p-2 rounded-full transition-colors ${isSearchOpen ? 'bg-[#FAF5EE] text-[#8B5A2B]' : 'bg-neutral-100 text-neutral-700'}`}
+                className={`p-2 rounded-full transition-colors ${isSearchOpen ? 'bg-neutral-100 text-neutral-900' : 'bg-neutral-100 text-neutral-700'}`}
                 aria-label="Toggle Search"
               >
                 <Search className="w-4 h-4" />
@@ -314,7 +345,7 @@ export default function FurnitureCatalogApp({
 
               <button
                 onClick={() => goToTab('cart')}
-                className={`relative p-2 rounded-full bg-neutral-100 hover:text-[#8B5A2B] transition-colors ${cartCount > 0 ? 'text-[#8B5A2B]' : 'text-neutral-700'}`}
+                className={`relative p-2 rounded-full bg-neutral-100 hover:text-neutral-900 transition-colors ${cartCount > 0 ? 'text-neutral-900' : 'text-neutral-700'}`}
                 aria-label={cartCount > 0 ? `Cart, ${cartCount} items` : 'Cart'}
               >
                 <ShoppingCart className="w-4 h-4" />
@@ -328,13 +359,15 @@ export default function FurnitureCatalogApp({
           </div>
 
           {/* Quick Pincode Delivery Pill */}
-          <div className="px-4 pb-2 flex items-center justify-between text-[11px] text-neutral-600">
-            <div className="flex items-center gap-1 bg-neutral-100/80 px-2.5 py-0.5 rounded-full text-[10px] text-neutral-700">
-              <MapPin className="w-3 h-3 text-[#8B5A2B]" />
-              <span className="font-semibold text-neutral-900">{STORE.deliveryArea}</span>
-              <span className="text-neutral-400">·</span>
+          {store.deliveryArea && (
+            <div className="px-4 pb-2 flex items-center justify-between text-[11px] text-neutral-600">
+              <div className="flex items-center gap-1 bg-neutral-100/80 px-2.5 py-0.5 rounded-full text-[10px] text-neutral-700">
+                <MapPin className="w-3 h-3 text-neutral-500" />
+                <span className="font-semibold text-neutral-900">{store.deliveryArea}</span>
+                <span className="text-neutral-400">·</span>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Collapsible Mobile Search Bar */}
           {(isSearchOpen || searchQuery) && (
@@ -346,8 +379,8 @@ export default function FurnitureCatalogApp({
                   autoFocus={isSearchOpen}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search sofa, teak chair, dining table..."
-                  className="w-full bg-neutral-100 focus:bg-white pl-9 pr-8 py-2 text-xs text-[#111111] focus:outline-none focus:ring-2 focus:ring-[#8B5A2B]/30 shadow-inner rounded-xl transition-all"
+                  placeholder={searchPlaceholder}
+                  className="w-full bg-neutral-100 focus:bg-white pl-9 pr-8 py-2 text-xs text-[#111111] focus:outline-none focus:ring-2 focus:ring-neutral-900/10 shadow-inner rounded-md transition-all"
                 />
                 {searchQuery && (
                   <button
@@ -372,9 +405,9 @@ export default function FurnitureCatalogApp({
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between pb-1">
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#8B5A2B]">Search Results</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Search Results</span>
                   <h2 className="text-sm font-bold text-[#111111]">
-                    &ldquo;{searchQuery}&rdquo; ({searchResults.length} designs)
+                    &ldquo;{searchQuery}&rdquo; ({searchResults.length} product{searchResults.length === 1 ? '' : 's'})
                   </h2>
                 </div>
                 <button
@@ -386,16 +419,16 @@ export default function FurnitureCatalogApp({
               </div>
 
               {searchResults.length === 0 ? (
-                <div className="bg-white rounded-2xl p-8 text-center space-y-3 shadow-xs my-4">
-                  <Search className="w-8 h-8 text-[#8B5A2B] mx-auto opacity-60" />
-                  <p className="text-xs font-semibold text-[#111111]">No designs found for &ldquo;{searchQuery}&rdquo;</p>
-                  <p className="text-[11px] text-neutral-500">Need something custom made? Send a photo to our carpenter on WhatsApp.</p>
+                <div className="bg-white rounded-lg border border-neutral-200 p-8 text-center space-y-3 my-4">
+                  <Search className="w-8 h-8 text-neutral-400 mx-auto" />
+                  <p className="text-xs font-semibold text-[#111111]">No products found for &ldquo;{searchQuery}&rdquo;</p>
+                  <p className="text-[11px] text-neutral-500">Can&apos;t find it? Send us a photo or a message on WhatsApp.</p>
                   <a
-                    href={getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.searchNotFound(searchQuery))}
+                    href={whatsAppUrl(WHATSAPP_MESSAGES.searchNotFound(store.name, searchQuery))}
                     onClick={onWhatsAppLinkClick}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#25D366] text-white text-xs font-semibold rounded-xl shadow-xs"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#25D366] text-white text-xs font-semibold rounded-md shadow-xs"
                   >
                     <WhatsAppIcon className="w-3.5 h-3.5" />
                     <span>Ask on WhatsApp</span>
@@ -430,11 +463,13 @@ export default function FurnitureCatalogApp({
             </>
           )}
 
-          {/* DEMO DISCLAIMER — shown at the end of every tab */}
-          <p className="mt-6 flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-neutral-300 bg-white/70 px-3 py-2.5 text-center text-[11px] font-medium text-neutral-500">
-            <Info className="w-3.5 h-3.5 shrink-0 text-[#8B5A2B]" />
-            <span>This is a furniture e-catalog for demo purposes only.</span>
-          </p>
+          {/* DEMO DISCLAIMER — the demo store only, at the end of every tab */}
+          {store.isDemo && (
+            <p className="mt-6 flex items-center justify-center gap-1.5 rounded-md border border-dashed border-neutral-300 bg-white/70 px-3 py-2.5 text-center text-[11px] font-medium text-neutral-500">
+              <Info className="w-3.5 h-3.5 shrink-0 text-neutral-500" />
+              <span>This is a furniture e-catalog for demo purposes only.</span>
+            </p>
+          )}
 
         </main>
 
@@ -452,7 +487,7 @@ export default function FurnitureCatalogApp({
               onClick={() => setSearchQuery('')}
               aria-current={activeTab === 'catalog' && !searchQuery ? 'page' : undefined}
               className={`flex flex-col items-center justify-center flex-1 h-full min-h-[44px] transition-all active:scale-95 ${
-                activeTab === 'catalog' && !searchQuery ? 'text-[#8B5A2B]' : 'text-neutral-500 hover:text-neutral-900'
+                activeTab === 'catalog' && !searchQuery ? 'text-neutral-900' : 'text-neutral-500 hover:text-neutral-900'
               }`}
             >
               <LayoutGrid className={`w-5 h-5 ${activeTab === 'catalog' && !searchQuery ? 'stroke-[2.5]' : 'stroke-[1.75]'}`} />
@@ -469,7 +504,7 @@ export default function FurnitureCatalogApp({
               aria-current={activeTab === 'saved' && !searchQuery ? 'page' : undefined}
               aria-label={savedCount > 0 ? `Saved, ${savedCount} items` : undefined}
               className={`flex flex-col items-center justify-center flex-1 h-full min-h-[44px] relative transition-all active:scale-95 ${
-                activeTab === 'saved' && !searchQuery ? 'text-[#8B5A2B]' : 'text-neutral-500 hover:text-neutral-900'
+                activeTab === 'saved' && !searchQuery ? 'text-neutral-900' : 'text-neutral-500 hover:text-neutral-900'
               }`}
             >
               <div className="relative">
@@ -492,7 +527,7 @@ export default function FurnitureCatalogApp({
               onClick={() => setSearchQuery('')}
               aria-current={activeTab === 'cart' && !searchQuery ? 'page' : undefined}
               className={`flex flex-col items-center justify-center flex-1 h-full min-h-[44px] relative transition-all active:scale-95 ${
-                activeTab === 'cart' && !searchQuery ? 'text-[#8B5A2B]' : 'text-neutral-500 hover:text-neutral-900'
+                activeTab === 'cart' && !searchQuery ? 'text-neutral-900' : 'text-neutral-500 hover:text-neutral-900'
               }`}
             >
               <div className="relative">
@@ -515,7 +550,7 @@ export default function FurnitureCatalogApp({
               onClick={() => setSearchQuery('')}
               aria-current={activeTab === 'help' && !searchQuery ? 'page' : undefined}
               className={`flex flex-col items-center justify-center flex-1 h-full min-h-[44px] transition-all active:scale-95 ${
-                activeTab === 'help' && !searchQuery ? 'text-[#8B5A2B]' : 'text-neutral-500 hover:text-neutral-900'
+                activeTab === 'help' && !searchQuery ? 'text-neutral-900' : 'text-neutral-500 hover:text-neutral-900'
               }`}
             >
               <div className="relative">
@@ -540,7 +575,7 @@ export default function FurnitureCatalogApp({
 
         {/* FLOATING TOAST NOTIFICATION — above product pages too */}
         {toastMessage && (
-          <div className="fixed bottom-20 left-4 right-4 sm:left-1/2 sm:right-auto sm:w-[398px] sm:-translate-x-1/2 z-[60] bg-[#111111] text-white px-4 py-2.5 text-xs font-medium shadow-2xl flex items-center justify-between gap-2 rounded-2xl animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <div className="fixed bottom-20 left-4 right-4 sm:left-1/2 sm:right-auto sm:w-[398px] sm:-translate-x-1/2 z-[60] bg-[#111111] text-white px-4 py-2.5 text-xs font-medium shadow-2xl flex items-center justify-between gap-2 rounded-lg animate-in fade-in slide-in-from-bottom-2 duration-200">
             <div className="flex items-center gap-2">
               <Check className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>{toastMessage}</span>

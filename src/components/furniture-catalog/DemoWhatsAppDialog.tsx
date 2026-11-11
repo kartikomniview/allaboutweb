@@ -74,7 +74,7 @@ export default function DemoWhatsAppDialog({ message, onClose }: { message: stri
         aria-modal="true"
         aria-labelledby="demo-whatsapp-title"
         onClick={(e) => e.stopPropagation()}
-        className="fc-page-enter w-full rounded-t-3xl bg-white p-5 pb-safe shadow-2xl sm:max-w-[400px] sm:rounded-3xl"
+        className="fc-page-enter w-full rounded-t-lg bg-white p-5 pb-safe shadow-2xl sm:max-w-[400px] sm:rounded-lg"
       >
         <div className="flex items-start gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-white">
@@ -95,8 +95,8 @@ export default function DemoWhatsAppDialog({ message, onClose }: { message: stri
         </div>
 
         {/* Preview of the message they'll receive */}
-        <div className="mt-4 rounded-2xl bg-[#ECE5DD] p-3">
-          <p className="ml-auto w-fit max-w-[90%] rounded-xl rounded-tr-sm bg-[#DCF8C6] px-3 py-2 text-[11px] leading-relaxed text-neutral-800 shadow-sm">
+        <div className="mt-4 rounded-lg bg-[#ECE5DD] p-3">
+          <p className="ml-auto w-fit max-w-[90%] rounded-md rounded-tr-sm bg-[#DCF8C6] px-3 py-2 text-[11px] leading-relaxed text-neutral-800 shadow-sm">
             {/* Clamp on an unpadded inner element so a cut line can't peek through the padding */}
             <span className="block whitespace-pre-line line-clamp-8">{message}</span>
           </p>
@@ -107,7 +107,7 @@ export default function DemoWhatsAppDialog({ message, onClose }: { message: stri
             Your WhatsApp number
           </label>
           <div
-            className={`flex items-center overflow-hidden rounded-xl border bg-white focus-within:ring-2 ${
+            className={`flex items-center overflow-hidden rounded-md border bg-white focus-within:ring-2 ${
               error ? "border-red-400 focus-within:ring-red-200" : "border-neutral-200 focus-within:ring-[#25D366]/30"
             }`}
           >
@@ -141,7 +141,7 @@ export default function DemoWhatsAppDialog({ message, onClose }: { message: stri
           <button
             type="submit"
             autoFocus={hadSavedNumber}
-            className="mt-1 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] py-3 text-sm font-bold text-white shadow-sm hover:bg-[#20bd5a] active:scale-[0.98] transition-all"
+            className="mt-1 flex w-full items-center justify-center gap-2 rounded-lg bg-[#25D366] py-3 text-sm font-bold text-white shadow-sm hover:bg-[#20bd5a] active:scale-[0.98] transition-all"
           >
             <WhatsAppIcon className="h-4 w-4" />
             Open in WhatsApp

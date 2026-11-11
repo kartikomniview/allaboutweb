@@ -2,10 +2,12 @@
 
 import Image from "next/image";
 import { ChevronDown, ChevronRight, Clock, Mail, MapPin, Navigation, Phone, Share2, Star } from "lucide-react";
-import { FAQS, STORE, TRUST_POINTS } from "./data";
-import { WhatsAppIcon, getWhatsAppUrl, useCatalog } from "./shared";
+import { telHref } from "@/lib/catalogStore";
+import { FAQS, TRUST_POINTS } from "./data";
+import { WhatsAppIcon, useCatalog } from "./shared";
 
-const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(STORE.address)}`;
+const directionsUrl = (address: string) =>
+  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 
 const formatCount = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k` : String(n));
 
@@ -15,14 +17,15 @@ const sectionLabel = "text-[11px] font-semibold uppercase tracking-[0.08em] text
 
 // The "WhatsApp" tab (/app/catalog/furniture/help): a compact store profile —
 // cover photo, name & rating, quick actions, contact rows, promises and FAQs.
-// All store details come from STORE in data.ts (placeholders in the demo).
+// The store's details come from its own settings (Store settings in the admin).
+// Anything the owner hasn't filled in is left out.
 export default function StoreInfoPage() {
-  const { openWhatsApp } = useCatalog();
+  const { store, whatsAppUrl, openWhatsApp } = useCatalog();
 
   const share = async () => {
     const url = window.location.origin + window.location.pathname.replace(/\/help$/, "");
     try {
-      if (navigator.share) await navigator.share({ title: STORE.name, url });
+      if (navigator.share) await navigator.share({ title: store.name, url });
       else await navigator.clipboard.writeText(url);
     } catch {
       // Share sheet dismissed or clipboard blocked; nothing to do.
@@ -30,27 +33,28 @@ export default function StoreInfoPage() {
   };
 
   const actions = [
-    { label: "Call", icon: Phone, href: `tel:${STORE.phone.tel}` },
-    { label: "Directions", icon: Navigation, href: directionsUrl, external: true },
+    store.phone && { label: "Call", icon: Phone, href: telHref(store.phone) },
+    store.address && { label: "Directions", icon: Navigation, href: directionsUrl(store.address), external: true },
     { label: "Share", icon: Share2, onClick: share },
-  ];
+  ].filter((a) => !!a);
 
   const details = [
-    { label: "Address", icon: MapPin, value: STORE.address },
-    { label: "Hours", icon: Clock, value: STORE.hours },
-    { label: "Phone", icon: Phone, value: STORE.phone.display, href: `tel:${STORE.phone.tel}` },
-    { label: "Email", icon: Mail, value: STORE.email, href: `mailto:${STORE.email}` },
-  ];
+    store.address && { label: "Address", icon: MapPin, value: store.address },
+    store.hours && { label: "Hours", icon: Clock, value: store.hours },
+    store.phone && { label: "Phone", icon: Phone, value: store.phone, href: telHref(store.phone) },
+    store.email && { label: "Email", icon: Mail, value: store.email, href: `mailto:${store.email}` },
+  ].filter((d) => !!d);
+  const subtitle = [store.category, store.since && `Since ${store.since}`].filter(Boolean).join(" · ");
 
   return (
     <div className="space-y-4 pt-1">
       {/* Store card: cover photo, logo, name, rating, actions */}
       <section className={`${panel} overflow-hidden`}>
-        <div className="relative aspect-[16/6] bg-gradient-to-br from-[#EFE7DC] via-[#F6F1EA] to-[#E6DACB]">
-          {STORE.coverImage && (
+        <div className="relative aspect-[16/6] bg-neutral-100">
+          {store.coverImage && (
             <Image
-              src={STORE.coverImage}
-              alt={`${STORE.name} store`}
+              src={store.coverImage}
+              alt={`${store.name} store`}
               fill
               sizes="(min-width: 640px) 400px, 100vw"
               className="object-cover"
@@ -60,30 +64,36 @@ export default function StoreInfoPage() {
 
         <div className="px-4 pb-4">
           <div className="flex items-end justify-between gap-3">
-            <span className="-mt-8 relative flex h-16 w-16 shrink-0 items-center justify-center rounded-md bg-[#8B5A2B] text-2xl font-bold text-white ring-4 ring-white">
-              {STORE.initial}
+            <span className="-mt-8 relative flex h-16 w-16 shrink-0 items-center justify-center rounded-md bg-neutral-900 text-2xl font-bold text-white ring-4 ring-white">
+              {store.initial}
             </span>
-            <span className="mb-0.5 flex items-center gap-1 rounded-[4px] border border-neutral-200 px-2 py-1 text-xs tabular-nums">
-              <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-              <span className="font-semibold text-[#111111]">{STORE.rating}</span>
-              <span className="text-neutral-500">· {formatCount(STORE.reviewCount)} reviews</span>
-            </span>
+            {store.rating !== null && (
+              <span className="mb-0.5 flex items-center gap-1 rounded-[4px] border border-neutral-200 px-2 py-1 text-xs tabular-nums">
+                <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                <span className="font-semibold text-[#111111]">{store.rating}</span>
+                {store.reviewCount !== null && (
+                  <span className="text-neutral-500">· {formatCount(store.reviewCount)} reviews</span>
+                )}
+              </span>
+            )}
           </div>
 
-          <h2 className="mt-3 text-lg font-bold leading-tight text-[#111111]">{STORE.name}</h2>
-          <p className="mt-0.5 text-xs text-neutral-500">
-            {STORE.category} · Since {STORE.since}
-          </p>
+          <h2 className="mt-3 text-lg font-bold leading-tight text-[#111111]">{store.name}</h2>
+          {subtitle && <p className="mt-0.5 text-xs text-neutral-500">{subtitle}</p>}
 
           {/* Primary action, then the secondary ones as a row of outlined buttons */}
           <button
-            onClick={() => openWhatsApp(getWhatsAppUrl())}
+            onClick={() => openWhatsApp(whatsAppUrl())}
             className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-[4px] bg-[#25D366] text-[12px] font-semibold uppercase tracking-[0.06em] text-white transition-colors hover:bg-[#1fb855]"
           >
             <WhatsAppIcon className="h-4 w-4" />
             Chat on WhatsApp
           </button>
-          <div className="mt-2 grid grid-cols-3 gap-2">
+          <div
+            className={`mt-2 grid gap-2 ${
+              actions.length === 3 ? "grid-cols-3" : actions.length === 2 ? "grid-cols-2" : "grid-cols-1"
+            }`}
+          >
             {actions.map(({ label, icon: Icon, onClick, href, external }) => {
               const itemClass =
                 "flex h-10 items-center justify-center gap-1.5 rounded-[4px] border border-neutral-200 text-[12px] font-medium text-[#111111] transition-colors hover:bg-neutral-50";
@@ -113,6 +123,7 @@ export default function StoreInfoPage() {
       </section>
 
       {/* Contact details — labelled rows; tappable ones get a chevron */}
+      {details.length > 0 && (
       <section aria-label="Contact details" className={panel}>
         <h3 className={`${sectionLabel} px-3.5 pt-3.5`}>Store details</h3>
         <ul className="mt-1 divide-y divide-neutral-100">
@@ -141,12 +152,16 @@ export default function StoreInfoPage() {
           })}
         </ul>
       </section>
+      )}
 
-      {/* Store promises — one panel split into three columns */}
+      {/* Store promises — one panel split into three columns. The demo's sample
+          furniture promises and FAQs; other stores don't have these. */}
+      {store.isDemo && (
+      <>
       <section aria-label="Store promises" className={`${panel} grid grid-cols-3 divide-x divide-neutral-100`}>
         {TRUST_POINTS.map(({ icon: Icon, title, subtitle }) => (
           <div key={title} className="px-2 py-3 text-center">
-            <Icon className="mx-auto h-5 w-5 text-[#8B5A2B]" strokeWidth={1.75} />
+            <Icon className="mx-auto h-5 w-5 text-neutral-600" strokeWidth={1.75} />
             <p className="mt-1.5 text-[11px] font-semibold leading-tight text-[#111111]">{title}</p>
             <p className="mt-0.5 text-[10px] leading-tight text-neutral-500">{subtitle}</p>
           </div>
@@ -168,6 +183,8 @@ export default function StoreInfoPage() {
           ))}
         </div>
       </section>
+      </>
+      )}
     </div>
   );
 }

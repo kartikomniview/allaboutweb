@@ -2,7 +2,8 @@
 
 import { useRef, useState } from "react";
 import { Check, Copy, ExternalLink, Sparkles, X } from "lucide-react";
-import type { ProductInput } from "@/lib/adminProducts";
+import type { ProductInput, ProductSpec } from "@/lib/adminProducts";
+import { findCategory } from "@/lib/taxonomy";
 import { buttonClass } from "../ui";
 import { useOverlay } from "./useOverlay";
 
@@ -13,14 +14,23 @@ type PromptProduct = Pick<
   | "subcategoryName"
   | "description"
   | "material"
-  | "woodType"
   | "dimensions"
   | "colors"
   | "highlights"
   | "images"
   | "plainImageUrl"
   | "mainImageUrl"
->;
+> & { specs: ProductSpec[] };
+
+// Room scenes per business type, for products outside the furniture scenes below.
+const BUSINESS_SCENES: Record<string, string> = {
+  decor: "a styled, modern Indian living room, placed on a console or shelf where it stands out",
+  lighting: "a modern Indian living room in the warm evening, with the light switched on and glowing",
+  flooring: "a bright, modern Indian room where the floor or rug fills most of the frame",
+  curtains: "a bright, modern Indian living room, hanging at a large window with daylight coming through",
+  fabrics: "a styled flat lay and a gentle drape that show the fabric's texture, pattern and fall",
+  electronics: "a clean, modern Indian home where the product is set up in its natural place",
+};
 
 // Where each kind of product is photographed. Subcategory matches win over the category.
 function sceneFor(category: string, subcategory: string): string {
@@ -46,14 +56,15 @@ function sceneFor(category: string, subcategory: string): string {
     case "Chair":
       return "a peaceful reading corner beside a window";
     default:
-      return "a stylish, modern Indian home";
+      return BUSINESS_SCENES[findCategory(category)?.businessType ?? ""] ?? "a stylish, modern Indian home";
   }
 }
 
 // Builds a prompt for AI image tools (ChatGPT, Gemini, Midjourney, ...) that
 // produces a lifestyle photo of the product, true to its details.
 function buildLifestylePrompt(p: PromptProduct, colorIndex: number, hasReference: boolean): string {
-  const name = p.productName.trim() || "this furniture piece";
+  const name = p.productName.trim() || "this product";
+  const isFurniture = (findCategory(p.categoryName)?.businessType ?? "furniture") === "furniture";
   const kind = [p.subcategoryName.trim(), p.categoryName.trim()].filter(Boolean).join(", ");
   const color = p.colors[colorIndex];
   const highlights = p.highlights.map((h) => h.trim()).filter(Boolean);
@@ -61,7 +72,7 @@ function buildLifestylePrompt(p: PromptProduct, colorIndex: number, hasReference
   const details = [
     p.description.trim() && `- ${p.description.trim()}`,
     p.material.trim() && `- Material: ${p.material.trim()}`,
-    p.woodType.trim() && `- Wood: ${p.woodType.trim()}`,
+    ...p.specs.filter((s) => s.label.trim() && s.value.trim()).map((s) => `- ${s.label.trim()}: ${s.value.trim()}`),
     color && `- Colour / finish: ${color.name} (${color.hex})`,
     p.dimensions.trim() && `- Size: ${p.dimensions.trim()}`,
     highlights.length > 0 && `- Key features: ${highlights.join("; ")}`,
@@ -74,8 +85,10 @@ function buildLifestylePrompt(p: PromptProduct, colorIndex: number, hasReference
     details.length > 0 && `\nProduct details (keep these accurate):\n${details.join("\n")}`,
     `\nScene: Make the product the hero of ${sceneFor(p.categoryName, p.subcategoryName)}, styled as a modern Indian home. Add a few tasteful props that suit the room, soft textiles and an indoor plant, without cluttering the frame.`,
     "\nLighting & camera: Warm natural daylight from a nearby window with soft shadows. Eye-level three-quarter angle, 35mm lens, shallow depth of field. The whole product is in frame and in sharp focus.",
-    "\nStyle: High-end furniture catalogue photography, realistic textures and wood grain, true-to-life colours. Landscape 4:3.",
-    "\nAvoid: text, logos, watermarks, people's faces, distorted proportions, extra or missing legs, or any change to the product's design or colour.",
+    isFurniture
+      ? "\nStyle: High-end furniture catalogue photography, realistic textures and wood grain, true-to-life colours. Landscape 4:3."
+      : "\nStyle: High-end product catalogue photography, realistic materials and textures, true-to-life colours. Landscape 4:3.",
+    `\nAvoid: text, logos, watermarks, people's faces, distorted proportions${isFurniture ? ", extra or missing legs" : ""}, or any change to the product's design or colour.`,
   ]
     .filter(Boolean)
     .join("\n");

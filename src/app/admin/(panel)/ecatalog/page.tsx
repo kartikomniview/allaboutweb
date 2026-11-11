@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
@@ -14,8 +15,10 @@ import {
   SearchX,
   TriangleAlert,
   Upload,
+  X,
 } from "lucide-react";
-import { LIVE_CATALOG_PATH } from "@/components/admin/AdminShell";
+import { useAdminUser, useLiveCatalogUrl } from "@/components/admin/AdminShell";
+import { ProductLimitNotice, limitState, usageLabel } from "@/components/admin/ProductLimit";
 import ConfirmDialog from "@/components/admin/ecatalog/ConfirmDialog";
 import ProductFormDrawer from "@/components/admin/ecatalog/ProductFormDrawer";
 import ProductTable, {
@@ -23,16 +26,13 @@ import ProductTable, {
   ProductGridSkeleton,
   ProductTableSkeleton,
 } from "@/components/admin/ecatalog/ProductTable";
-import { Button, Card, PageHeader, buttonClass } from "@/components/admin/ui";
-import {
-  CATALOG_CATEGORIES,
-  CATEGORY_TAB_LABELS,
-  PRODUCTS,
-  type MainCategory,
-} from "@/components/furniture-catalog/data";
+import { authButtonClass } from "@/components/admin/AuthLayout";
+import { ripple } from "@/components/admin/ripple";
+import { Button, Card, buttonClass } from "@/components/admin/ui";
+import { PRODUCTS } from "@/components/furniture-catalog/data";
+import { categoryLabel, sortCategoryNames } from "@/lib/taxonomy";
 import { AuthError } from "@/lib/adminAuth";
 import {
-  createProduct,
   deleteProduct,
   importProducts,
   listProducts,
@@ -43,13 +43,15 @@ import {
   type ProductInput,
 } from "@/lib/adminProducts";
 
+const NEW_PRODUCT_ROUTE = "/admin/ecatalog/new";
+
 type StatusFilter = "all" | "published" | "hidden";
 type Toast = { id: number; text: string; tone: "ok" | "error" };
 
 // Rows rendered at a time; the next batch appears as the admin scrolls.
 const PAGE_SIZE = 20;
-// The list opens on the first category; "All" is the last chip.
-const DEFAULT_CATEGORY: string = CATALOG_CATEGORIES[0]?.name ?? "All";
+// The list opens on "All", the first chip; the other chips are the categories the products use.
+const DEFAULT_CATEGORY = "All";
 
 // List or grid (grid by default), remembered in this browser. Storage can be
 // unavailable (private mode, blocked site data), so every access is guarded.
@@ -124,7 +126,7 @@ function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center px-6 py-16 text-center">
-      <span className="grid h-12 w-12 place-items-center rounded-full bg-paper text-slate ring-1 ring-line">
+      <span className="grid h-12 w-12 place-items-center rounded-full bg-paper text-slate">
         <Icon className="h-5 w-5" aria-hidden />
       </span>
       <h2 className="mt-4 text-base font-semibold text-ink">{title}</h2>
@@ -136,7 +138,10 @@ function EmptyState({
 
 export default function ManageEcatalogPage() {
   const router = useRouter();
+  const liveUrl = useLiveCatalogUrl();
   const [products, setProducts] = useState<Product[] | null>(null);
+  const { store } = useAdminUser();
+  const sellsFurniture = store.businessTypes.includes("furniture");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -151,8 +156,8 @@ export default function ManageEcatalogPage() {
     saveViewMode(next);
   }
 
-  // undefined = closed, null = new product, Product = editing
-  const [editing, setEditing] = useState<Product | null | undefined>(undefined);
+  // The product open in the editor (new products are added at NEW_PRODUCT_ROUTE).
+  const [editing, setEditing] = useState<Product | undefined>(undefined);
   const [deleting, setDeleting] = useState<Product | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -181,6 +186,15 @@ export default function ManageEcatalogPage() {
     [router],
   );
 
+  // Links from the dashboard: ?edit=<id> opens that product.
+  const openDeepLink = useCallback((list: Product[]) => {
+    const id = new URLSearchParams(window.location.search).get("edit");
+    if (!id) return;
+    window.history.replaceState(window.history.state, "", window.location.pathname);
+    const found = list.find((p) => p.id === id);
+    if (found) setEditing(found);
+  }, []);
+
   // First load shows the skeleton; later refreshes keep the table and show a progress bar.
   const load = useCallback(
     async (mode: "initial" | "refresh") => {
@@ -188,7 +202,9 @@ export default function ManageEcatalogPage() {
       if (mode === "initial") setProducts(null);
       else setRefreshing(true);
       try {
-        setProducts(await listProducts());
+        const list = await listProducts();
+        setProducts(list);
+        if (mode === "initial") openDeepLink(list);
       } catch (err) {
         const message = errorMessage(err, "We couldn't load your products.");
         if (mode === "initial") setLoadError(message);
@@ -197,7 +213,7 @@ export default function ManageEcatalogPage() {
         setRefreshing(false);
       }
     },
-    [errorMessage, showToast],
+    [errorMessage, showToast, openDeepLink],
   );
 
   useEffect(() => {
@@ -222,7 +238,8 @@ export default function ManageEcatalogPage() {
       return (
         p.productName.toLowerCase().includes(q) ||
         p.subcategoryName.toLowerCase().includes(q) ||
-        p.tags.some((t) => t.toLowerCase().includes(q))
+        p.tags.some((t) => t.toLowerCase().includes(q)) ||
+        (p.keywords ?? []).some((k) => k.toLowerCase().includes(q))
       );
     });
   }, [products, query, status]);
@@ -245,22 +262,23 @@ export default function ManageEcatalogPage() {
   const shownCount = Math.min(page.key === filterKey ? page.count : PAGE_SIZE, visible.length);
   const showMore = () => setPage({ key: filterKey, count: shownCount + PAGE_SIZE });
 
-  const categoryNames = useMemo(() => {
-    const names = new Set(CATALOG_CATEGORIES.map((c) => c.name as string));
-    products?.forEach((p) => p.categoryName && names.add(p.categoryName));
-    return [...names];
-  }, [products]);
+  const categoryNames = useMemo(
+    () => sortCategoryNames((products ?? []).map((p) => p.categoryName).filter(Boolean)),
+    [products],
+  );
 
   const replaceProduct = (saved: Product) =>
     setProducts((list) => sortProducts([...(list ?? []).filter((p) => p.id !== saved.id), saved]));
 
-  async function handleSave(input: ProductInput) {
-    const target = editing;
-    const saved = target ? await updateProduct(target.id, input) : await createProduct(input);
+  async function handleSave(input: ProductInput): Promise<Product> {
+    if (!editing) throw new Error("No product open");
+    const saved = await updateProduct(editing.id, input);
     replaceProduct(saved);
     setEditing(undefined);
-    showToast(target ? `Saved “${saved.productName}”` : `Created “${saved.productName}”`);
+    showToast(`Saved “${saved.productName}”`);
+    return saved;
   }
+
 
   async function handleToggleActive(product: Product) {
     setTogglingId(product.id);
@@ -300,9 +318,13 @@ export default function ManageEcatalogPage() {
   async function handleImport() {
     setImporting(true);
     try {
-      const { created, skipped } = await importProducts(PRODUCTS);
+      const { created, skipped, limitReached } = await importProducts(PRODUCTS);
       setProducts(await listProducts());
-      showToast(`Imported ${created} product${created === 1 ? "" : "s"}${skipped ? ` · ${skipped} already existed` : ""}`);
+      showToast(
+        `Imported ${created} product${created === 1 ? "" : "s"}${skipped ? ` · ${skipped} already existed` : ""}${
+          limitReached ? " · your product limit is reached" : ""
+        }`,
+      );
     } catch (err) {
       showToast(errorMessage(err, "Could not import products."), "error");
     } finally {
@@ -316,6 +338,7 @@ export default function ManageEcatalogPage() {
     setStatus("all");
   }
 
+  const limit = limitState(counts.all, store.productLimit);
   const hasFilters = query.trim() !== "" || category !== DEFAULT_CATEGORY || status !== "all";
   const tabs: { key: StatusFilter; label: string }[] = [
     { key: "all", label: "All" },
@@ -348,19 +371,21 @@ export default function ManageEcatalogPage() {
         title="No products yet"
         actions={
           <>
-            <Button variant="primary" onClick={handleImport} loading={importing}>
-              {!importing && <Upload className="h-4 w-4" aria-hidden />}
-              {importing ? "Importing…" : `Import ${PRODUCTS.length} starter products`}
-            </Button>
-            <Button onClick={() => setEditing(null)}>
+            {sellsFurniture && (
+              <Button onClick={handleImport} loading={importing}>
+                {!importing && <Upload className="h-4 w-4" aria-hidden />}
+                {importing ? "Importing…" : `Import ${PRODUCTS.length} sample furniture products`}
+              </Button>
+            )}
+            <Link href={NEW_PRODUCT_ROUTE} className={buttonClass("primary")}>
               <Plus className="h-4 w-4" aria-hidden />
               Add product
-            </Button>
+            </Link>
           </>
         }
       >
-        Start with the {PRODUCTS.length} products currently shown in the e-catalog, or create your first product from
-        scratch.
+        Add your first product: upload a photo and its name, category and details are filled in for you.
+        {sellsFurniture && " Or start with sample furniture products to see how the catalog looks."}
       </EmptyState>
     );
   } else if (visible.length === 0) {
@@ -390,30 +415,100 @@ export default function ManageEcatalogPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        breadcrumbs={[{ label: "Dashboard", href: "/admin/dashboard" }, { label: "E-Catalog" }]}
-        title="E-Catalog"
-        description="Manage the products, prices and details shown in your furniture e-catalog."
-        actions={
-          <>
-            <a href={LIVE_CATALOG_PATH} target="_blank" rel="noopener noreferrer" className={buttonClass("secondary")}>
-              View live
-              <ArrowUpRight className="h-4 w-4 text-slate" aria-hidden />
-            </a>
-            <Button variant="primary" onClick={() => setEditing(null)}>
-              <Plus className="h-4 w-4" aria-hidden />
-              Add product
-            </Button>
-          </>
-        }
-      />
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+      {/* Title */}
+      <header className="admin-fade-in flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-[1.5rem] font-bold leading-tight tracking-[-0.025em] text-ink">Products</h1>
+          <p className="mt-0.5 text-sm text-slate">
+            {products ? (
+              <>
+                {usageLabel(limit)} · {counts.published} published
+              </>
+            ) : (
+              "Your catalog's products"
+            )}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <a
+            href={liveUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="View live catalog"
+            className={`${buttonClass("secondary")} px-3 sm:px-4`}
+          >
+            View live
+            <ArrowUpRight className="h-4 w-4 text-slate" aria-hidden />
+          </a>
+          <Link href={NEW_PRODUCT_ROUTE} className={`${buttonClass("primary")} hidden lg:inline-flex`}>
+            <Plus className="h-4 w-4" aria-hidden />
+            Add product
+          </Link>
+        </div>
+      </header>
 
-      <Card className="relative overflow-hidden">
-        {(refreshing || importing) && <div className="admin-progress absolute inset-x-0 top-0 z-10" role="progressbar" aria-label="Loading" />}
+      {products && <ProductLimitNotice state={limit} storeName={store.name} compact />}
 
-        {/* Status tabs */}
-        <div className="flex gap-1 overflow-x-auto border-b border-line px-3 sm:px-4" role="tablist" aria-label="Filter by status">
+      {/* Search & filters: stick under the top bar while scrolling */}
+      <div className="sticky top-14 z-20 -mx-3 flex flex-col gap-2 bg-paper/95 px-3 py-1.5 backdrop-blur sm:-mx-4 sm:gap-2.5 sm:px-4 sm:py-2 lg:top-16 lg:-mx-5 lg:px-5">
+        <div className="flex gap-2">
+          <label className="relative min-w-0 flex-1">
+            <span className="sr-only">Search products</span>
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate/60" aria-hidden />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search products"
+              enterKeyHint="search"
+              className="h-11 w-full rounded-md border border-line bg-white pl-11 pr-10 text-base text-ink transition-[border-color,box-shadow] placeholder:text-slate/55 focus:border-primary focus:outline-none focus-visible:outline-none! focus:ring-[3px] focus:ring-primary/15 [&::-webkit-search-cancel-button]:hidden"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="Clear search"
+                className="absolute right-0.5 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-md text-slate hover:text-ink"
+              >
+                <X className="h-4 w-4" aria-hidden />
+              </button>
+            )}
+          </label>
+          <div role="group" aria-label="Layout" className="flex h-11 shrink-0 items-center gap-0.5 rounded-md border border-line bg-white p-1">
+            {VIEW_OPTIONS.map(({ key, label, icon: Icon }) => {
+              const selected = view === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => changeView(key)}
+                  aria-pressed={selected}
+                  aria-label={label}
+                  title={label}
+                  className={`grid h-8 w-9 place-items-center rounded-[4px] transition-colors ${
+                    selected ? "bg-ink text-white" : "text-slate hover:text-ink"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" aria-hidden />
+                </button>
+              );
+            })}
+          </div>
+          <Button
+            onClick={() => load("refresh")}
+            disabled={products === null || refreshing}
+            size="icon"
+            aria-label="Refresh"
+            title="Refresh"
+            className="hidden h-11 w-11 sm:inline-flex"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} aria-hidden />
+          </Button>
+        </div>
+
+        {/* Status: a segmented control */}
+        <div role="tablist" aria-label="Filter by status" className="grid grid-cols-3 gap-1 rounded-md bg-ink/[0.05] p-1 sm:inline-grid sm:w-auto sm:self-start">
           {tabs.map(({ key, label }) => {
             const selected = status === key;
             return (
@@ -423,126 +518,69 @@ export default function ManageEcatalogPage() {
                 role="tab"
                 aria-selected={selected}
                 onClick={() => setStatus(key)}
-                className={`relative inline-flex h-12 shrink-0 items-center gap-2 px-3 text-sm font-semibold transition-colors ${
-                  selected ? "text-ink" : "text-slate hover:text-ink"
+                className={`flex h-9 items-center justify-center gap-1.5 rounded-[4px] px-3 text-[13px] font-semibold transition-colors ${
+                  selected ? "bg-white text-ink shadow-[0_1px_2px_rgba(1,18,60,0.12)]" : "text-slate hover:text-ink"
                 }`}
               >
                 {label}
-                <span
-                  className={`min-w-6 rounded-full px-1.5 py-0.5 text-center text-[11px] font-semibold tabular-nums ${
-                    selected ? "bg-ink text-white" : "bg-ink/[0.06] text-slate"
-                  }`}
-                >
+                <span className={`text-[11px] tabular-nums ${selected ? "text-primary" : "text-slate/80"}`}>
                   {products ? counts[key] : "–"}
                 </span>
-                {selected && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-primary" aria-hidden />}
               </button>
             );
           })}
         </div>
 
-        {/* Toolbar */}
-        <div className="flex items-center gap-2 p-3 pb-2 sm:p-4 sm:pb-2.5">
-          <label className="relative min-w-0 flex-1">
-            <span className="sr-only">Search products</span>
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate/70" aria-hidden />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by name, subcategory or tag…"
-              className="h-10 w-full rounded-btn border border-line bg-white pl-9 pr-3 text-base text-ink shadow-[0_1px_1px_rgba(1,18,60,0.03)] placeholder:text-slate/60 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 sm:text-sm"
-            />
-          </label>
-          <div className="flex shrink-0 gap-2">
-            <div
-              role="group"
-              aria-label="Layout"
-              className="flex h-10 shrink-0 items-center gap-0.5 rounded-btn bg-ink/[0.05] p-1"
-            >
-              {VIEW_OPTIONS.map(({ key, label, icon: Icon }) => {
-                const selected = view === key;
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => changeView(key)}
-                    aria-pressed={selected}
-                    aria-label={label}
-                    title={label}
-                    className={`grid h-8 w-8 place-items-center rounded-[6px] transition-colors ${
-                      selected
-                        ? "bg-white text-ink shadow-[0_1px_2px_rgba(1,18,60,0.12)]"
-                        : "text-slate hover:text-ink"
-                    }`}
-                  >
-                    <Icon className="h-4 w-4" aria-hidden />
-                  </button>
-                );
-              })}
-            </div>
-            <Button
-              onClick={() => load("refresh")}
-              disabled={products === null || refreshing}
-              size="icon"
-              aria-label="Refresh"
-              title="Refresh"
-            >
-              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} aria-hidden />
-            </Button>
-          </div>
-        </div>
-
-        {/* Category chips (counts follow the status tab and search) */}
-        <div
-          role="group"
-          aria-label="Filter by category"
-          className="flex gap-1.5 overflow-x-auto border-b border-line px-3 pb-3 [scrollbar-width:none] sm:flex-wrap sm:px-4 sm:pb-4 [&::-webkit-scrollbar]:hidden"
-        >
-          {[...categoryNames.map((name) => ({
-            name,
-            label: CATEGORY_TAB_LABELS[name as MainCategory] ?? name,
-            count: categoryCounts.get(name) ?? 0,
-          })), { name: "All", label: "All", count: matching.length }].map(({ name, label, count }) => {
-            const selected = category === name;
-            return (
-              <button
-                key={name}
-                type="button"
-                onClick={() => setCategory(name)}
-                aria-pressed={selected}
-                className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold whitespace-nowrap ring-1 ring-inset transition-colors ${
-                  selected
-                    ? "bg-ink text-white ring-ink"
-                    : count === 0
-                      ? "bg-white text-slate/60 ring-line hover:text-slate"
-                      : "bg-white text-ink ring-line hover:bg-paper"
-                }`}
-              >
-                {label}
-                <span
-                  className={`min-w-5 rounded-full px-1.5 text-center text-[11px] tabular-nums ${
-                    selected ? "bg-white/20 text-white" : "bg-ink/[0.06] text-slate"
+        {/* Categories (counts follow the status and search) */}
+        {categoryNames.length > 0 && (
+          <div
+            role="group"
+            aria-label="Filter by category"
+            className="-mx-3 flex gap-1.5 overflow-x-auto px-3 [scrollbar-width:none] sm:-mx-4 sm:px-4 lg:mx-0 lg:flex-wrap lg:px-0 [&::-webkit-scrollbar]:hidden"
+          >
+            {[
+              { name: "All", label: "All categories", count: matching.length },
+              ...categoryNames.map((name) => ({ name, label: categoryLabel(name), count: categoryCounts.get(name) ?? 0 })),
+            ].map(({ name, label, count }) => {
+              const selected = category === name;
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => setCategory(name)}
+                  onPointerDown={ripple}
+                  aria-pressed={selected}
+                  className={`relative inline-flex h-9 shrink-0 items-center gap-1.5 overflow-hidden rounded-md border px-3 text-[13px] font-semibold whitespace-nowrap transition-colors ${
+                    selected
+                      ? "border-ink bg-ink text-white"
+                      : count === 0
+                        ? "border-line bg-white text-slate/60"
+                        : "border-line bg-white text-ink hover:border-slate/35"
                   }`}
                 >
-                  {products ? count : "–"}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+                  {label}
+                  <span className={`text-[11px] tabular-nums ${selected ? "text-white/70" : "text-slate/80"}`}>
+                    {products ? count : "–"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
+      <Card className="relative overflow-hidden">
+        {(refreshing || importing) && <div className="admin-progress absolute inset-x-0 top-0 z-10" role="progressbar" aria-label="Loading" />}
         {content}
-
         {products && products.length > 0 && visible.length > 0 && (
-          <div className="flex items-center justify-between border-t border-line bg-paper/50 px-4 py-3 text-[13px] text-slate sm:px-5">
+          <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-3 text-[13px] text-slate">
             <span>
               Showing <span className="font-semibold text-ink">{shownCount}</span> of{" "}
               <span className="font-semibold text-ink">{visible.length}</span>
-              {visible.length === products.length ? " products" : ` matching products (${products.length} in total)`}
+              {visible.length === products.length ? "" : ` (${products.length} in total)`}
             </span>
             {hasFilters && (
-              <button type="button" onClick={clearFilters} className="font-semibold text-primary hover:text-[#c4501a]">
+              <button type="button" onClick={clearFilters} className="font-semibold text-primary hover:underline">
                 Clear filters
               </button>
             )}
@@ -550,14 +588,23 @@ export default function ManageEcatalogPage() {
         )}
       </Card>
 
+      {/* Phones: the main action, pinned in thumb reach */}
+      <div className="sticky bottom-0 z-20 -mx-3 -mb-3 mt-auto sm:-mb-5 border-t border-line bg-white/95 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:-mx-4 sm:px-4 lg:hidden">
+        <Link href={NEW_PRODUCT_ROUTE} onPointerDown={ripple} className={authButtonClass}>
+          <Plus className="h-[18px] w-[18px]" aria-hidden />
+          Add product
+        </Link>
+      </div>
+
       {editing !== undefined && (
         <ProductFormDrawer
-          key={editing?.id ?? "new"}
+          key={editing.id}
           product={editing}
           onClose={() => setEditing(undefined)}
           onSave={handleSave}
           onDelete={askDelete}
           onImagesSaved={replaceProduct}
+          products={products ?? []}
         />
       )}
 
@@ -579,7 +626,7 @@ export default function ManageEcatalogPage() {
         <div
           key={toast.id}
           role="status"
-          className="admin-pop-in fixed bottom-4 right-4 z-[120] flex max-w-[calc(100vw-2rem)] items-center gap-3 rounded-card border border-line bg-white py-3 pl-3.5 pr-4 text-sm font-medium text-ink shadow-[0_12px_32px_-12px_rgba(1,18,60,0.3)] sm:bottom-6 sm:right-6"
+          className="admin-pop-in fixed bottom-24 right-4 z-[120] flex max-w-[calc(100vw-2rem)] items-center gap-3 rounded-lg border border-line lg:bottom-6 bg-white py-3 pl-3.5 pr-4 text-sm font-medium text-ink shadow-[0_12px_32px_-12px_rgba(1,18,60,0.3)] sm:right-6"
         >
           {toast.tone === "ok" ? (
             <CircleCheck className="h-5 w-5 shrink-0 text-emerald-600" aria-hidden />

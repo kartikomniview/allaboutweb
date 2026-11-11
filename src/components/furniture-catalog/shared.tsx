@@ -7,32 +7,32 @@ import React, { createContext, useContext } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Heart } from "lucide-react";
-import { CATALOG_DEMO_BASE } from "@/lib/catalogDomain";
-import { WHATSAPP_NUMBER } from "@/lib/contact";
+import { CATALOG_DEMO_BASE, STORE_ROUTE } from "@/lib/catalogDomain";
 import type { CatalogProduct } from "@/lib/adminProducts";
-import {
-  CATEGORY_CARDS,
-  CATEGORY_TAB_LABELS,
-  WHATSAPP_MESSAGES,
-  formatINR,
-  type MainCategory,
-} from "./data";
+import type { CatalogStore } from "@/lib/catalogStore";
+import CategoryIcon from "@/components/CategoryIcon";
+import { categoryLabel, findCategory, isFurnitureCategory } from "@/lib/taxonomy";
+import { PRICE_ON_REQUEST, formatINR, hasPrice } from "./data";
 
-export const getWhatsAppUrl = (product?: CatalogProduct, customMessage?: string) => {
-  const text =
-    customMessage ?? (product ? WHATSAPP_MESSAGES.product(product) : WHATSAPP_MESSAGES.general());
-  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
-};
+/** A wa.me link to the store's WhatsApp with the message filled in. */
+export const whatsAppLink = (number: string, text: string) =>
+  number ? `https://wa.me/${number}?text=${encodeURIComponent(text)}` : `https://wa.me/?text=${encodeURIComponent(text)}`;
 
-// The catalog's own route. The proxy also serves it at /furniture on catalog24.in and at
-// the root of yourstore.catalog24.in (see src/proxy.ts), so links are built from a base
-// path held in the catalog context.
-export const CATALOG_PATH = '/app/catalog/furniture';
-const CATALOG_BASES = [CATALOG_PATH, CATALOG_DEMO_BASE];
+// A store's catalog is served at the root of its subdomain (demostore.catalog24.in). The
+// demo store is also shown at /furniture on catalog24.in and /app/catalog/furniture on
+// allaboutw3b.in (see src/proxy.ts), so links are built from a base path held in the
+// catalog context. Its internal route is /store/<slug>, which only the server sees.
+export const DEMO_PATHS = ['/app/catalog/furniture', CATALOG_DEMO_BASE];
+const INTERNAL_BASE_RE = new RegExp(`^${STORE_ROUTE}/[a-z0-9]{3,30}(?=/|$)`);
 
-/** The base path in the given pathname: one of CATALOG_BASES, or '' when served at the root. */
+/** The internal route of a store's catalog. */
+export const storeRoutePath = (slug: string) => `${STORE_ROUTE}/${slug}`;
+
+/** The base path in the given pathname: the demo paths, the internal route, or '' at the root. */
 export const catalogBasePath = (pathname: string) =>
-  CATALOG_BASES.find(b => pathname === b || pathname.startsWith(`${b}/`)) ?? '';
+  DEMO_PATHS.find(b => pathname === b || pathname.startsWith(`${b}/`)) ??
+  INTERNAL_BASE_RE.exec(pathname)?.[0] ??
+  '';
 
 /** `sub` ('' | '/cart' | '/product/…') under the catalog's base path. */
 export const catalogHref = (basePath: string, sub: string) => `${basePath}${sub}` || '/';
@@ -48,6 +48,10 @@ export const productSubPath = (id: string) => `/product/${encodeURIComponent(id)
 // Shared with the product pages, which render on top of the (still mounted) catalog
 // so the cart, the open tab and the scroll position survive opening a product.
 export type CatalogContextValue = {
+  /** The store being browsed: its name, WhatsApp number and details. */
+  store: CatalogStore;
+  /** A WhatsApp link to this store with the message filled in (a general enquiry by default). */
+  whatsAppUrl: (text?: string) => string;
   products: CatalogProduct[];
   /** A path inside the catalog for the current domain, e.g. href('/cart'). */
   href: (sub: string) => string;
@@ -76,11 +80,11 @@ export type CatalogContextValue = {
   /** The product page's back button: to where it was opened from, or the catalog home. */
   closeProduct: () => void;
   /**
-   * Demo WhatsApp: takes a `getWhatsAppUrl(...)` link and, instead of messaging the store,
-   * asks the visitor for their own number and opens the enquiry in their own chat.
+   * Opens a `whatsAppUrl(...)` link. In the demo store, instead of messaging the store,
+   * it asks the visitor for their own number and opens the enquiry in their own chat.
    */
   openWhatsApp: (url: string) => void;
-  /** onClick for `<a href={getWhatsAppUrl(...)}>` links — same as openWhatsApp. */
+  /** onClick for `<a href={whatsAppUrl(...)}>` links — the demo dialog in the demo store. */
   onWhatsAppLinkClick: (e: React.MouseEvent<HTMLAnchorElement>) => void;
 };
 
@@ -529,6 +533,34 @@ export const FriendlyFurniturePlaceholder: React.FC<{
   );
 };
 
+// Placeholder for products outside furniture: a soft tile with the category's icon.
+export const CategoryIconPlaceholder: React.FC<{ category: string; className?: string }> = ({
+  category,
+  className = 'w-full h-full',
+}) => {
+  return (
+    <div
+      className={`flex items-center justify-center bg-neutral-100 text-neutral-400 select-none ${className}`}
+      aria-hidden
+    >
+      <CategoryIcon category={category} className="h-[38%] w-[38%] max-h-16 max-w-16" strokeWidth={1.4} />
+    </div>
+  );
+};
+
+/** The drawn furniture placeholder for furniture categories, an icon tile for everything else. */
+export const ProductPlaceholder: React.FC<{
+  category: string;
+  subCategory?: string;
+  colorHex?: string;
+  className?: string;
+}> = ({ category, subCategory, colorHex, className = 'w-full h-full' }) =>
+  isFurnitureCategory(category) ? (
+    <FriendlyFurniturePlaceholder category={category} subCategory={subCategory} colorHex={colorHex} className={className} />
+  ) : (
+    <CategoryIconPlaceholder category={category} className={className} />
+  );
+
 // WhatsApp Brand Icon
 export const WhatsAppIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
   <svg className={`fill-current shrink-0 ${className}`} viewBox="0 0 24 24">
@@ -552,7 +584,7 @@ export const ProductVisual: React.FC<{ product: CatalogProduct; sizes: string; f
       className={`${fit === 'contain' ? 'object-contain' : 'object-cover'} transition-transform duration-500 ease-out group-hover:scale-105`}
     />
   ) : (
-    <FriendlyFurniturePlaceholder
+    <ProductPlaceholder
       category={product.categoryName}
       subCategory={product.subcategoryName}
       colorHex={product.colors[0]?.hex || '#8B5A2B'}
@@ -591,7 +623,7 @@ export const ProductCard: React.FC<{ product: CatalogProduct }> = ({ product }) 
   const { href, embedded, markInAppNavigation } = useCatalog();
   // The first tag is the card badge.
   const badge = product.tags[0];
-  const hasDiscount = product.originalPrice > product.price;
+  const hasDiscount = hasPrice(product) && product.originalPrice > product.price;
 
   return (
     <article className="relative group">
@@ -602,7 +634,7 @@ export const ProductCard: React.FC<{ product: CatalogProduct }> = ({ product }) 
         onClick={markInAppNavigation}
         className="flex flex-col active:scale-[0.99] transition-transform duration-300"
       >
-        <div className="relative aspect-square overflow-hidden rounded-md bg-gradient-to-b from-[#FDFBF7] to-[#F5ECE0] shadow-[0_2px_12px_rgba(0,0,0,0.05)] group-hover:shadow-[0_14px_32px_rgba(139,90,43,0.13)] transition-shadow duration-300">
+        <div className="relative aspect-square overflow-hidden rounded-md bg-neutral-100 shadow-[0_2px_12px_rgba(0,0,0,0.05)] group-hover:shadow-[0_10px_24px_rgba(0,0,0,0.10)] transition-shadow duration-300">
           <ProductVisual product={product} sizes="(min-width: 640px) 200px, 50vw" fit="contain" />
 
           {badge && (
@@ -617,7 +649,11 @@ export const ProductCard: React.FC<{ product: CatalogProduct }> = ({ product }) 
             {product.productName}
           </h2>
           <p className="mt-0.5 flex items-baseline gap-1.5 tabular-nums">
-            <span className="text-sm font-bold text-[#111111]">{formatINR(product.price)}</span>
+            {hasPrice(product) ? (
+              <span className="text-sm font-bold text-[#111111]">{formatINR(product.price)}</span>
+            ) : (
+              <span className="text-xs font-semibold text-neutral-700">{PRICE_ON_REQUEST}</span>
+            )}
             {hasDiscount && (
               <span className="text-[10px] text-neutral-400 line-through">{formatINR(product.originalPrice)}</span>
             )}
@@ -628,30 +664,28 @@ export const ProductCard: React.FC<{ product: CatalogProduct }> = ({ product }) 
   );
 };
 
-const CATEGORY_IMAGES: Partial<Record<MainCategory, string>> = Object.fromEntries(
-  CATEGORY_CARDS.map(card => [card.key, card.image])
-);
-
-// Category tile: a soft box with the furniture cut-out popping out over its rim (same
-// trick as the story highlights). The photo is larger than the box and anchored to its
-// bottom; multiply blends the photo's white background into the box and the page, so
+// Category tile. Furniture categories have a cut-out photo that pops out over the
+// box's rim (same trick as the story highlights): larger than the box, anchored to
+// its bottom, and multiply blends its white background into the box and the page, so
 // keep transforms off this button (they'd isolate the blend and bring the white back).
-export const CategoryBox: React.FC<{ category: MainCategory; active?: boolean; onClick: () => void }> = ({
+// Other categories show a product photo inside the box (`photo`), or their icon.
+export const CategoryBox: React.FC<{ category: string; photo?: string; active?: boolean; onClick: () => void }> = ({
   category,
+  photo,
   active,
   onClick,
 }) => {
-  const image = CATEGORY_IMAGES[category];
+  const image = findCategory(category)?.image;
 
   return (
     <button onClick={onClick} aria-pressed={active} className="flex w-full flex-col items-center gap-1.5 group">
       <span className="relative block w-full pt-3">
         {/* Selected: a warmer fill and stronger shadow — no outline, which would cross the photo */}
         <span
-          className={`block w-full aspect-square rounded-2xl transition-[background,box-shadow] duration-200 ${
+          className={`block w-full aspect-square rounded-lg transition-[background,box-shadow] duration-200 ${
             active
-              ? 'bg-gradient-to-b from-[#F5E4CC] to-[#E9CDA6] shadow-[0_6px_16px_rgba(139,90,43,0.28)]'
-              : 'bg-gradient-to-b from-[#FAF5EE] to-[#F1E3D1] shadow-[0_2px_10px_rgba(139,90,43,0.10)]'
+              ? 'bg-neutral-200'
+              : 'bg-neutral-100'
           }`}
         />
         {image ? (
@@ -663,24 +697,34 @@ export const CategoryBox: React.FC<{ category: MainCategory; active?: boolean; o
             sizes="(min-width: 640px) 120px, 30vw"
             className="absolute bottom-0 left-1/2 w-[120%] max-w-none h-auto -translate-x-1/2 mix-blend-multiply transition-transform duration-300 group-hover:-translate-y-1 group-hover:scale-105 group-active:scale-95"
           />
+        ) : photo ? (
+          <span className="absolute inset-x-0 bottom-0 top-3 overflow-hidden rounded-lg">
+            <Image
+              src={photo}
+              alt=""
+              fill
+              sizes="(min-width: 640px) 100px, 20vw"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+          </span>
         ) : (
-          <span className="absolute inset-x-0 bottom-0 top-3 p-2">
-            <FriendlyFurniturePlaceholder category={category} className="w-full h-full" />
+          <span className="absolute inset-x-0 bottom-0 top-3 overflow-hidden rounded-lg p-2">
+            <ProductPlaceholder category={category} className="w-full h-full rounded-md" />
           </span>
         )}
       </span>
       <span className="flex flex-col items-center gap-1">
         <span
           className={`text-[11px] leading-tight text-center line-clamp-2 ${
-            active ? 'font-bold text-[#8B5A2B]' : active === false ? 'font-semibold text-neutral-500' : 'font-semibold text-neutral-800'
+            active ? 'font-bold text-neutral-900' : active === false ? 'font-semibold text-neutral-500' : 'font-semibold text-neutral-800'
           }`}
         >
-          {CATEGORY_TAB_LABELS[category]}
+          {categoryLabel(category)}
         </span>
         {/* Selected marker under the label (reserved space keeps rows aligned) */}
         {active !== undefined && (
           <span
-            className={`h-1 rounded-full transition-all duration-200 ${active ? 'w-5 bg-[#8B5A2B]' : 'w-0 bg-transparent'}`}
+            className={`h-1 rounded-full transition-all duration-200 ${active ? 'w-5 bg-neutral-900' : 'w-0 bg-transparent'}`}
           />
         )}
       </span>

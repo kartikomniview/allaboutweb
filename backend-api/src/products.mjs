@@ -1,7 +1,7 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "./firebase.mjs";
 import { HttpError } from "./http.mjs";
-import { deleteImages, isOwnImageUrl } from "./storage.mjs";
+import { deleteImages, isStoreImageUrl } from "./storage.mjs";
 
 const PRODUCTS = "products";
 
@@ -9,6 +9,7 @@ export const PRODUCT_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
 const MAX_IMPORT = 200;
 const MAX_IMAGES = 20;
+const MAX_SPECS = 12;
 
 const bad = (message) => new HttpError(400, "BAD_REQUEST", message);
 
@@ -41,6 +42,19 @@ function textList(body, field, { maxItems = 20, max = 200 } = {}) {
   }).filter(Boolean);
 }
 
+// [{ label, value }], e.g. { label: "Wood", value: "Sheesham" }. Empty rows are dropped.
+function specList(body) {
+  const value = body.specs ?? [];
+  if (!Array.isArray(value)) throw bad("specs must be a list");
+  if (value.length > MAX_SPECS) throw bad(`specs can have at most ${MAX_SPECS} items`);
+  return value
+    .map((spec) => {
+      if (!spec || typeof spec !== "object") throw bad("Each spec needs a label and a value");
+      return { label: text(spec, "label", { max: 40 }), value: text(spec, "value", { max: 120 }) };
+    })
+    .filter((spec) => spec.label && spec.value);
+}
+
 function colorList(body) {
   const value = body.colors ?? [];
   if (!Array.isArray(value)) throw bad("colors must be a list");
@@ -54,14 +68,16 @@ function colorList(body) {
   });
 }
 
-// images: uploaded e-catalog URLs only. mainImageUrl / plainImageUrl must be
+// images: URLs uploaded to this store's folder only. mainImageUrl / plainImageUrl must be
 // one of them (or empty); main falls back to the first image.
-function imageFields(body) {
+function imageFields(body, storeSlug) {
   const value = body.images ?? [];
   if (!Array.isArray(value)) throw bad("images must be a list");
   const images = [...new Set(value)];
   if (images.length > MAX_IMAGES) throw bad(`A product can have at most ${MAX_IMAGES} images`);
-  if (!images.every(isOwnImageUrl)) throw bad("images must be uploaded through the admin panel");
+  if (!images.every((url) => isStoreImageUrl(url, storeSlug))) {
+    throw bad("images must be uploaded through the admin panel");
+  }
 
   const pick = (field) => {
     const url = body[field] ?? "";
@@ -73,7 +89,7 @@ function imageFields(body) {
 }
 
 // Whitelists and normalises the writable fields of a product.
-export function validateProduct(body) {
+export function validateProduct(body, storeSlug) {
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     throw bad("Product must be an object");
   }
@@ -85,17 +101,20 @@ export function validateProduct(body) {
     price: number(body, "price", { max: 100_000_000 }),
     originalPrice: number(body, "originalPrice", { max: 100_000_000 }),
     tags: textList(body, "tags", { maxItems: 10, max: 40 }),
+    // Search-only words (not shown to shoppers), e.g. "almirah", "3 seater".
+    keywords: textList(body, "keywords", { maxItems: 20, max: 40 }),
     rating: number(body, "rating", { max: 5 }),
     reviewCount: number(body, "reviewCount", { integer: true }),
     colors: colorList(body),
     material: text(body, "material"),
     dimensions: text(body, "dimensions"),
-    woodType: text(body, "woodType"),
+    woodType: text(body, "woodType"), // older furniture field; new products use a "Wood" spec
+    specs: specList(body),
     stockStatus: text(body, "stockStatus", { max: 100 }),
     description: text(body, "description", { max: 2000 }),
     highlights: textList(body, "highlights", { maxItems: 10 }),
     isActive: body.isActive ?? true,
-    ...imageFields(body),
+    ...imageFields(body, storeSlug),
   };
 
   if (typeof product.isActive !== "boolean") throw bad("isActive must be true or false");
@@ -123,6 +142,7 @@ function toProduct(snap) {
     price,
     originalPrice: typeof data.originalPrice === "number" ? data.originalPrice : price,
     tags: strList(data.tags),
+    keywords: strList(data.keywords),
     rating: num(data.rating),
     reviewCount: num(data.reviewCount),
     colors: Array.isArray(data.colors)
@@ -133,6 +153,11 @@ function toProduct(snap) {
     material: str(data.material),
     dimensions: str(data.dimensions),
     woodType: str(data.woodType),
+    specs: Array.isArray(data.specs)
+      ? data.specs
+          .filter((s) => typeof s?.label === "string" && typeof s?.value === "string")
+          .map((s) => ({ label: s.label, value: s.value }))
+      : [],
     stockStatus: str(data.stockStatus),
     description: str(data.description),
     highlights: strList(data.highlights),
@@ -147,10 +172,10 @@ function toProduct(snap) {
 
 const notFound = () => new HttpError(404, "NOT_FOUND", "Product not found");
 
-// Sorted in memory: ordering by two fields in Firestore needs a composite index,
-// and the catalog is small enough to read in one go.
-export async function listProducts() {
-  const snap = await db().collection(PRODUCTS).get();
+// One store's products. Sorted in memory: ordering in Firestore on top of the
+// store filter needs a composite index, and a store's catalog is small.
+export async function listProducts(storeSlug) {
+  const snap = await db().collection(PRODUCTS).where("storeSlug", "==", storeSlug).get();
   return snap.docs
     .map(toProduct)
     .sort(
@@ -163,18 +188,32 @@ export async function listProducts() {
 
 // Published products for the public e-catalog. Hidden products and the
 // admin-only timestamps are left out.
-export async function listPublicProducts() {
-  const products = await listProducts();
+export async function listPublicProducts(storeSlug) {
+  const products = await listProducts(storeSlug);
   return products
     .filter((p) => p.isActive)
     .map(({ createdAt, updatedAt, ...product }) => product);
 }
 
-export async function createProduct(body) {
-  const product = validateProduct(body);
+// The store's product count, for its product limit.
+const countProducts = async (storeSlug) =>
+  (await db().collection(PRODUCTS).where("storeSlug", "==", storeSlug).count().get()).data().count;
+
+const limitReached = (limit) =>
+  new HttpError(
+    403,
+    "PRODUCT_LIMIT",
+    `You've reached your limit of ${limit} product${limit === 1 ? "" : "s"}. Delete one or contact us for more.`,
+  );
+
+// limit: the store's product limit, or null for unlimited.
+export async function createProduct(storeSlug, body, limit = null) {
+  const product = validateProduct(body, storeSlug);
+  if (limit !== null && (await countProducts(storeSlug)) >= limit) throw limitReached(limit);
   const ref = db().collection(PRODUCTS).doc();
   await ref.create({
     ...product,
+    storeSlug,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   });
@@ -182,28 +221,30 @@ export async function createProduct(body) {
 }
 
 // Images dropped from the product are deleted from S3 after the save.
-export async function updateProduct(id, body) {
-  const product = validateProduct(body);
+export async function updateProduct(storeSlug, id, body) {
+  const product = validateProduct(body, storeSlug);
   const ref = db().collection(PRODUCTS).doc(id);
   const before = await ref.get();
-  if (!before.exists) throw notFound();
+  // Another store's product looks the same as a missing one.
+  if (!before.exists || before.get("storeSlug") !== storeSlug) throw notFound();
 
   await ref.update({ ...product, updatedAt: FieldValue.serverTimestamp() });
-  await deleteImages(strList(before.get("images")).filter((url) => !product.images.includes(url)));
+  await deleteImages(strList(before.get("images")).filter((url) => !product.images.includes(url)), storeSlug);
   return toProduct(await ref.get());
 }
 
-export async function deleteProduct(id) {
+export async function deleteProduct(storeSlug, id) {
   const ref = db().collection(PRODUCTS).doc(id);
   const snap = await ref.get();
-  if (!snap.exists) throw notFound();
+  if (!snap.exists || snap.get("storeSlug") !== storeSlug) throw notFound();
   await ref.delete();
-  await deleteImages(strList(snap.get("images")));
+  await deleteImages(strList(snap.get("images")), storeSlug);
 }
 
-// Bulk-creates products with fixed ids (the starter catalog). Ids that already
-// exist are skipped, so running the import twice is harmless.
-export async function importProducts(list) {
+// Bulk-creates products with fixed ids (the starter catalog). Each store gets
+// its own copy, so the document id is prefixed with the store: demo-sofa-1.
+// Ids that already exist are skipped, so running the import twice is harmless.
+export async function importProducts(storeSlug, list, limit = null) {
   if (!Array.isArray(list) || list.length === 0) throw bad("products must be a non-empty list");
   if (list.length > MAX_IMPORT) throw bad(`At most ${MAX_IMPORT} products per import`);
 
@@ -211,7 +252,7 @@ export async function importProducts(list) {
     if (typeof item?.id !== "string" || !PRODUCT_ID_RE.test(item.id)) {
       throw bad(`Product #${i + 1} needs an id of letters, numbers, - or _`);
     }
-    return { id: item.id, product: validateProduct(item) };
+    return { id: `${storeSlug}-${item.id}`.slice(0, 64), product: validateProduct(item, storeSlug) };
   });
   if (new Set(items.map(({ id }) => id)).size !== items.length) {
     throw bad("Product ids in an import must be unique");
@@ -221,12 +262,21 @@ export async function importProducts(list) {
   const snaps = await db().getAll(...items.map(({ id }) => collection.doc(id)));
   const existing = new Set(snaps.filter((s) => s.exists).map((s) => s.id));
 
+  // Only as many as the product limit still allows.
+  const slots = limit === null ? Infinity : Math.max(limit - (await countProducts(storeSlug)), 0);
+  let limited = false;
+
   const batch = db().batch();
   const created = [];
   for (const { id, product } of items) {
     if (existing.has(id)) continue;
+    if (created.length >= slots) {
+      limited = true;
+      break;
+    }
     batch.create(collection.doc(id), {
       ...product,
+      storeSlug,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });
@@ -234,5 +284,5 @@ export async function importProducts(list) {
   }
   if (created.length) await batch.commit();
 
-  return { created: created.length, skipped: existing.size };
+  return { created: created.length, skipped: existing.size, limitReached: limited };
 }

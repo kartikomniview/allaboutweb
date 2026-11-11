@@ -4,6 +4,7 @@
 import Link from "next/link";
 import type { ButtonHTMLAttributes, ComponentProps, ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
+import { ripple } from "./ripple";
 
 export function Spinner({ className = "h-4 w-4" }: { className?: string }) {
   return (
@@ -36,7 +37,7 @@ const SIZES: Record<Size, string> = {
 };
 
 export const buttonClass = (variant: Variant = "secondary", size: Size = "md", extra = "") =>
-  `inline-flex shrink-0 items-center [&_svg]:shrink-0 justify-center rounded-btn font-semibold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-button/20 disabled:pointer-events-none disabled:opacity-50 ${VARIANTS[variant]} ${SIZES[size]} ${extra}`;
+  `relative inline-flex shrink-0 items-center overflow-hidden [&_svg]:shrink-0 justify-center rounded-md font-semibold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-button/20 disabled:pointer-events-none disabled:opacity-50 ${VARIANTS[variant]} ${SIZES[size]} ${extra}`;
 
 export function Button({
   variant = "secondary",
@@ -46,10 +47,20 @@ export function Button({
   children,
   disabled,
   type = "button",
+  onPointerDown,
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: Size; loading?: boolean }) {
   return (
-    <button type={type} disabled={disabled || loading} className={buttonClass(variant, size, className)} {...props}>
+    <button
+      type={type}
+      disabled={disabled || loading}
+      className={buttonClass(variant, size, className)}
+      onPointerDown={(e) => {
+        ripple(e);
+        onPointerDown?.(e);
+      }}
+      {...props}
+    >
       {loading && <Spinner className="h-4 w-4" />}
       {children}
     </button>
@@ -137,7 +148,7 @@ export function PageHeader({
 
 export function Card({ className = "", children }: { className?: string; children: ReactNode }) {
   return (
-    <div className={`rounded-card border border-line bg-white shadow-[0_1px_2px_rgba(1,18,60,0.04)] ${className}`}>
+    <div className={`rounded-lg border border-line bg-white shadow-[0_1px_2px_rgba(1,18,60,0.04)] ${className}`}>
       {children}
     </div>
   );

@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { Check, Heart, ShoppingCart } from 'lucide-react';
 import { discountPercent } from '@/lib/adminProducts';
-import { WHATSAPP_MESSAGES, formatINR } from './data';
-import { ProductVisual, WhatsAppIcon, getWhatsAppUrl, productSubPath, useCatalog } from './shared';
+import { WHATSAPP_MESSAGES, formatINR, formatPrice } from './data';
+import { ProductVisual, WhatsAppIcon, productSubPath, useCatalog } from './shared';
 
 // Flat, bordered panels with barely-rounded corners (matches the cart).
 const panel = 'rounded-md border border-neutral-200 bg-white';
@@ -13,6 +13,8 @@ const panel = 'rounded-md border border-neutral-200 bg-white';
 // the cart, and the whole list can be shared on WhatsApp (to family, or to the store).
 export default function SavedPage({ onBrowse }: { onBrowse: () => void }) {
   const {
+    store,
+    whatsAppUrl,
     products,
     href,
     embedded,
@@ -74,7 +76,7 @@ export default function SavedPage({ onBrowse }: { onBrowse: () => void }) {
                 scroll={false}
                 replace={embedded}
                 onClick={markInAppNavigation}
-                className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-[4px] bg-[#F5F1EA]"
+                className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-[4px] bg-neutral-100"
                 aria-label={product.productName}
               >
                 <ProductVisual product={product} sizes="72px" />
@@ -88,7 +90,7 @@ export default function SavedPage({ onBrowse }: { onBrowse: () => void }) {
                   {product.productName}
                 </h3>
                 <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5 tabular-nums">
-                  <span className="text-sm font-semibold text-[#111111]">{formatINR(product.price)}</span>
+                  <span className="text-sm font-semibold text-[#111111]">{formatPrice(product.price)}</span>
                   {off > 0 && (
                     <>
                       <span className="text-[11px] text-neutral-400 line-through">{formatINR(product.originalPrice)}</span>
@@ -128,7 +130,7 @@ export default function SavedPage({ onBrowse }: { onBrowse: () => void }) {
       {/* Share button — stays visible above the bottom navigation */}
       <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10">
         <a
-          href={getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.savedList(items))}
+          href={whatsAppUrl(WHATSAPP_MESSAGES.savedList(store.name, items))}
           onClick={onWhatsAppLinkClick}
           target="_blank"
           rel="noopener noreferrer"

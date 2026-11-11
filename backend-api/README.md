@@ -1,22 +1,31 @@
 # backend-api — Admin API (Firebase Auth + Firestore on AWS Lambda)
 
-This is the backend for the `/admin` panel on the website: the admin login, the e-catalog product manager, and product image uploads to S3. It runs as one Node.js Lambda function behind an API Gateway HTTP API.
+This is the backend for Catalog24: store registration, the store owners' admin panel (`catalog24.in/admin`), each store's products and product images, and the public catalog of every store. It runs as one Node.js Lambda function behind an API Gateway HTTP API.
+
+**Stores.** Every account owns one store. A store has a name, e.g. "Demo Store", and a *slug*, which is the name lowercased with everything except letters and digits removed, e.g. `demostore`. The slug is the store's subdomain, `demostore.catalog24.in`. Slugs are unique and never change. The products that existed before stores were introduced belong to the store "Demo" (`demo.catalog24.in`).
 
 | Route | Purpose |
 | --- | --- |
-| `POST /auth/login` | Body `{ email, password, deviceId }`. Checks the credentials with Firebase Auth, applies the one-device rule, and returns `{ token, expiresAt, user }` |
+| `POST /auth/register` | **Public.** Body `{ storeName, businessTypes, email, password, deviceId, whatsapp? }`. `whatsapp` is optional (added later in Store settings). `businessTypes` is what the store sells: one or more of `furniture`, `decor`, `lighting`, `flooring`, `curtains`, `fabrics`, `clothing`, `electronics`. Creates the store and the owner's Firebase account, binds this device (the one-device rule) and logs them in: returns `{ token, expiresAt, user }`. 409 `STORE_TAKEN` if the store name (its slug) exists, 409 `EMAIL_TAKEN` if the email has an account |
+| `GET /stores/check?name=…` | **Public.** Whether a store name is free: `{ slug, available, message }`. The registration form's live check |
+| `POST /auth/login` | Body `{ email, password, deviceId }`. Checks the credentials with Firebase Auth, applies the one-device rule, and returns `{ token, expiresAt, user }`. `user.store` is `{ slug, name }` |
 | `GET /auth/session` | Headers `Authorization: Bearer <token>` and `X-Device-Id`. Returns `{ user, expiresAt }`, or 401 |
 | `POST /auth/logout` | Header `Authorization: Bearer <token>`. Deletes the session |
-| `GET /catalog/products` | **Public, no login.** Lists the published products (`isActive: true`) as `{ products }`, without `createdAt`/`updatedAt`. The website's e-catalog page reads this |
-| `GET /products` | Lists all products as `{ products }` |
+| `GET /catalog/{store}/products` | **Public, no login.** A store's public details and its published products (`isActive: true`): `{ store, products }`, or 404 `STORE_NOT_FOUND`. Each store's catalog page reads this |
+| `GET /catalog/products` | **Public.** The demo store's products, as `{ products }`. Kept for older website builds |
+| `GET /store` / `PUT /store` | The logged-in owner's store details (name, WhatsApp, business types, phone, email, address, hours, tagline, category, year started). The slug can't be changed. `PUT` keeps the business types when `businessTypes` isn't sent. Stores from before business types (the Demo store) count as `["furniture"]` |
+| `GET /products` | Lists the store's products as `{ products }` |
 | `POST /products` | Body is one product. Creates it with an auto id and returns `{ product }` |
 | `POST /products/import` | Body `{ products: [{ id, ...product }] }`. Creates products with fixed ids and skips ids that already exist. Returns `{ created, skipped }` |
 | `PUT /products/{id}` | Body is the full product. Replaces its fields and returns `{ product }` |
 | `DELETE /products/{id}` | Deletes the product and its images in S3 |
+| `GET /admin/stores` | **Super admins only.** Every store: `{ stores: [{ slug, name, email, active, productLimit, productCount, createdAt }] }` |
+| `PUT /admin/stores/{slug}` | **Super admins only.** Body `{ active?, productLimit? }`. `productLimit` is a whole number from 0 to 10000, or `null` for unlimited. Returns `{ store }` |
 | `POST /products/uploads` | Body `{ categoryName, subcategoryName, productName, files: [{ contentType, size }] }`. Returns `{ uploads: [{ uploadUrl, fields, publicUrl }] }`, one signed S3 upload form per file. The browser then uploads each file straight to S3 |
 | `POST /products/uploads/discard` | Body `{ urls }`. Deletes images that were uploaded but never saved to a product (for example when the editor is cancelled) |
+| `POST /products/detect` | Body `{ businessTypes, categories: [{ name, subcategories }], image: { data, mediaType } }` (a base64 photo) or `{ businessTypes, categories, imageUrl }` (an uploaded image). `businessTypes` are labels for the prompt ("Furniture", "Lighting"); `categories` (at most 80) are the store's own. Asks Claude to identify any kind of product and returns `{ detected: { productName, categoryName, subcategoryName, categoryIsNew, subcategoryIsNew, description, colors, material, dimensions, specs, tags, highlights, keywords } }`. The category is one of the `categories` sent (with its spelling) when one fits; otherwise it is a new name and `categoryIsNew` / `subcategoryIsNew` is `true` |
 
-Every `/products` route needs a logged-in admin: the same `Authorization: Bearer <token>` and `X-Device-Id` headers as `GET /auth/session`. `GET /catalog/products` is the only product route that is public.
+Every `/products` and `/store` route needs a logged-in store owner: the same `Authorization: Bearer <token>` and `X-Device-Id` headers as `GET /auth/session`. They only ever see and change that owner's own store: another store's product id returns 404. Each store's images are stored under `ecatalog/stores/{slug}/` in S3 (the demo store's older images stay under `ecatalog/`).
 
 ## How the one-device rule works
 
@@ -29,11 +38,14 @@ Every `/products` route needs a logged-in admin: the same `Authorization: Bearer
 Firestore layout:
 
 ```
-users/{uid}        { email, deviceId, deviceBoundAt, lastLoginAt }
+stores/{slug}      { name, slug, ownerUid, email, whatsapp, businessTypes[], phone, publicEmail,
+                     address, hours, tagline, category, since, coverImage, createdAt, updatedAt }
+users/{uid}        { email, storeSlug, deviceId, deviceBoundAt, lastLoginAt }
 sessions/{sha256}  { uid, email, deviceId, createdAt, expiresAt }   // doc id = SHA-256 of the token
-products/{id}      { productName, categoryName, subcategoryName, price, originalPrice,
-                     tags[], rating, reviewCount, colors[{ name, hex }], material,
-                     dimensions, woodType, stockStatus, description, highlights[],
+products/{id}      { storeSlug, productName, categoryName, subcategoryName, price, originalPrice,
+                     tags[], keywords[], rating, reviewCount, colors[{ name, hex }], material,
+                     dimensions, specs[{ label, value }], stockStatus, description, highlights[],
+                     woodType (older furniture field; new products use a "Wood" spec),
                      isActive, mainImageUrl, plainImageUrl, images[],
                      createdAt, updatedAt }
 ```
@@ -106,6 +118,7 @@ Use `npm run package` rather than zipping the folder yourself. The script calls 
    | `FIREBASE_WEB_API_KEY` | the Web API key from step 2.1 |
    | `FIREBASE_SERVICE_ACCOUNT_BASE64` | the base64 string from step 2.3 |
    | `SESSION_TTL_HOURS` | `12` (optional, default 12) |
+   | `SUPER_ADMIN_EMAILS` | `admin@allaboutweb.com` (comma-separated; these accounts manage every store) |
 
 7. Optional quick check: go to **Test** and create an event with this JSON, then run it:
 
@@ -240,6 +253,76 @@ No CORS change is needed: the website fetches this route from its own server, no
 3. Complete step 6 (S3 setup).
 4. Add the routes `POST /products/uploads` and `POST /products/uploads/discard` in API Gateway, and attach the `aaw-admin-auth` integration to each one.
 
+### Switching to stores (multi-store) on an existing deployment
+
+Do these in order. Until step 3 is done, the live website keeps working with the old `GET /catalog/products` route.
+
+1. **Backend.** Run `npm run package` and upload `lambda.zip` to the `aaw-admin-auth` function.
+2. **API Gateway routes.** In **API Gateway → aaw-admin-api → Routes**, add the following routes, and attach the `aaw-admin-auth` integration to each one:
+   - `POST /auth/register`
+   - `GET /stores/check`
+   - `GET /catalog/{store}/products`
+   - `GET /store`
+   - `PUT /store`
+
+   CORS already allows `PUT`. Under **Protect → Throttling**, keep a rate limit on the stage, because `POST /auth/register` is public.
+3. **Move the existing products into the Demo store.** Run this once from `backend-api/`, with the same service account as the Lambda. First do a dry run, then run it for real:
+
+   ```powershell
+   $env:FIREBASE_SERVICE_ACCOUNT_BASE64 = "<the same value as the Lambda's variable>"
+   node scripts/migrate-demo-store.mjs --admin-email=you@example.com --dry-run
+   node scripts/migrate-demo-store.mjs --admin-email=you@example.com
+   ```
+
+   It does three things:
+   - creates the store `demo` (named "Demo"), owned by that admin account;
+   - puts every existing product into it;
+   - clears the admin's device binding. The admin panel now lives on catalog24.in, where the browser has a new device id. The first login there binds the device again.
+4. **Website.** Deploy the website. It loads each store from `GET /catalog/{store}/products`.
+5. **Wildcard subdomain.** In **Amplify → Hosting → Custom domains → catalog24.in → Manage subdomains**, add the subdomain `*` pointing to the production branch. If the domain's DNS isn't on Route 53, add the `CNAME` record for `*.catalog24.in` that Amplify shows. Amplify issues the wildcard certificate.
+6. **Check.**
+   - `https://demo.catalog24.in` shows the existing products.
+   - `https://catalog24.in/register` creates a store.
+   - The new store's catalog opens at `https://<slug>.catalog24.in`.
+
+Locally, open `http://catalog24.localhost:3000/register` and `http://<slug>.localhost:3000`. Browsers send any `*.localhost` to your own machine, so no setup is needed.
+
+### Adding product limits and store on/off to an existing deployment
+
+Every store has a product limit and an active flag in `stores/{slug}`:
+
+- **`productLimit`:** new stores get 20. A store without the field (such as the Demo store) is unlimited.
+  - `POST /products` returns 403 `PRODUCT_LIMIT` at the limit.
+  - `POST /products/import` only imports up to the limit and reports `limitReached`.
+- **`active`:** a missing field counts as active. When it's `false`:
+  - the owner can't log in, and open sessions end on their next request (403 `STORE_INACTIVE`);
+  - `GET /catalog/{store}/products` returns 403 `STORE_INACTIVE` with only the store's name, so the website shows "Store unavailable".
+
+Super admins (`SUPER_ADMIN_EMAILS`) change both on the website's **All stores** page (`/admin/stores`). They are never blocked by their own store's status.
+
+1. Run `npm run package` and upload `lambda.zip`.
+2. Add the environment variable `SUPER_ADMIN_EMAILS` (for example `admin@allaboutweb.com`).
+3. In API Gateway, add these routes with the `aaw-admin-auth` integration:
+   - `GET /admin/stores`
+   - `PUT /admin/stores/{slug}`
+
+### Adding photo detection to an existing deployment
+
+When a photo is added to a new product, the admin form fills in the name, category, subcategory, description, colours, material and wood type from it. The Lambda asks Claude (model `claude-haiku-5-5`) to identify the product.
+
+1. **Get an Anthropic API key.**
+   1. Sign up at <https://platform.claude.com>.
+   2. Under **Settings → Billing**, add a card and buy credits. Billing is prepaid: each detection is deducted from the balance. You can turn on auto-reload and set a monthly spend limit.
+   3. Under **Settings → API Keys**, create a key.
+   4. Each detection costs about $0.0007, so 1,000 products cost about $0.65. Prices can change.
+2. Run `npm install` and then `npm run package`. The zip now includes the Anthropic SDK. Upload it to the `aaw-admin-auth` function.
+3. Under **Configuration → Environment variables**, add `ANTHROPIC_API_KEY` with the key.
+   - Optional: set `ANTHROPIC_MODEL` to use a different Claude model, for example `claude-sonnet-5-5`, which is more accurate but about 20 times the price.
+4. Under **Configuration → General configuration**, raise **Timeout** to `30 sec`. A detection usually takes 2–6 seconds, but this leaves room for one retry.
+5. In API Gateway, add the route `POST /products/detect` and attach the `aaw-admin-auth` integration to it. API Gateway's integration timeout is 30 seconds by default. Leave it at that.
+
+If the key is missing or invalid, the admin form shows "Photo detection is not set up". You can then still fill in the name, category and subcategory by hand and click **Retry** on the photo.
+
 ---
 
 ## Error codes returned by the API
@@ -251,6 +334,16 @@ No CORS change is needed: the website fetches this route from its own server, no
 | 401 | `NO_SESSION` / `SESSION_INVALID` / `SESSION_EXPIRED` / `DEVICE_RESET` | Session check failed |
 | 404 | `NOT_FOUND` | Unknown route, or the product id does not exist |
 | 403 | `DEVICE_LOCKED` | The user is bound to a different device ("Logged in into another device") |
+| 403 | `NO_STORE` | The account has no store (`users/{uid}.storeSlug` is missing) |
+| 403 | `STORE_INACTIVE` | The store has been deactivated by a super admin |
+| 403 | `PRODUCT_LIMIT` | The store has reached its product limit |
+| 403 | `FORBIDDEN` | A super-admin route called by someone else |
+| 404 | `STORE_NOT_FOUND` | No store with that slug |
+| 409 | `STORE_TAKEN` / `EMAIL_TAKEN` | Registration: the store name or the email is already used |
 | 403 | `USER_DISABLED` | The account is disabled in Firebase Auth |
 | 429 | `TOO_MANY_ATTEMPTS` | Firebase rate-limited this account |
+| 422 | `NOT_DETECTED` | Photo detection couldn't identify the product (or the model declined) |
+| 429 | `RATE_LIMITED` | Too many photo detections at once (Anthropic rate limit) |
+| 502 | `DETECT_FAILED` | The Claude API couldn't be reached. Check CloudWatch logs |
+| 503 | `NOT_CONFIGURED` | `ANTHROPIC_API_KEY` is missing or invalid |
 | 500/502 | `INTERNAL` / `AUTH_PROVIDER_ERROR` | Check CloudWatch logs for the Lambda |

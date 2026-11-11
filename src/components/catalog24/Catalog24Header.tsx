@@ -92,6 +92,13 @@ export default function Catalog24Header() {
           </nav>
 
           <div className="flex items-center gap-2">
+            {/* Self-serve: create a store and manage it yourself (catalog24.in/register). */}
+            <Link
+              href="/register"
+              className="hidden h-10 shrink-0 items-center rounded-full border border-line bg-white px-4 text-sm font-semibold text-ink transition hover:border-ink/30 sm:inline-flex"
+            >
+              Create your store
+            </Link>
             <a
               href={CATALOG24_WHATSAPP_HREF}
               target="_blank"

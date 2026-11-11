@@ -1,25 +1,13 @@
 "use client";
 
 import type { MouseEvent } from "react";
-import {
-  Archive,
-  Armchair,
-  BedDouble,
-  ChevronRight,
-  Coffee,
-  DoorClosed,
-  Eye,
-  EyeOff,
-  Package,
-  Pencil,
-  Sofa,
-  Table2,
-  Trash2,
-  UtensilsCrossed,
-} from "lucide-react";
-import { formatINR } from "@/components/furniture-catalog/data";
+import { ChevronRight, Eye, EyeOff, Pencil, Table2, Trash2 } from "lucide-react";
+import { formatINR, formatPrice } from "@/components/furniture-catalog/data";
 import { discountPercent, type Product } from "@/lib/adminProducts";
+import { categoryLabel } from "@/lib/taxonomy";
+import CategoryIcon from "@/components/CategoryIcon";
 import { Badge, Skeleton, Spinner, formatRelative } from "../ui";
+import { ripple } from "../ripple";
 
 type Props = {
   products: Product[];
@@ -29,17 +17,6 @@ type Props = {
   togglingId: string | null;
 };
 
-// "Table" is the old name of CenterTable, kept for products saved before the rename.
-const CATEGORY_ICONS = {
-  Sofa,
-  Wardrobe: DoorClosed,
-  Dresser: Archive,
-  Bed: BedDouble,
-  Dining: UtensilsCrossed,
-  CenterTable: Coffee,
-  Chair: Armchair,
-  Table: Table2,
-} as const;
 
 // The main image, or a stand-in: category icon on the product's first colour.
 export function ProductThumb({
@@ -63,7 +40,6 @@ export function ProductThumb({
       </span>
     );
   }
-  const Icon = CATEGORY_ICONS[product.categoryName as keyof typeof CATEGORY_ICONS] ?? Package;
   const hex = product.colors[0]?.hex ?? "#8B5A2B";
   return (
     <span
@@ -71,7 +47,12 @@ export function ProductThumb({
       style={{ backgroundColor: `${hex}1F`, color: hex }}
       aria-hidden
     >
-      <Icon className="h-[45%] w-[45%]" strokeWidth={1.75} />
+      {/* Old "Table" category name (before CenterTable) keeps its table icon. */}
+      {product.categoryName === "Table" ? (
+        <Table2 className="h-[45%] w-[45%]" strokeWidth={1.75} />
+      ) : (
+        <CategoryIcon category={product.categoryName} className="h-[45%] w-[45%]" strokeWidth={1.75} />
+      )}
     </span>
   );
 }
@@ -92,7 +73,7 @@ function Price({ product, align = "right" }: { product: Product; align?: "left" 
   const off = discountPercent(product.price, product.originalPrice);
   return (
     <div className={`tabular-nums ${align === "right" ? "text-right" : ""}`}>
-      <p className="text-sm font-semibold text-ink">{formatINR(product.price)}</p>
+      <p className="text-sm font-semibold text-ink">{formatPrice(product.price)}</p>
       {off > 0 && (
         <p className="text-xs text-slate">
           <span className="line-through">{formatINR(product.originalPrice)}</span>
@@ -104,7 +85,7 @@ function Price({ product, align = "right" }: { product: Product; align?: "left" 
 }
 
 const iconBtn =
-  "grid h-8 w-8 place-items-center rounded-btn text-slate transition-colors hover:bg-ink/[0.06] hover:text-ink disabled:opacity-50";
+  "grid h-8 w-8 place-items-center rounded-md text-slate transition-colors hover:bg-ink/[0.06] hover:text-ink disabled:opacity-50";
 
 export default function ProductTable({ products, onEdit, onDelete, onToggleActive, togglingId }: Props) {
   const stop = (fn: () => void) => (e: MouseEvent) => {
@@ -154,7 +135,7 @@ export default function ProductTable({ products, onEdit, onDelete, onToggleActiv
                     </div>
                   </td>
                   <td className="px-3 py-3">
-                    <p className="font-medium text-ink">{p.categoryName || "—"}</p>
+                    <p className="font-medium text-ink">{p.categoryName ? categoryLabel(p.categoryName) : "—"}</p>
                     <p className="text-xs text-slate">{p.subcategoryName}</p>
                   </td>
                   <td className="whitespace-nowrap px-3 py-3">
@@ -212,17 +193,18 @@ export default function ProductTable({ products, onEdit, onDelete, onToggleActiv
             <button
               type="button"
               onClick={() => onEdit(p)}
-              className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors active:bg-paper"
+              onPointerDown={ripple}
+              className="relative flex min-h-[76px] w-full items-center gap-3 overflow-hidden px-3 py-2.5 text-left transition-colors active:bg-paper sm:px-4 sm:py-3"
             >
-              <ProductThumb product={p} className="h-11 w-11" />
+              <ProductThumb product={p} className="h-14 w-14" rounded="rounded-md" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-ink">{p.productName || "Untitled product"}</p>
                 <p className="truncate text-xs text-slate">
-                  {p.categoryName}
+                  {categoryLabel(p.categoryName)}
                   {p.subcategoryName && ` · ${p.subcategoryName}`}
                 </p>
                 <div className="mt-1.5 flex items-center gap-2">
-                  <span className="text-[13px] font-semibold tabular-nums text-ink">{formatINR(p.price)}</span>
+                  <span className="text-[13px] font-semibold tabular-nums text-ink">{formatPrice(p.price)}</span>
                   <StatusBadge active={p.isActive} />
                 </div>
               </div>
@@ -236,22 +218,22 @@ export default function ProductTable({ products, onEdit, onDelete, onToggleActiv
 }
 
 const floatingBtn =
-  "grid h-8 w-8 place-items-center rounded-full bg-white/95 text-slate shadow-[0_1px_3px_rgba(1,18,60,0.18)] transition-colors hover:text-ink disabled:opacity-50";
+  "grid h-9 w-9 place-items-center rounded-full bg-white/95 text-slate shadow-[0_1px_3px_rgba(1,18,60,0.18)] transition-colors hover:text-ink disabled:opacity-50";
 
 // Card grid: a large photo per product. Clicking a card opens the editor; the
 // hide/publish and delete buttons sit on the photo (always visible on touch
 // screens, on hover with a mouse).
 export function ProductGrid({ products, onEdit, onDelete, onToggleActive, togglingId }: Props) {
   return (
-    <ul className="grid grid-cols-2 gap-3 p-3 sm:grid-cols-3 sm:p-4 lg:grid-cols-4 xl:grid-cols-5">
+    <ul className="grid grid-cols-2 gap-2 p-2 sm:grid-cols-3 sm:gap-3 sm:p-4 lg:grid-cols-4 xl:grid-cols-5">
       {products.map((p) => {
         const toggling = togglingId === p.id;
         return (
           <li
             key={p.id}
-            className="group relative flex flex-col overflow-hidden rounded-card border border-line bg-white transition-shadow hover:shadow-[0_8px_24px_-12px_rgba(1,18,60,0.25)]"
+            className="group relative flex flex-col overflow-hidden rounded-lg border border-line bg-white transition-shadow hover:shadow-[0_8px_24px_-12px_rgba(1,18,60,0.25)]"
           >
-            <button type="button" onClick={() => onEdit(p)} className="flex flex-1 flex-col text-left">
+            <button type="button" onClick={() => onEdit(p)} onPointerDown={ripple} className="relative flex flex-1 flex-col overflow-hidden text-left">
               <div className="relative w-full">
                 <ProductThumb product={p} className="aspect-square w-full" rounded="rounded-none" fit="contain" />
                 {/* Only flag the exception: published is the normal state. */}
@@ -261,7 +243,7 @@ export function ProductGrid({ products, onEdit, onDelete, onToggleActive, toggli
                   </span>
                 )}
               </div>
-              <div className="flex flex-1 flex-col gap-0.5 p-3">
+              <div className="flex flex-1 flex-col gap-0.5 p-2.5 sm:p-3">
                 <p className="truncate text-[13px] font-semibold leading-snug text-ink group-hover:text-primary" title={p.productName}>
                   {p.productName || <span className="italic text-slate">Untitled product</span>}
                 </p>
@@ -269,10 +251,10 @@ export function ProductGrid({ products, onEdit, onDelete, onToggleActive, toggli
                   className="truncate text-xs text-slate"
                   title={[p.categoryName, p.subcategoryName].filter(Boolean).join(" · ")}
                 >
-                  {p.categoryName}
+                  {categoryLabel(p.categoryName)}
                   {p.subcategoryName && ` · ${p.subcategoryName}`}
                 </p>
-                <p className="mt-auto pt-1 text-sm font-semibold tabular-nums text-ink">{formatINR(p.price)}</p>
+                <p className="mt-auto pt-1 text-sm font-semibold tabular-nums text-ink">{formatPrice(p.price)}</p>
               </div>
             </button>
 
@@ -309,10 +291,10 @@ export function ProductGridSkeleton({ cards = 10 }: { cards?: number }) {
     <ul
       aria-busy="true"
       aria-label="Loading products"
-      className="grid grid-cols-2 gap-3 p-3 sm:grid-cols-3 sm:p-4 lg:grid-cols-4 xl:grid-cols-5"
+      className="grid grid-cols-2 gap-2 p-2 sm:grid-cols-3 sm:gap-3 sm:p-4 lg:grid-cols-4 xl:grid-cols-5"
     >
       {Array.from({ length: cards }, (_, i) => (
-        <li key={i} className="overflow-hidden rounded-card border border-line bg-white">
+        <li key={i} className="overflow-hidden rounded-lg border border-line bg-white">
           <Skeleton className="aspect-square w-full rounded-none" />
           <div className="flex flex-col gap-2 p-3">
             <Skeleton className="h-3.5 w-4/5" />
@@ -331,7 +313,7 @@ export function ProductTableSkeleton({ rows = 6 }: { rows?: number }) {
       <div className="hidden h-10 border-b border-line bg-paper/70 md:block" />
       <ul className="divide-y divide-line">
         {Array.from({ length: rows }, (_, i) => (
-          <li key={i} className="flex items-center gap-3 px-4 py-3.5 md:px-5">
+          <li key={i} className="flex items-center gap-3 px-3 py-3 sm:px-4 sm:py-3.5 md:px-5">
             <Skeleton className="h-10 w-10 shrink-0 rounded-lg" />
             <div className="flex flex-1 flex-col gap-2">
               <Skeleton className="h-3.5 w-2/5 min-w-32" />

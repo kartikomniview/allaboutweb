@@ -1,12 +1,36 @@
 // Client-side helpers for the admin auth API (backend-api/ → API Gateway + Lambda).
 // Browser-only: everything here touches localStorage.
 
+import { toBusinessTypes, type BusinessTypeId } from "./taxonomy";
+
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/+$/, "");
 const DEVICE_KEY = "aaw_device_id";
 const TOKEN_KEY = "aaw_admin_token";
 const EMAIL_KEY = "aaw_admin_email";
 
-export type AdminUser = { uid: string; email: string };
+/** The store the account owns: `slug` is its subdomain (demostore.catalog24.in). */
+export type AdminStore = {
+  slug: string;
+  name: string;
+  businessTypes: BusinessTypeId[];
+  /** Most products the store may have; null = unlimited. */
+  productLimit: number | null;
+  active: boolean;
+};
+
+// Fills fields missing from older stores and API builds.
+const withStore = (user: AdminUser): AdminUser => ({
+  ...user,
+  isSuperAdmin: user.isSuperAdmin === true,
+  store: {
+    ...user.store,
+    businessTypes: toBusinessTypes(user.store.businessTypes),
+    productLimit: typeof user.store.productLimit === "number" ? user.store.productLimit : null,
+    active: user.store.active !== false,
+  },
+});
+/** isSuperAdmin: may manage every store (the All stores page). */
+export type AdminUser = { uid: string; email: string; store: AdminStore; isSuperAdmin: boolean };
 
 export class AuthError extends Error {
   status: number;
@@ -98,8 +122,42 @@ export async function login(email: string, password: string): Promise<AdminUser>
     method: "POST",
     body: JSON.stringify({ email, password, deviceId: getDeviceId() }),
   });
+  // An API from before stores existed logs in without a store; the admin can't work with that.
+  if (!data.user?.store?.slug) {
+    throw new AuthError(
+      500,
+      "NO_STORE",
+      "This account has no store yet. Deploy the latest backend and run the Demo store migration.",
+    );
+  }
   localStorage.setItem(TOKEN_KEY, data.token);
-  return data.user;
+  return withStore(data.user);
+}
+
+export type Registration = {
+  storeName: string;
+  /** Optional: added later in Store settings. */
+  whatsapp?: string;
+  businessTypes: BusinessTypeId[];
+  email: string;
+  password: string;
+};
+
+// Creates the store and the owner's account, and logs them in on this device.
+export async function register(details: Registration): Promise<AdminUser> {
+  const data = await apiRequest<{ token: string; user: AdminUser }>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify({ ...details, deviceId: getDeviceId() }),
+  });
+  localStorage.setItem(TOKEN_KEY, data.token);
+  return withStore(data.user);
+}
+
+export type StoreNameCheck = { slug: string; available: boolean; message: string };
+
+// Whether a store name is still free (for the registration form's live check).
+export function checkStoreName(name: string): Promise<StoreNameCheck> {
+  return apiRequest<StoreNameCheck>(`/stores/check?name=${encodeURIComponent(name)}`);
 }
 
 // Returns the logged-in user, or null when there is no valid session.
@@ -107,9 +165,15 @@ export async function checkSession(): Promise<AdminUser | null> {
   if (!getToken()) return null;
   try {
     const data = await apiRequest<{ user: AdminUser }>("/auth/session");
-    return data.user;
+    if (!data.user?.store?.slug) {
+      clearToken();
+      return null;
+    }
+    return withStore(data.user);
   } catch (err) {
-    if (err instanceof AuthError && err.status === 401) {
+    // 401: no valid session. 403 NO_STORE: an account without a store.
+    // 403 STORE_INACTIVE: the store was deactivated (the login page explains it).
+    if (err instanceof AuthError && (err.status === 401 || err.code === "NO_STORE" || err.code === "STORE_INACTIVE")) {
       clearToken();
       return null;
     }

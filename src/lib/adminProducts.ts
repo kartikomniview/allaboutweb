@@ -5,6 +5,9 @@ import { apiRequest, sessionCredentials } from "./adminAuth";
 import { refreshCatalog } from "./catalogActions";
 
 export type ProductColor = { name: string; hex: string };
+// A specification row, e.g. { label: "Wood", value: "Sheesham" } or { label: "Bulb", value: "LED" }.
+export type ProductSpec = { label: string; value: string };
+export const MAX_SPECS = 12;
 
 // The writable fields of a product document.
 export type ProductInput = {
@@ -14,12 +17,17 @@ export type ProductInput = {
   price: number;
   originalPrice: number;
   tags: string[];
+  // Extra search words, never shown (the first tag is the card badge). Optional
+  // so the starter products in furniture-catalog/data.ts can leave it out.
+  keywords?: string[];
   rating: number;
   reviewCount: number;
   colors: ProductColor[];
   material: string;
   dimensions: string;
+  // Older furniture field; normalizeProduct turns it into a "Wood" spec. The form saves it empty.
   woodType: string;
+  specs?: ProductSpec[];
   stockStatus: string;
   description: string;
   highlights: string[];
@@ -36,6 +44,9 @@ export type ProductInput = {
 export type CatalogProduct = ProductInput & { id: string };
 
 export type Product = CatalogProduct & {
+  // Always filled by normalizeProduct.
+  keywords: string[];
+  specs: ProductSpec[];
   createdAt: string | null;
   updatedAt: string | null;
 };
@@ -43,6 +54,20 @@ export type Product = CatalogProduct & {
 const str = (v: unknown) => (typeof v === "string" ? v : "");
 const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
 const strList = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
+
+// The product's specs, with the older woodType field as a "Wood" spec (first) when
+// no Wood spec exists yet.
+export function specsOf(raw: { specs?: unknown; woodType?: unknown }): ProductSpec[] {
+  const specs = Array.isArray(raw.specs)
+    ? raw.specs
+        .filter((s): s is ProductSpec => typeof s?.label === "string" && typeof s?.value === "string")
+        .map((s) => ({ label: s.label.trim(), value: s.value.trim() }))
+        .filter((s) => s.label && s.value)
+    : [];
+  const wood = str(raw.woodType).trim();
+  if (wood && !specs.some((s) => s.label.toLowerCase() === "wood")) specs.unshift({ label: "Wood", value: wood });
+  return specs.slice(0, MAX_SPECS);
+}
 
 // Fills in missing or wrongly typed fields, e.g. on documents added by hand in
 // the Firebase console, so the UI can rely on the Product shape.
@@ -57,6 +82,7 @@ export function normalizeProduct(raw: Record<string, unknown>): Product {
     price,
     originalPrice: typeof raw.originalPrice === "number" ? raw.originalPrice : price,
     tags: strList(raw.tags),
+    keywords: strList(raw.keywords),
     rating: num(raw.rating),
     reviewCount: num(raw.reviewCount),
     colors: Array.isArray(raw.colors)
@@ -66,7 +92,8 @@ export function normalizeProduct(raw: Record<string, unknown>): Product {
       : [],
     material: str(raw.material),
     dimensions: str(raw.dimensions),
-    woodType: str(raw.woodType),
+    woodType: "",
+    specs: specsOf(raw),
     stockStatus: str(raw.stockStatus),
     description: str(raw.description),
     highlights: strList(raw.highlights),
@@ -118,8 +145,8 @@ export async function deleteProduct(id: string): Promise<void> {
 // Creates products with fixed ids; ids that already exist are skipped.
 export async function importProducts(
   products: CatalogProduct[],
-): Promise<{ created: number; skipped: number }> {
-  const result = await apiRequest<{ created: number; skipped: number }>("/products/import", {
+): Promise<{ created: number; skipped: number; limitReached?: boolean }> {
+  const result = await apiRequest<{ created: number; skipped: number; limitReached?: boolean }>("/products/import", {
     method: "POST",
     body: JSON.stringify({ products }),
   });
@@ -135,12 +162,14 @@ export function productToInput(p: Product): ProductInput {
     price: p.price,
     originalPrice: p.originalPrice,
     tags: p.tags,
+    keywords: p.keywords ?? [],
     rating: p.rating,
     reviewCount: p.reviewCount,
     colors: p.colors,
     material: p.material,
     dimensions: p.dimensions,
-    woodType: p.woodType,
+    woodType: "",
+    specs: specsOf(p),
     stockStatus: p.stockStatus,
     description: p.description,
     highlights: p.highlights,
@@ -162,20 +191,28 @@ export function sortProducts(products: Product[]): Product[] {
 }
 
 export const discountPercent =(price: number, originalPrice: number) =>
-  originalPrice > price ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
+  price > 0 && originalPrice > price ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
 
 /* ---------- Image uploads (browser → S3, signed by the Lambda) ---------- */
 
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+// Picked files are resized and converted to WebP in the browser first, so the
+// original can be bigger than what S3 accepts.
+export const MAX_SOURCE_IMAGE_BYTES = 30 * 1024 * 1024;
 export const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 
 export type ImageUpload = { uploadUrl: string; fields: Record<string, string>; publicUrl: string };
 
-// Returns an error message for files S3 would reject, or null.
+// Checks a picked file before it is converted. Returns an error message, or null.
 export function checkImageFile(file: File): string | null {
   if (!IMAGE_TYPES.includes(file.type)) return `${file.name}: use JPG, PNG, WebP or AVIF`;
-  if (file.size > MAX_IMAGE_BYTES) return `${file.name}: larger than 5 MB`;
+  if (file.size > MAX_SOURCE_IMAGE_BYTES) return `${file.name}: larger than 30 MB`;
   return null;
+}
+
+// Checks the converted file against the S3 limit. Returns an error message, or null.
+export function checkImageSize(file: File): string | null {
+  return file.size > MAX_IMAGE_BYTES ? `${file.name}: still larger than 5 MB after optimizing` : null;
 }
 
 // One signed upload form per file. The S3 folder comes from the product's

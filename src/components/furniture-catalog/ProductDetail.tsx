@@ -2,15 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { ArrowLeft, Check, Layers, Ruler, Share2, ShoppingCart, Star, Trees, Truck } from 'lucide-react';
-import type { CatalogProduct } from '@/lib/adminProducts';
-import { TRUST_POINTS, WHATSAPP_MESSAGES, formatINR } from './data';
+import { ArrowLeft, Check, Layers, Ruler, Share2, ShoppingCart, SlidersHorizontal, Star, Trees, Truck } from 'lucide-react';
+import { specsOf, type CatalogProduct } from '@/lib/adminProducts';
+import { PRICE_ON_REQUEST, TRUST_POINTS, WHATSAPP_MESSAGES, formatINR, hasPrice } from './data';
 import ImageViewer, { rememberImageSize } from './ImageViewer';
 import {
   ProductVisual,
   SaveButton,
   WhatsAppIcon,
-  getWhatsAppUrl,
   useCatalog,
 } from './shared';
 
@@ -19,7 +18,8 @@ const MAX_HIGHLIGHTS = 3;
 // Full-screen product page. It renders on top of the catalog (which stays mounted
 // underneath), so "back" returns to the same tab and scroll position.
 export default function ProductDetail({ product }: { product: CatalogProduct }) {
-  const { href, navigate, isInCart, addToCart, closeProduct: goBack, onWhatsAppLinkClick } = useCatalog();
+  const { store, whatsAppUrl, href, navigate, isInCart, addToCart, closeProduct: goBack, onWhatsAppLinkClick } =
+    useCatalog();
   const inCart = isInCart(product.id);
 
   const images = [...new Set([product.mainImageUrl, ...product.images].filter(Boolean))];
@@ -30,15 +30,20 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
   const galleryRef = useRef<HTMLDivElement>(null);
 
   const discount =
-    product.originalPrice > product.price
+    hasPrice(product) && product.originalPrice > product.price
       ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
       : 0;
 
-  // Short, scannable details — no paragraphs on a catalog page
+  // Short, scannable details — no paragraphs on a catalog page. Specs come in
+  // between: Wood, Bulb, Width... whatever fits the product.
   const details = [
-    { icon: Trees, label: 'Wood', value: product.woodType },
-    { icon: Ruler, label: 'Size', value: product.dimensions },
     { icon: Layers, label: 'Material', value: product.material },
+    { icon: Ruler, label: 'Size', value: product.dimensions },
+    ...specsOf(product).map((spec) => ({
+      icon: spec.label.toLowerCase() === 'wood' ? Trees : SlidersHorizontal,
+      label: spec.label,
+      value: spec.value,
+    })),
     { icon: Truck, label: 'Delivery', value: product.stockStatus },
   ].filter((detail) => detail.value);
   const highlights = product.highlights.slice(0, MAX_HIGHLIGHTS);
@@ -81,11 +86,11 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
     <div className="fixed inset-0 z-50 flex justify-center bg-black/40">
       <section
         aria-label={product.productName}
-        className="fc-page-enter relative flex h-full w-full flex-col bg-[#FAF9F6] sm:max-w-[430px] sm:shadow-2xl"
+        className="fc-page-enter relative flex h-full w-full flex-col bg-white sm:max-w-[430px] sm:shadow-2xl"
       >
         <div className="flex-1 overflow-y-auto overscroll-contain">
           {/* Photo gallery — swipe when there is more than one image; tap to open full screen */}
-          <div ref={heroRef} className="relative aspect-square bg-gradient-to-b from-[#FDFBF7] to-[#F5ECE0]">
+          <div ref={heroRef} className="relative aspect-square bg-neutral-100">
             {images.length > 0 ? (
               <div
                 ref={galleryRef}
@@ -147,7 +152,7 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
             {/* Type, rating, name & price */}
             <div>
               <p className="flex items-center gap-1.5 text-[11px] font-medium text-neutral-500">
-                <span className="font-semibold text-[#8B5A2B]">{product.subcategoryName || product.categoryName}</span>
+                <span className="font-semibold text-primary">{product.subcategoryName || product.categoryName}</span>
                 {product.rating > 0 && (
                   <>
                     <span aria-hidden="true">·</span>
@@ -159,7 +164,11 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
               </p>
               <h1 className="mt-1 text-lg font-bold leading-snug text-[#111111]">{product.productName}</h1>
               <p className="mt-1 flex items-baseline gap-2 tabular-nums">
-                <span className="text-2xl font-extrabold text-[#111111]">{formatINR(product.price)}</span>
+                {hasPrice(product) ? (
+                  <span className="text-2xl font-extrabold text-[#111111]">{formatINR(product.price)}</span>
+                ) : (
+                  <span className="text-base font-bold text-[#111111]">{PRICE_ON_REQUEST}</span>
+                )}
                 {discount > 0 && (
                   <>
                     <span className="text-sm text-neutral-400 line-through">{formatINR(product.originalPrice)}</span>
@@ -175,7 +184,7 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
                     <span
                       key={color.name}
                       title={color.name}
-                      className="h-5 w-5 rounded-full ring-1 ring-black/10 ring-offset-2 ring-offset-[#FAF9F6]"
+                      className="h-5 w-5 rounded-full ring-1 ring-black/10 ring-offset-2 ring-offset-white"
                       style={{ backgroundColor: color.hex }}
                     />
                   ))}
@@ -185,11 +194,11 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
 
             {/* Key details — one short row each */}
             {details.length > 0 && (
-              <dl className="divide-y divide-neutral-100 rounded-2xl bg-white px-3.5 shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
-                {details.map(({ icon: Icon, label, value }) => (
-                  <div key={label} className="flex items-center gap-3 py-2.5 text-xs">
-                    <Icon className="h-4 w-4 shrink-0 text-[#8B5A2B]" />
-                    <dt className="w-16 shrink-0 text-neutral-500">{label}</dt>
+              <dl className="divide-y divide-neutral-100 rounded-lg border border-neutral-200 bg-white px-3.5">
+                {details.map(({ icon: Icon, label, value }, i) => (
+                  <div key={`${label}-${i}`} className="flex items-center gap-3 py-2.5 text-xs">
+                    <Icon className="h-4 w-4 shrink-0 text-neutral-500" />
+                    <dt className="w-20 shrink-0 truncate text-neutral-500">{label}</dt>
                     <dd className="min-w-0 flex-1 truncate font-medium text-neutral-800">{value}</dd>
                   </div>
                 ))}
@@ -210,15 +219,17 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
               </ul>
             )}
 
-            {/* Store promises */}
-            <div className="grid grid-cols-3 gap-2 text-center">
-              {TRUST_POINTS.map(({ icon: Icon, title }) => (
-                <div key={title} className="rounded-xl bg-[#FAF5EE] px-1.5 py-2.5">
-                  <Icon className="mx-auto h-4 w-4 text-[#8B5A2B]" />
-                  <p className="mt-1 text-[10px] font-semibold leading-tight text-neutral-800">{title}</p>
-                </div>
-              ))}
-            </div>
+            {/* Store promises (the demo's sample furniture promises) */}
+            {store.isDemo && (
+              <div className="grid grid-cols-3 gap-2 text-center">
+                {TRUST_POINTS.map(({ icon: Icon, title }) => (
+                  <div key={title} className="rounded-md bg-neutral-100 px-1.5 py-2.5">
+                    <Icon className="mx-auto h-4 w-4 text-neutral-600" />
+                    <p className="mt-1 text-[10px] font-semibold leading-tight text-neutral-800">{title}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -228,7 +239,11 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
           <div className="min-w-0 flex-1 pr-1">
             <p className="truncate text-[11px] text-neutral-500">{product.productName}</p>
             <p className="flex items-baseline gap-1.5 tabular-nums">
-              <span className="text-[17px] font-bold leading-tight text-[#111111]">{formatINR(product.price)}</span>
+              {hasPrice(product) ? (
+                <span className="text-[17px] font-bold leading-tight text-[#111111]">{formatINR(product.price)}</span>
+              ) : (
+                <span className="text-[13px] font-bold leading-tight text-[#111111]">{PRICE_ON_REQUEST}</span>
+              )}
               {discount > 0 && (
                 <>
                   <span className="truncate text-[11px] text-neutral-400 line-through">{formatINR(product.originalPrice)}</span>
@@ -249,7 +264,7 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
             {inCart ? 'Go to cart' : 'Add to cart'}
           </button>
           <a
-            href={getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.product(product))}
+            href={whatsAppUrl(WHATSAPP_MESSAGES.product(store.name, product))}
             onClick={onWhatsAppLinkClick}
             target="_blank"
             rel="noopener noreferrer"

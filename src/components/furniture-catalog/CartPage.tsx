@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { ArrowRight, ShoppingCart, Trash2 } from 'lucide-react';
 import { discountPercent } from '@/lib/adminProducts';
-import { WHATSAPP_MESSAGES, formatINR } from './data';
-import { ProductVisual, WhatsAppIcon, getWhatsAppUrl, productSubPath, useCatalog } from './shared';
+import { PRICE_ON_REQUEST, WHATSAPP_MESSAGES, formatINR, formatPrice, hasPrice } from './data';
+import { ProductVisual, WhatsAppIcon, productSubPath, useCatalog } from './shared';
 
 // Flat, bordered panels with barely-rounded corners (matches the product page footer).
 const panel = 'rounded-md border border-neutral-200 bg-white';
@@ -12,15 +12,29 @@ const panel = 'rounded-md border border-neutral-200 bg-white';
 // The Cart tab (/app/catalog/furniture/cart): the products the shopper added, a price
 // breakdown and one WhatsApp button that asks the store for its best price on everything.
 export default function CartPage({ onBrowse }: { onBrowse: () => void }) {
-  const { products, href, embedded, cart, removeFromCart, clearCart, markInAppNavigation, onWhatsAppLinkClick } =
-    useCatalog();
+  const {
+    store,
+    whatsAppUrl,
+    products,
+    href,
+    embedded,
+    cart,
+    removeFromCart,
+    clearCart,
+    markInAppNavigation,
+    onWhatsAppLinkClick,
+  } = useCatalog();
 
   // Products can be unpublished while they sit in a cart; those are skipped.
   const items = cart.flatMap((id) => products.find((p) => p.id === id) ?? []);
   const itemCount = items.length;
   const itemsLabel = `${itemCount} ${itemCount === 1 ? 'item' : 'items'}`;
-  const mrpTotal = items.reduce((sum, p) => sum + Math.max(p.originalPrice, p.price), 0);
-  const total = items.reduce((sum, p) => sum + p.price, 0);
+  // Products without a price (price on request) are left out of the totals.
+  const priced = items.filter(hasPrice);
+  const onRequest = itemCount - priced.length;
+  const pricedLabel = `${priced.length} ${priced.length === 1 ? 'item' : 'items'}`;
+  const mrpTotal = priced.reduce((sum, p) => sum + Math.max(p.originalPrice, p.price), 0);
+  const total = priced.reduce((sum, p) => sum + p.price, 0);
   const savings = mrpTotal - total;
 
   if (items.length === 0) {
@@ -66,7 +80,7 @@ export default function CartPage({ onBrowse }: { onBrowse: () => void }) {
                 scroll={false}
                 replace={embedded}
                 onClick={markInAppNavigation}
-                className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-[4px] bg-[#F5F1EA]"
+                className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-[4px] bg-neutral-100"
                 aria-label={product.productName}
               >
                 <ProductVisual product={product} sizes="72px" />
@@ -80,7 +94,7 @@ export default function CartPage({ onBrowse }: { onBrowse: () => void }) {
                   {product.productName}
                 </h3>
                 <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5 tabular-nums">
-                  <span className="text-sm font-semibold text-[#111111]">{formatINR(product.price)}</span>
+                  <span className="text-sm font-semibold text-[#111111]">{formatPrice(product.price)}</span>
                   {off > 0 && (
                     <>
                       <span className="text-[11px] text-neutral-400 line-through">{formatINR(product.originalPrice)}</span>
@@ -107,10 +121,20 @@ export default function CartPage({ onBrowse }: { onBrowse: () => void }) {
       <section aria-label="Price details" className={`${panel} p-3.5`}>
         <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-500">Price details</h3>
         <dl className="mt-3 space-y-2 text-[13px] tabular-nums">
-          <div className="flex justify-between text-neutral-600">
-            <dt>Price ({itemsLabel})</dt>
-            <dd>{formatINR(mrpTotal)}</dd>
-          </div>
+          {priced.length > 0 && (
+            <div className="flex justify-between text-neutral-600">
+              <dt>Price ({pricedLabel})</dt>
+              <dd>{formatINR(mrpTotal)}</dd>
+            </div>
+          )}
+          {onRequest > 0 && (
+            <div className="flex justify-between text-neutral-600">
+              <dt>{PRICE_ON_REQUEST}</dt>
+              <dd>
+                {onRequest} {onRequest === 1 ? 'item' : 'items'}
+              </dd>
+            </div>
+          )}
           {savings > 0 && (
             <div className="flex justify-between text-neutral-600">
               <dt>Discount</dt>
@@ -118,8 +142,8 @@ export default function CartPage({ onBrowse }: { onBrowse: () => void }) {
             </div>
           )}
           <div className="flex justify-between border-t border-neutral-200 pt-2.5 text-[15px] font-semibold text-[#111111]">
-            <dt>Total amount</dt>
-            <dd>{formatINR(total)}</dd>
+            <dt>{onRequest > 0 && total > 0 ? 'Listed total' : 'Total amount'}</dt>
+            <dd>{formatPrice(total)}</dd>
           </div>
         </dl>
         {savings > 0 && (
@@ -132,14 +156,14 @@ export default function CartPage({ onBrowse }: { onBrowse: () => void }) {
       {/* Best-price button — stays visible above the bottom navigation */}
       <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10">
         <a
-          href={getWhatsAppUrl(undefined, WHATSAPP_MESSAGES.cartEnquiry(items, total))}
+          href={whatsAppUrl(WHATSAPP_MESSAGES.cartEnquiry(store.name, items, total))}
           onClick={onWhatsAppLinkClick}
           target="_blank"
           rel="noopener noreferrer"
           className="flex h-12 items-center justify-between gap-3 rounded-[4px] bg-[#25D366] px-4 text-white shadow-[0_4px_12px_-4px_rgba(0,0,0,0.25)] transition-colors hover:bg-[#1fb855]"
         >
           <span className="leading-tight tabular-nums">
-            <span className="block text-[15px] font-bold">{formatINR(total)}</span>
+            <span className={`block font-bold ${total > 0 ? 'text-[15px]' : 'text-[13px]'}`}>{formatPrice(total)}</span>
             <span className="block text-[10px] text-white/85">{itemsLabel}</span>
           </span>
           <span className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.06em]">

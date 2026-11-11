@@ -44,21 +44,42 @@ export function slugify(text) {
   return slug || "untitled";
 }
 
-// ecatalog/{category}/{subcategory}/{product}/{time}-{random}.{ext}
+// Each store's images live under ecatalog/stores/{store}/. Images uploaded
+// before stores existed sit directly under ecatalog/ and belong to the demo store.
+const STORE_DIR = "stores";
+export const LEGACY_IMAGE_STORE = "demo";
+
+// ecatalog/stores/{store}/{category}/{subcategory}/{product}/{time}-{random}.{ext}
 // The random suffix keeps every key unique, so files can be cached forever.
-export function imageKey(categoryName, subcategoryName, productName, ext) {
+export function imageKey(storeSlug, categoryName, subcategoryName, productName, ext) {
   const name = `${Date.now().toString(36)}-${randomBytes(4).toString("hex")}.${ext}`;
-  return [PREFIX, slugify(categoryName), slugify(subcategoryName), slugify(productName), name].join("/");
+  return [
+    PREFIX,
+    STORE_DIR,
+    storeSlug,
+    slugify(categoryName),
+    slugify(subcategoryName),
+    slugify(productName),
+    name,
+  ].join("/");
 }
 
 export const isOwnImageUrl = (url) =>
   typeof url === "string" && url.startsWith(IMAGE_BASE) && url.length > IMAGE_BASE.length;
 
+// An image in this store's folder (or, for the demo store, an older image).
+export function isStoreImageUrl(url, storeSlug) {
+  if (!isOwnImageUrl(url)) return false;
+  const storesBase = `${IMAGE_BASE}${STORE_DIR}/`;
+  if (url.startsWith(`${storesBase}${storeSlug}/`)) return true;
+  return storeSlug === LEGACY_IMAGE_STORE && !url.startsWith(storesBase);
+}
+
 const keyFromUrl = (url) => (isOwnImageUrl(url) ? decodeURIComponent(url.slice(PUBLIC_BASE.length)) : null);
 
 // Signed upload forms the browser posts straight to S3. The policy pins the
 // key, the content type and the 5 MB size limit.
-export async function presignImageUploads(body) {
+export async function presignImageUploads(storeSlug, body) {
   const { categoryName, subcategoryName, productName, files } = body ?? {};
   for (const [field, value] of Object.entries({ categoryName, subcategoryName, productName })) {
     if (typeof value !== "string" || !value.trim()) throw bad(`${field} is required to upload images`);
@@ -72,7 +93,7 @@ export async function presignImageUploads(body) {
     if (typeof file.size !== "number" || file.size <= 0 || file.size > MAX_IMAGE_BYTES) {
       throw bad(`Image #${i + 1} must be smaller than 5 MB`);
     }
-    return { contentType: file.contentType, key: imageKey(categoryName, subcategoryName, productName, ext) };
+    return { contentType: file.contentType, key: imageKey(storeSlug, categoryName, subcategoryName, productName, ext) };
   });
 
   return Promise.all(
@@ -95,10 +116,11 @@ export async function presignImageUploads(body) {
   );
 }
 
-// Best-effort cleanup: only touches keys under the e-catalog prefix and never
+// Best-effort cleanup: only touches the given store's images and never
 // throws, so a failed delete can't fail the save that triggered it.
-export async function deleteImages(urls) {
-  const keys = [...new Set((urls ?? []).map(keyFromUrl).filter(Boolean))];
+export async function deleteImages(urls, storeSlug) {
+  const owned = (urls ?? []).filter((url) => isStoreImageUrl(url, storeSlug));
+  const keys = [...new Set(owned.map(keyFromUrl).filter(Boolean))];
   if (!keys.length) return;
   try {
     const res = await client().send(

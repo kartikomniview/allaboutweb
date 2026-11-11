@@ -2,101 +2,416 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowRight, ArrowUpRight, BookOpen } from "lucide-react";
-import { LIVE_CATALOG_PATH, useAdminUser } from "@/components/admin/AdminShell";
-import { Card, PageHeader, SectionLabel, Skeleton } from "@/components/admin/ui";
-import { listProducts } from "@/lib/adminProducts";
+import {
+  ArrowUpRight,
+  Check,
+  ChevronRight,
+  Copy,
+  Eye,
+  EyeOff,
+  Package,
+  Plus,
+  Share2,
+  Store,
+  type LucideIcon,
+} from "lucide-react";
+import { useAdminUser, useLiveCatalogUrl } from "@/components/admin/AdminShell";
+import { authButtonClass } from "@/components/admin/AuthLayout";
+import { ProductThumb } from "@/components/admin/ecatalog/ProductTable";
+import { ripple } from "@/components/admin/ripple";
+import { ProductLimitNotice, limitState } from "@/components/admin/ProductLimit";
+import { Badge, Card, Skeleton, buttonClass } from "@/components/admin/ui";
+import { formatPrice } from "@/components/furniture-catalog/data";
+import { listProducts, type Product } from "@/lib/adminProducts";
+import { getOwnStore } from "@/lib/adminStore";
+import { categoryLabel } from "@/lib/taxonomy";
 
-type Counts = { total: number; published: number; hidden: number };
+// Remembers (in this browser) that the owner has shared their catalog link.
+const sharedKey = (slug: string) => `c24_shared_${slug}`;
+function readShared(slug: string) {
+  try {
+    return localStorage.getItem(sharedKey(slug)) === "1";
+  } catch {
+    return false;
+  }
+}
+function saveShared(slug: string) {
+  try {
+    localStorage.setItem(sharedKey(slug), "1");
+  } catch {
+    // Storage unavailable (private mode): the checklist just shows it again.
+  }
+}
 
-function Stat({ label, value }: { label: string; value: number | null }) {
+async function copyText(text: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function Stat({
+  label,
+  value,
+  icon: Icon,
+  href,
+  of,
+}: {
+  label: string;
+  value: number | null;
+  icon: LucideIcon;
+  href: string;
+  /** The limit the value counts towards ("12 / 20"). */
+  of?: number | null;
+}) {
   return (
-    <div>
-      <dt className="text-xs font-medium text-slate">{label}</dt>
-      <dd className="mt-1 text-xl font-bold tabular-nums tracking-[-0.02em] text-ink">
-        {value === null ? <Skeleton className="h-6 w-10" /> : value}
-      </dd>
-    </div>
+    <Link
+      href={href}
+      onPointerDown={ripple}
+      className="relative flex flex-col gap-2 overflow-hidden rounded-lg border border-line bg-white p-3 transition-colors hover:bg-paper/60 active:scale-[0.98] sm:p-4"
+    >
+      <Icon className="h-4 w-4 text-slate" aria-hidden />
+      <span className="text-2xl font-bold tabular-nums tracking-[-0.02em] text-ink">
+        {value === null ? (
+          <Skeleton className="h-7 w-10" />
+        ) : (
+          <>
+            {value}
+            {of != null && <span className="text-sm font-semibold text-slate"> / {of}</span>}
+          </>
+        )}
+      </span>
+      {of != null && value !== null && (
+        <span className="h-1 overflow-hidden rounded-full bg-line" aria-hidden>
+          <span
+            className={`block h-full rounded-full ${value >= of ? "bg-red-500" : value / of >= 0.8 ? "bg-amber-500" : "bg-primary"}`}
+            style={{ width: `${Math.min(value / Math.max(of, 1), 1) * 100}%` }}
+          />
+        </span>
+      )}
+      <span className="text-xs font-medium text-slate">{label}</span>
+    </Link>
   );
 }
 
+type Task = { id: string; title: string; text: string; done: boolean; href?: string; action?: () => void; cta: string };
+
 export default function AdminDashboardPage() {
   const user = useAdminUser();
-  const name = user.email.split("@")[0];
-  const [counts, setCounts] = useState<Counts | null>(null);
-  const [countsError, setCountsError] = useState(false);
+  const liveUrl = useLiveCatalogUrl();
+  const { slug, name: storeName } = user.store;
+  const link = liveUrl.replace(/^https?:\/\//, "");
+
+  const [products, setProducts] = useState<Product[] | null>(null);
+  const [productsError, setProductsError] = useState(false);
+  const [whatsapp, setWhatsapp] = useState<string | null>(null);
+  const [shared, setShared] = useState(() => readShared(slug));
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     listProducts()
-      .then((products) => {
-        const published = products.filter((p) => p.isActive).length;
-        setCounts({ total: products.length, published, hidden: products.length - published });
-      })
-      .catch(() => setCountsError(true));
+      .then(setProducts)
+      .catch(() => setProductsError(true));
+    getOwnStore()
+      .then((s) => setWhatsapp(s.whatsapp))
+      .catch(() => setWhatsapp(""));
   }, []);
 
-  return (
-    <div className="flex flex-col gap-8">
-      <PageHeader
-        title="Dashboard"
-        description={
-          <>
-            Welcome back, <span className="font-semibold text-ink">{name}</span>. Choose what you&apos;d like to
-            manage.
-          </>
-        }
-      />
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 1800);
+    return () => clearTimeout(timer);
+  }, [copied]);
 
-      <section className="flex flex-col gap-3">
-        <SectionLabel>Content</SectionLabel>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Card className="group relative flex flex-col transition-shadow hover:shadow-[0_8px_24px_-12px_rgba(1,18,60,0.18)]">
-            <div className="flex items-start gap-4 p-5">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-tint text-primary ring-1 ring-inset ring-primary/15">
-                <BookOpen className="h-5 w-5" aria-hidden />
+  const markShared = () => {
+    saveShared(slug);
+    setShared(true);
+  };
+
+  async function copyLink() {
+    if (await copyText(liveUrl)) {
+      setCopied(true);
+      markShared();
+    }
+  }
+
+  async function shareLink() {
+    const text = `Browse ${storeName}'s catalog and enquire on WhatsApp:`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: storeName, text, url: liveUrl });
+        markShared();
+      } catch {
+        // Share sheet closed.
+      }
+      return;
+    }
+    window.open(`https://wa.me/?text=${encodeURIComponent(`${text} ${liveUrl}`)}`, "_blank", "noopener,noreferrer");
+    markShared();
+  }
+
+  const total = products?.length ?? null;
+  const published = products ? products.filter((p) => p.isActive).length : null;
+  const hidden = total !== null && published !== null ? total - published : null;
+  const recent = products
+    ? [...products].sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? "")).slice(0, 5)
+    : null;
+
+  // Getting the store ready. Shown until everything is done.
+  const tasks: Task[] = [
+    {
+      id: "product",
+      title: "Add your first product",
+      text: "Take a photo and AI fills in the details.",
+      done: (total ?? 0) > 0,
+      href: "/admin/ecatalog/new",
+      cta: "Add",
+    },
+    {
+      id: "whatsapp",
+      title: "Add your WhatsApp number",
+      text: "Customer enquiries from your catalog go there.",
+      done: !!whatsapp,
+      href: "/admin/settings",
+      cta: "Add",
+    },
+    {
+      id: "publish",
+      title: "Publish a product",
+      text: "Published products show in your catalog.",
+      done: (published ?? 0) > 0,
+      href: "/admin/ecatalog",
+      cta: "Open",
+    },
+    {
+      id: "share",
+      title: "Share your catalog link",
+      text: "Send it to customers on WhatsApp or post it.",
+      done: shared,
+      action: shareLink,
+      cta: "Share",
+    },
+  ];
+  const tasksLoaded = products !== null && whatsapp !== null;
+  const doneCount = tasks.filter((t) => t.done).length;
+  const showTasks = tasksLoaded && doneCount < tasks.length;
+
+  return (
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-3 sm:gap-5 pb-2">
+      {/* Greeting */}
+      <header className="admin-fade-in flex items-end justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-sm text-slate">Welcome back</p>
+          <h1 className="truncate text-[1.5rem] font-bold leading-tight tracking-[-0.025em] text-ink">{storeName}</h1>
+        </div>
+        <Link href="/admin/ecatalog/new" className={`${buttonClass("primary")} hidden lg:inline-flex`}>
+          <Plus className="h-4 w-4" aria-hidden />
+          Add product
+        </Link>
+      </header>
+
+      <div className="grid grid-cols-1 gap-3 sm:gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+        {/* Side column on desktop, first on phones: link + stats */}
+        <div className="flex flex-col gap-3 sm:gap-5 lg:order-2">
+          {/* Store link */}
+          <Card className="admin-pop-in overflow-hidden">
+            <div className="flex items-center gap-3 p-3.5 sm:p-4">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-tint text-primary">
+                <Store className="h-5 w-5" aria-hidden />
               </span>
-              <div className="min-w-0">
-                <h3 className="text-base font-semibold text-ink">
-                  <Link href="/admin/ecatalog" className="after:absolute after:inset-0 focus-visible:outline-none">
-                    E-Catalog
-                  </Link>
-                </h3>
-                <p className="mt-0.5 text-sm leading-relaxed text-slate">
-                  Products, prices, categories and tags shown in your furniture catalog.
-                </p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-slate">Your catalog link</p>
+                <a
+                  href={liveUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block truncate text-[15px] font-semibold text-ink hover:text-primary"
+                >
+                  {link}
+                </a>
               </div>
             </div>
-
-            <dl className="grid grid-cols-3 gap-4 border-t border-line px-5 py-4">
-              {countsError ? (
-                <p className="col-span-3 text-sm text-slate">Product counts are unavailable right now.</p>
-              ) : (
-                <>
-                  <Stat label="Products" value={counts?.total ?? null} />
-                  <Stat label="Published" value={counts?.published ?? null} />
-                  <Stat label="Hidden" value={counts?.hidden ?? null} />
-                </>
-              )}
-            </dl>
-
-            <div className="flex items-center justify-between border-t border-line bg-paper/60 px-5 py-3 text-sm">
-              <span className="inline-flex items-center gap-1.5 font-semibold text-primary">
-                Manage E-Catalog
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
-              </span>
-              <a
-                href={LIVE_CATALOG_PATH}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="relative z-10 inline-flex items-center gap-1 font-medium text-slate hover:text-ink"
-              >
-                View live
-                <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
-              </a>
+            <div className="grid grid-cols-3 border-t border-line">
+              {[
+                {
+                  label: copied ? "Copied" : "Copy",
+                  icon: copied ? Check : Copy,
+                  onClick: copyLink,
+                  tone: copied ? "text-emerald-700" : "text-ink",
+                },
+                { label: "Share", icon: Share2, onClick: shareLink, tone: "text-ink" },
+                {
+                  label: "Open",
+                  icon: ArrowUpRight,
+                  onClick: () => window.open(liveUrl, "_blank", "noopener,noreferrer"),
+                  tone: "text-ink",
+                },
+              ].map(({ label, icon: Icon, onClick, tone }, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={onClick}
+                  onPointerDown={ripple}
+                  className={`relative flex h-12 items-center justify-center gap-1.5 overflow-hidden text-[13px] font-semibold transition-colors hover:bg-paper/70 ${tone} ${
+                    i > 0 ? "border-l border-line" : ""
+                  }`}
+                >
+                  <Icon className={`h-4 w-4 ${label === "Copied" ? "admin-pop-check" : ""}`} aria-hidden />
+                  {label}
+                </button>
+              ))}
             </div>
           </Card>
+
+          {/* Stats */}
+          <section aria-label="Products" className="grid grid-cols-3 gap-2.5 sm:gap-3">
+            <Stat label="Products" value={total} icon={Package} href="/admin/ecatalog" of={user.store.productLimit} />
+            <Stat label="Published" value={published} icon={Eye} href="/admin/ecatalog" />
+            <Stat label="Hidden" value={hidden} icon={EyeOff} href="/admin/ecatalog" />
+          </section>
+          {productsError && <p className="-mt-2 text-xs text-slate">Product counts are unavailable right now.</p>}
+          {total !== null && <ProductLimitNotice state={limitState(total, user.store.productLimit)} storeName={storeName} />}
         </div>
-      </section>
+
+        {/* Main column */}
+        <div className="flex flex-col gap-3 sm:gap-5 lg:order-1">
+          {/* Getting started */}
+          {showTasks && (
+            <Card className="admin-fade-in overflow-hidden">
+              <div className="p-3.5 pb-3 sm:p-4 sm:pb-3">
+                <div className="flex items-baseline justify-between gap-3">
+                  <h2 className="text-[15px] font-semibold text-ink">Get your store ready</h2>
+                  <span className="text-xs font-medium tabular-nums text-slate">
+                    {doneCount} of {tasks.length} done
+                  </span>
+                </div>
+                <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-line" aria-hidden>
+                  <div
+                    className="h-full rounded-full bg-primary transition-[width] duration-500 ease-out"
+                    style={{ width: `${(doneCount / tasks.length) * 100}%` }}
+                  />
+                </div>
+              </div>
+              <ul className="divide-y divide-line border-t border-line">
+                {tasks.map((task) => {
+                  const body = (
+                    <>
+                      <span
+                        className={`grid h-6 w-6 shrink-0 place-items-center rounded-full ${
+                          task.done ? "admin-pop-check bg-emerald-500 text-white" : "border-2 border-line"
+                        }`}
+                        aria-hidden
+                      >
+                        {task.done && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className={`block text-sm font-semibold ${task.done ? "text-slate line-through" : "text-ink"}`}>
+                          {task.title}
+                        </span>
+                        {!task.done && <span className="block text-xs text-slate">{task.text}</span>}
+                      </span>
+                      {!task.done && (
+                        <span className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-primary">
+                          {task.cta}
+                          <ChevronRight className="h-4 w-4" aria-hidden />
+                        </span>
+                      )}
+                    </>
+                  );
+                  const rowClass =
+                    "relative flex min-h-14 w-full items-center gap-3 overflow-hidden px-3.5 sm:px-4 py-2.5 text-left transition-colors";
+                  return (
+                    <li key={task.id}>
+                      {task.done ? (
+                        <div className={rowClass}>{body}</div>
+                      ) : task.href ? (
+                        <Link href={task.href} onPointerDown={ripple} className={`${rowClass} hover:bg-paper/60`}>
+                          {body}
+                        </Link>
+                      ) : (
+                        <button type="button" onClick={task.action} onPointerDown={ripple} className={`${rowClass} hover:bg-paper/60`}>
+                          {body}
+                        </button>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </Card>
+          )}
+
+          {/* Recent products */}
+          <Card className="overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-3.5 sm:px-4 py-3">
+              <h2 className="text-[15px] font-semibold text-ink">Recent products</h2>
+              {!!recent?.length && (
+                <Link href="/admin/ecatalog" className="text-[13px] font-semibold text-primary hover:underline">
+                  View all
+                </Link>
+              )}
+            </div>
+            {recent === null && !productsError ? (
+              <ul className="divide-y divide-line border-t border-line">
+                {[0, 1, 2].map((i) => (
+                  <li key={i} className="flex items-center gap-3 px-3.5 sm:px-4 py-3">
+                    <Skeleton className="h-11 w-11 rounded-md" />
+                    <div className="flex flex-1 flex-col gap-1.5">
+                      <Skeleton className="h-3.5 w-2/3" />
+                      <Skeleton className="h-3 w-1/3" />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : recent && recent.length > 0 ? (
+              <ul className="divide-y divide-line border-t border-line">
+                {recent.map((p) => (
+                  <li key={p.id}>
+                    <Link
+                      href={`/admin/ecatalog?edit=${encodeURIComponent(p.id)}`}
+                      onPointerDown={ripple}
+                      className="relative flex min-h-16 items-center gap-3 overflow-hidden px-3.5 sm:px-4 py-2.5 transition-colors hover:bg-paper/60"
+                    >
+                      <ProductThumb product={p} className="h-11 w-11" rounded="rounded-md" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-ink">{p.productName}</span>
+                        <span className="block truncate text-xs text-slate">
+                          {categoryLabel(p.categoryName)} · {formatPrice(p.price)}
+                        </span>
+                      </span>
+                      {!p.isActive && <Badge>Hidden</Badge>}
+                      <ChevronRight className="h-4 w-4 shrink-0 text-slate/60" aria-hidden />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="flex flex-col items-center gap-3 border-t border-line px-6 py-10 text-center">
+                <span className="grid h-12 w-12 place-items-center rounded-full bg-paper text-slate">
+                  <Package className="h-5 w-5" aria-hidden />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-ink">No products yet</p>
+                  <p className="mt-0.5 text-xs text-slate">Add your first product: it takes about a minute.</p>
+                </div>
+                <Link href="/admin/ecatalog/new" className={`${buttonClass("primary")} hidden lg:inline-flex`}>
+                  <Plus className="h-4 w-4" aria-hidden />
+                  Add product
+                </Link>
+              </div>
+            )}
+          </Card>
+        </div>
+      </div>
+
+      {/* Phones: the main action, pinned in thumb reach */}
+      <div className="sticky bottom-0 z-20 -mx-3 -mb-3 mt-auto sm:-mb-5 border-t border-line bg-white/95 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:-mx-4 sm:px-4 lg:hidden">
+        <Link href="/admin/ecatalog/new" onPointerDown={ripple} className={authButtonClass}>
+          <Plus className="h-[18px] w-[18px]" aria-hidden />
+          Add product
+        </Link>
+      </div>
     </div>
   );
 }
