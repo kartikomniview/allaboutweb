@@ -62,7 +62,7 @@ import { categoryLabel, storeCategories } from "@/lib/taxonomy";
 import { toWebP } from "@/lib/imageToWebp";
 import { detectFromFile, detectFromUrl, type DetectContext, type DetectedProduct } from "@/lib/productDetect";
 import { useAdminUser, useLiveCatalogUrl } from "../AdminShell";
-import { AuthProgress, authButtonClass, authSecondaryButtonClass } from "../AuthLayout";
+import { AuthProgress, authButtonClass, authSecondaryButtonClass, useTyping } from "../AuthLayout";
 import { ripple } from "../ripple";
 import { Button, Spinner } from "../ui";
 import ConfirmDialog from "./ConfirmDialog";
@@ -1248,6 +1248,11 @@ export default function ProductFormDrawer({
   const isAutoFilled = (key: "productName" | "categoryName" | "subcategoryName") =>
     !!autoFilled[key] && form[key] === autoFilled[key];
   const liveUrl = useLiveCatalogUrl();
+  // Phones: while a field is being filled the keyboard takes half the screen, so the
+  // button footer steps aside (the keyboard's Next / Go key moves on). It stays when
+  // there's an error to read or a save in progress.
+  const typing = useTyping();
+  const footerAside = typing && !error && !saving ? "hidden sm:block" : "";
 
   // The latest form, for async detection callbacks that must not use a stale render.
   const formRef = useRef(form);
@@ -2090,7 +2095,7 @@ export default function ProductFormDrawer({
   const editFooter = (
         <>
           {/* Footer */}
-          <footer className="shrink-0 border-t border-line bg-white px-4 py-2.5">
+          <footer className={`shrink-0 border-t border-line bg-white px-4 py-2.5 ${footerAside}`}>
             {error && (
               <p
                 role="alert"
@@ -2432,7 +2437,7 @@ export default function ProductFormDrawer({
           : "Continue";
 
   const wizardFooter = created ? null : (
-          <footer className="shrink-0 border-t border-line bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-6">
+          <footer className={`shrink-0 border-t border-line bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-6 ${footerAside}`}>
             {error && (
               <p
                 role="alert"

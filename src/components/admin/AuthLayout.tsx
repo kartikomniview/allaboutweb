@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 import { ripple } from "./ripple";
 import { Spinner } from "./ui";
@@ -77,11 +77,34 @@ export function AuthProgress({ current, total, label }: { current: number; total
  * The form's buttons and links. Pinned to the bottom of the screen on phones
  * (above the keyboard and the home indicator); at the end of the card on larger screens.
  */
+// True while a text field has focus, i.e. the on-screen keyboard is likely open.
+export function useTyping() {
+  const [typing, setTyping] = useState(false);
+  useEffect(() => {
+    const isField = (el: EventTarget | null) =>
+      el instanceof HTMLElement &&
+      el.matches("input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]), textarea, select");
+    const onFocusIn = (e: FocusEvent) => isField(e.target) && setTyping(true);
+    // Focus may be moving to the next field: check where it lands.
+    const onFocusOut = () => setTimeout(() => setTyping(isField(document.activeElement)), 0);
+    document.addEventListener("focusin", onFocusIn);
+    document.addEventListener("focusout", onFocusOut);
+    return () => {
+      document.removeEventListener("focusin", onFocusIn);
+      document.removeEventListener("focusout", onFocusOut);
+    };
+  }, []);
+  return typing;
+}
+
 export function AuthActions({ children }: { children: ReactNode }) {
+  // While typing on a phone the keyboard shrinks the screen; a pinned bar would
+  // ride up over the field being filled, so it drops back to the end of the form.
+  const typing = useTyping();
   return (
     <>
       <div className="min-h-6 flex-1 sm:min-h-0 sm:flex-none" aria-hidden />
-      <div className="sticky bottom-0 z-10 -mx-5 border-t border-line bg-white/95 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:static sm:mx-0 sm:mt-6 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+      <div className={`${typing ? "relative" : "sticky bottom-0"} z-10 -mx-5 border-t border-line bg-white/95 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:static sm:mx-0 sm:mt-6 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none`}>
         {children}
       </div>
     </>

@@ -3,8 +3,16 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowLeft, Check, Eye, EyeOff, Lock, Mail, Store, TriangleAlert, X } from "lucide-react";
-import { AuthError, checkSession, checkStoreName, register, type StoreNameCheck } from "@/lib/adminAuth";
+import { ArrowLeft, Check, Eye, EyeOff, Lock, Store, TriangleAlert, UserRound, X } from "lucide-react";
+import {
+  AuthError,
+  LOGIN_DOMAIN,
+  USERNAME_RE,
+  checkSession,
+  checkStoreName,
+  register,
+  type StoreNameCheck,
+} from "@/lib/adminAuth";
 import { Spinner } from "@/components/admin/ui";
 import AuthLayout, {
   AuthActions,
@@ -30,7 +38,6 @@ const toSlug = (name: string) =>
     .normalize("NFKD")
     .replace(/[^a-z0-9]/g, "");
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type NameStatus =
   | { state: "idle" }
@@ -70,7 +77,10 @@ export default function RegisterStorePage() {
   const [direction, setDirection] = useState<"right" | "left">("right");
   const [storeName, setStoreName] = useState("");
   const [businessTypes, setBusinessTypes] = useState<BusinessTypeId[]>([]);
-  const [email, setEmail] = useState("");
+  // The login username (the account email is username@catalog24.in). Until the owner
+  // edits it, it follows the store's link name: "My Store" -> mystore.
+  const [usernameInput, setUsernameInput] = useState("");
+  const [usernameEdited, setUsernameEdited] = useState(false);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -94,6 +104,7 @@ export default function RegisterStorePage() {
   }, [router]);
 
   const slug = toSlug(storeName.trim());
+  const username = usernameEdited ? usernameInput : slug.slice(0, 30);
 
   // Live "is this name free?" check, a moment after typing stops. The status shown
   // is derived from the latest answer, so it's "checking" until one for this slug arrives.
@@ -128,8 +139,8 @@ export default function RegisterStorePage() {
     }
     if (i === 1 && !businessTypes.length) errors.businessTypes = "Choose at least one.";
     if (i === 2) {
-      if (!email.trim()) errors.email = "Enter your email address.";
-      else if (!EMAIL_RE.test(email.trim())) errors.email = "That doesn't look like an email address.";
+      if (!username) errors.email = "Choose a username.";
+      else if (!USERNAME_RE.test(username)) errors.email = "Use 3 to 30 letters, numbers, dots, dashes or underscores.";
       if (password.length < 8) errors.password = "Use at least 8 characters.";
       if (password.length >= 8 && confirm !== password) errors.confirm = "The passwords don't match.";
     }
@@ -207,7 +218,7 @@ export default function RegisterStorePage() {
 
     setSubmitting(true);
     try {
-      await register({ storeName: storeName.trim(), businessTypes, email: email.trim(), password });
+      await register({ storeName: storeName.trim(), businessTypes, email: `${username}@${LOGIN_DOMAIN}`, password });
       setCreated(true);
       // A moment to see the confirmation, then into the dashboard.
       setTimeout(() => router.replace("/admin/dashboard"), 700);
@@ -222,7 +233,7 @@ export default function RegisterStorePage() {
         return;
       }
       if (err instanceof AuthError && err.code === "EMAIL_TAKEN") {
-        setFieldErrors({ email: message });
+        setFieldErrors({ email: "This username is taken. Try another one." });
         return flagField(emailRef.current);
       }
       setError(message);
@@ -345,35 +356,46 @@ export default function RegisterStorePage() {
           <div className="flex flex-col gap-5">
             <div data-field>
               <label htmlFor="store-email" className={labelClass}>
-                Email address
+                Username
               </label>
               <div className="relative">
-                <Mail className={iconClass} aria-hidden />
+                <UserRound className={iconClass} aria-hidden />
                 <input
                   ref={emailRef}
                   id="store-email"
-                  name="email"
-                  type="email"
+                  name="username"
+                  type="text"
                   inputMode="email"
                   autoComplete="username"
                   autoCapitalize="none"
                   spellCheck={false}
                   enterKeyHint="next"
                   autoFocus
-                  value={email}
+                  maxLength={30}
+                  value={username}
                   onChange={(e) => {
-                    setEmail(e.target.value);
+                    setUsernameInput(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ""));
+                    setUsernameEdited(true);
                     clearError("email");
                   }}
                   aria-invalid={!!fieldErrors.email}
-                  aria-describedby={fieldErrors.email ? "store-email-error" : undefined}
-                  className={inputClass}
-                  placeholder="yourname@gmail.com"
+                  aria-describedby={fieldErrors.email ? "store-email-error" : "store-email-help"}
+                  className={`${inputClass} pr-[8.5rem]`}
+                  placeholder="yourstore"
                 />
+                {/* The fixed domain after the username */}
+                <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[15px] text-slate">
+                  @{LOGIN_DOMAIN}
+                </span>
               </div>
-              {fieldErrors.email && (
+              {fieldErrors.email ? (
                 <p id="store-email-error" className={fieldErrorClass}>
                   {fieldErrors.email}
+                </p>
+              ) : (
+                <p id="store-email-help" className="mt-1.5 text-xs text-slate">
+                  You&apos;ll log in with <span className="font-semibold text-ink">{username || "yourstore"}</span>. We suggested
+                  your store&apos;s name; change it if you like.
                 </p>
               )}
             </div>

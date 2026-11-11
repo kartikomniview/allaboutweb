@@ -3,14 +3,19 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import Link from "next/link";
-import { Eye, EyeOff, Lock, Mail, ShieldCheck, TriangleAlert } from "lucide-react";
+import { Eye, EyeOff, Lock, ShieldCheck, TriangleAlert, UserRound } from "lucide-react";
 import {
   AuthError,
   checkSession,
+  LOGIN_DOMAIN,
+  USERNAME_RE,
+  cleanUsername,
   getRememberedEmail,
+  loginNameOf,
   login,
   saveBrowserCredential,
   setRememberedEmail,
+  toLoginEmail,
 } from "@/lib/adminAuth";
 import { Spinner } from "@/components/admin/ui";
 import AuthLayout, {
@@ -54,7 +59,7 @@ export default function AdminLoginPage() {
           return;
         }
         const saved = getRememberedEmail();
-        if (saved) setEmail(saved);
+        if (saved) setEmail(loginNameOf(saved));
         setChecking(false);
       })
       .catch(() => setChecking(false));
@@ -66,8 +71,11 @@ export default function AdminLoginPage() {
 
   function validate(): FieldErrors {
     const next: FieldErrors = {};
-    if (!email.trim()) next.email = "Enter your email address.";
-    else if (!EMAIL_RE.test(email.trim())) next.email = "That doesn't look like an email address.";
+    const value = email.trim().toLowerCase();
+    if (!value) next.email = "Enter your username.";
+    else if (value.includes("@") ? !EMAIL_RE.test(value) : !USERNAME_RE.test(value)) {
+      next.email = "Check your username: letters, numbers, dots, dashes or underscores.";
+    }
     if (!password) next.password = "Enter your password.";
     return next;
   }
@@ -80,7 +88,8 @@ export default function AdminLoginPage() {
     if (errors.email) return flagField(emailRef.current);
     if (errors.password) return flagField(passwordRef.current);
 
-    const trimmed = email.trim();
+    // "mystore" logs in as mystore@catalog24.in; a full email is used as it is.
+    const trimmed = toLoginEmail(email);
     setSubmitting(true);
     try {
       await login(trimmed, password);
@@ -101,15 +110,15 @@ export default function AdminLoginPage() {
         <div className="flex flex-col gap-5">
           <div data-field>
             <label htmlFor="admin-email" className={labelClass}>
-              Email address
+              Username
             </label>
             <div className="relative">
-              <Mail className={iconClass} aria-hidden />
+              <UserRound className={iconClass} aria-hidden />
               <input
                 ref={emailRef}
                 id="admin-email"
-                name="email"
-                type="email"
+                name="username"
+                type="text"
                 inputMode="email"
                 autoComplete="username"
                 autoCapitalize="none"
@@ -118,14 +127,23 @@ export default function AdminLoginPage() {
                 autoFocus={!email}
                 value={email}
                 onChange={(e) => {
-                  setEmail(e.target.value);
+                  setEmail(cleanUsername(e.target.value));
                   if (fieldErrors.email) setFieldErrors((f) => ({ ...f, email: undefined }));
                 }}
                 aria-invalid={!!fieldErrors.email}
-                aria-describedby={fieldErrors.email ? "admin-email-error" : undefined}
-                className={inputClass}
-                placeholder="yourname@gmail.com"
+                aria-describedby={fieldErrors.email ? "admin-email-error" : "admin-email-domain"}
+                className={`${inputClass} ${email.includes("@") ? "" : "pr-[8.5rem]"}`}
+                placeholder="yourstore"
               />
+              {/* The fixed domain, shown after the username (hidden if a full email is typed) */}
+              {!email.includes("@") && (
+                <span
+                  id="admin-email-domain"
+                  className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[15px] text-slate"
+                >
+                  @{LOGIN_DOMAIN}
+                </span>
+              )}
             </div>
             {fieldErrors.email && (
               <p id="admin-email-error" className={fieldErrorClass}>

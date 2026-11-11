@@ -8,6 +8,24 @@ const DEVICE_KEY = "aaw_device_id";
 const TOKEN_KEY = "aaw_admin_token";
 const EMAIL_KEY = "aaw_admin_email";
 
+// Store owners log in with a username; their account email is username@catalog24.in.
+// Anything typed with an "@" is used as a full email (older accounts, e.g. the admin).
+export const LOGIN_DOMAIN = "catalog24.in";
+export const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{2,29}$/;
+
+/** "mystore" -> "mystore@catalog24.in"; a full email stays as it is. */
+export const toLoginEmail = (value: string) => {
+  const v = value.trim().toLowerCase();
+  return v.includes("@") ? v : `${v}@${LOGIN_DOMAIN}`;
+};
+
+/** What to show in the username field: "mystore@catalog24.in" -> "mystore". */
+export const loginNameOf = (email: string) =>
+  email.toLowerCase().endsWith(`@${LOGIN_DOMAIN}`) ? email.slice(0, -(LOGIN_DOMAIN.length + 1)) : email;
+
+/** Keeps a typed username to the allowed characters (lowercase, no spaces). */
+export const cleanUsername = (value: string) => value.toLowerCase().replace(/[^a-z0-9._@-]/g, "");
+
 /** The store the account owns: `slug` is its subdomain (demostore.catalog24.in). */
 export type AdminStore = {
   slug: string;
