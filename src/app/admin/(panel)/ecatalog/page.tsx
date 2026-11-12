@@ -28,7 +28,6 @@ import ProductTable, {
   ProductGridSkeleton,
   ProductTableSkeleton,
 } from "@/components/admin/ecatalog/ProductTable";
-import { authButtonClass } from "@/components/admin/AuthLayout";
 import { ripple } from "@/components/admin/ripple";
 import { Button, Card, buttonClass } from "@/components/admin/ui";
 import { PRODUCTS } from "@/components/furniture-catalog/data";
@@ -596,14 +595,6 @@ export default function ManageEcatalogPage() {
         )}
       </Card>
 
-      {/* Phones: the main action, pinned in thumb reach */}
-      <div className="sticky bottom-0 z-20 -mx-3 -mb-3 mt-auto sm:-mb-5 border-t border-line bg-white/95 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:-mx-4 sm:px-4 lg:hidden">
-        <Link href={NEW_PRODUCT_ROUTE} onPointerDown={ripple} className={authButtonClass}>
-          <Plus className="h-[18px] w-[18px]" aria-hidden />
-          Add product
-        </Link>
-      </div>
-
       {editing !== undefined && (
         <ProductFormDrawer
           key={editing.id}
@@ -644,7 +635,7 @@ export default function ManageEcatalogPage() {
         <div
           key={toast.id}
           role="status"
-          className="admin-pop-in fixed bottom-24 right-4 z-[120] flex max-w-[calc(100vw-2rem)] items-center gap-3 rounded-lg border border-line lg:bottom-6 bg-white py-3 pl-3.5 pr-4 text-sm font-medium text-ink shadow-[0_12px_32px_-12px_rgba(1,18,60,0.3)] sm:right-6"
+          className="admin-pop-in fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-[120] flex max-w-[calc(100vw-2rem)] items-center gap-3 rounded-lg border border-line lg:bottom-6 bg-white py-3 pl-3.5 pr-4 text-sm font-medium text-ink shadow-[0_12px_32px_-12px_rgba(1,18,60,0.3)] sm:right-6"
         >
           {toast.tone === "ok" ? (
             <CircleCheck className="h-5 w-5 shrink-0 text-emerald-600" aria-hidden />

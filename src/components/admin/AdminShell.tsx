@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { ArrowUpRight, BookOpen, Building2, LayoutDashboard, LogOut, Menu, Store, TriangleAlert, X } from "lucide-react";
+import { ArrowUpRight, BookOpen, Building2, Download, LayoutDashboard, LogOut, Menu, Plus, Store, TriangleAlert, X } from "lucide-react";
 import { checkSession, logout, type AdminStore, type AdminUser } from "@/lib/adminAuth";
 import { storeUrlFor } from "@/lib/catalogDomain";
+import { InstallAppPopup, useInstallApp } from "./InstallApp";
+import { ripple } from "./ripple";
 import { Button, Spinner } from "./ui";
 import "./admin.css";
 
@@ -144,6 +146,51 @@ function SidebarContent({
   );
 }
 
+// Phones and tablets: app-style tabs fixed at the bottom, with "Add product" as the
+// raised middle button (the pages' main action). Desktop has the sidebar instead.
+function MobileTabBar({ user, pathname }: { user: AdminUser; pathname: string }) {
+  const tabs = [
+    { href: "/admin/dashboard", label: "Home", icon: LayoutDashboard },
+    { href: "/admin/ecatalog", label: "Products", icon: BookOpen },
+    { href: "/admin/ecatalog/new", label: "Add", icon: Plus, main: true },
+    { href: "/admin/settings", label: "Settings", icon: Store },
+    ...(user.isSuperAdmin ? [{ href: "/admin/stores", label: "Stores", icon: Building2 }] : []),
+  ];
+  return (
+    <nav
+      aria-label="Main"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+    >
+      <ul className="mx-auto flex h-16 max-w-xl items-stretch">
+        {tabs.map(({ href, label, icon: Icon, main }) => {
+          const active = !main && pathname.startsWith(href);
+          return (
+            <li key={href} className="flex-1">
+              <Link
+                href={href}
+                onPointerDown={ripple}
+                aria-current={active ? "page" : undefined}
+                className={`relative flex h-full flex-col items-center justify-center gap-1 overflow-hidden text-[11px] transition-colors ${
+                  active ? "font-semibold text-primary" : "font-medium text-slate hover:text-ink"
+                }`}
+              >
+                {main ? (
+                  <span className="grid h-9 w-9 place-items-center rounded-full bg-button text-white shadow-[0_4px_12px_-4px_rgba(20,62,59,0.6)]">
+                    <Icon className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+                  </span>
+                ) : (
+                  <Icon className="h-[22px] w-[22px]" strokeWidth={active ? 2.25 : 1.75} aria-hidden />
+                )}
+                <span className={main ? "font-semibold text-ink" : ""}>{label}</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
 export default function AdminShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -151,6 +198,11 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  // Installing the admin as an app: the top bar's Install button and the popup.
+  const install = useInstallApp();
+  const [installOpen, setInstallOpen] = useState(false);
+  // Chrome & co. show their install prompt; iPhone gets the popup with the steps.
+  const startInstall = () => (install.ios ? setInstallOpen(true) : install.prompt());
 
   const verify = useCallback(() => {
     checkSession()
@@ -286,13 +338,26 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             </div>
             {pageTitle && <h2 className="hidden truncate text-[15px] font-semibold text-ink lg:block">{pageTitle}</h2>}
           </div>
-          <Button variant="danger-soft" size="sm" onClick={handleLogout} loading={loggingOut}>
-            {!loggingOut && <LogOut className="h-4 w-4" aria-hidden />}
-            {loggingOut ? "Logging out…" : "Log out"}
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            {install.available && (
+              <Button variant="share" size="sm" onClick={startInstall}>
+                <Download className="h-4 w-4" aria-hidden />
+                Install<span className="hidden sm:inline">&nbsp;app</span>
+              </Button>
+            )}
+            <Button variant="danger-soft" size="sm" onClick={handleLogout} loading={loggingOut}>
+              {!loggingOut && <LogOut className="h-4 w-4" aria-hidden />}
+              {loggingOut ? "Logging out…" : "Log out"}
+            </Button>
+          </div>
         </header>
-        <div className="w-full flex-1 px-3 py-3 sm:px-4 sm:py-5 lg:px-5 lg:py-6">{children}</div>
+        {/* Bottom padding on phones and tablets keeps the end of the page clear of the tab bar. */}
+        <div className="w-full flex-1 px-3 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-3 sm:px-4 sm:pt-5 lg:px-5 lg:py-6">
+          {children}
+        </div>
       </div>
+      <MobileTabBar user={user} pathname={pathname} />
+      <InstallAppPopup install={install} open={installOpen} onOpenChange={setInstallOpen} />
     </AdminUserContext.Provider>
   );
 }

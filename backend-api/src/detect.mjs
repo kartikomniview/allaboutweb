@@ -85,7 +85,7 @@ const SYSTEM = `You catalogue products for an Indian retail store's online catal
 Look at the product photo and describe the main product in it.
 
 - productName: 3 to 6 words, a short appealing name followed by the product type, e.g. "Nilgiri L-Shape Corner Sofa", "Jaipur Brass Pendant Light", "Ivory Sheer Window Curtain", "Kashmiri Wool Area Rug", "Velvet Upholstery Fabric", "Banarasi Silk Saree", "55-inch 4K Smart LED TV".
-- categoryName and subcategoryName: always use the exact names from the store's list; the subcategory must belong to the chosen category. If nothing fits exactly, choose the closest category and subcategory from the list. Never make up a new name.
+- categoryName and subcategoryName: always use the exact names from the store's list; the subcategory must belong to the chosen category. If the product belongs in one of the categories but no subcategory fits exactly, choose the closest one. If the product clearly belongs in none of the categories (it's a different kind of product from what the store sells, e.g. a bottle in a furniture store), set both to an empty string; never force a poor fit. Never make up a new name.
 - description: 1 to 2 plain, friendly sentences for shoppers, at most 300 characters. Describe only what is visible: no prices, warranty or delivery claims.
 - dimensions: only if a size is printed on the product or its packaging; otherwise an empty string. Never guess a size.
 - specs: 2 to 6 short label/value pairs that matter for this kind of product and are visible or clearly implied, e.g. Wood: Sheesham, Seating: 3 Seater, Bulb: LED, Mount: Ceiling, Pattern: Floral, Opacity: Sheer, Screen: 55 inch. Labels are 1 or 2 words. No Colour or Material labels. No prices, warranty or delivery.
@@ -97,7 +97,8 @@ Look at the product photo and describe the main product in it.
 // subcategory enum holds every category's subcategories; clean() fixes the pair).
 // The list depends only on the store's business types, so few distinct schemas
 // are compiled (each is cached by the API for 24 hours).
-const nameSchema = (names) => (names.length ? { type: "string", enum: names } : { type: "string" });
+// "" is allowed: the product fits none of the store's categories.
+const nameSchema = (names) => (names.length ? { type: "string", enum: ["", ...names] } : { type: "string" });
 
 const schemaFor = (categories) => ({
   type: "object",
@@ -149,11 +150,13 @@ function strings(v, max, limit) {
 }
 
 // The category and subcategory from the store's list (with the list's spelling),
-// as a matching pair; empty if the category isn't in the list.
+// as a matching pair; empty if the category isn't in the list, or if the model
+// left either one empty (the product fits none of the store's categories).
 function pickCategory(raw, categories) {
   const categoryText = clip(raw.categoryName, 60);
   const subText = clip(raw.subcategoryName, 60);
-  const inList = (c) => subText && c.subcategories.find((s) => same(s, subText));
+  if (!categoryText || !subText) return { categoryName: "", subcategoryName: "" };
+  const inList = (c) => c.subcategories.find((s) => same(s, subText));
   let category = categoryText ? categories.find((c) => same(c.name, categoryText)) : undefined;
   // No usable category: take the one the subcategory belongs to.
   category ??= categories.find(inList);

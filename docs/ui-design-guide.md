@@ -132,7 +132,8 @@ Phone (< 640px)                      Desktop (sm+)
 
 ### Panel pages (dashboard, products, settings): the target for the redesign
 
-- **Phones:** a white page with a sticky top bar (title, plus a back arrow or menu) and content in full-width sections divided by `border-line`. Use a pinned bottom bar for the page's main action, such as "Save changes" or "Add product".
+- **Phones and tablets:** a white page with a sticky top bar (title, plus a back arrow or menu) and content in full-width sections divided by `border-line`.
+- **Bottom tabs (below `lg`):** `MobileTabBar` in [`AdminShell.tsx`](../src/components/admin/AdminShell.tsx) is fixed at the bottom: Home, Products, a raised **Add** button in the middle (Add product), Settings, and Stores for super admins. The shell pads the page bottom so content clears it. Don't add another pinned bar for "Add product". Anything else fixed to the bottom (toasts, a page's own pinned "Save changes") sits above it: `bottom-[calc(5rem+env(safe-area-inset-bottom))]`. Full-screen flows (`FOCUS_ROUTES`) have no tabs.
 - **Desktop:** the existing side navigation, with content in white `rounded-lg border border-line` cards on `bg-paper`.
 - **Lists:** rows with a 44px or taller hit area, a thumbnail on the left, text in the middle, and an action or chevron on the right.
 

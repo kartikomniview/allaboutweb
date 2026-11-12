@@ -97,11 +97,11 @@ export default function StoreLogoPicker({
     />
   );
 
-  const buttons = (size: "sm" | "md") => (
+  const buttons = (size: "sm" | "md", short = false) => (
     <div className="flex flex-wrap items-center gap-2">
       <Button size={size} onClick={openPicker} disabled={busy !== null}>
         {uploading ? <Spinner className="h-4 w-4" /> : <ImagePlus className="h-4 w-4 text-slate" aria-hidden />}
-        {uploading ? "Uploading…" : logo ? "Change logo" : "Upload logo"}
+        {uploading ? "Uploading…" : logo ? (short ? "Change" : "Change logo") : "Upload logo"}
       </Button>
       {logo && (
         <Button size={size} variant="danger-ghost" onClick={remove} disabled={busy !== null} loading={busy === "remove"}>
@@ -128,12 +128,12 @@ export default function StoreLogoPicker({
             onClick={openPicker}
             onPointerDown={ripple}
             disabled={busy !== null}
-            className="group relative flex min-h-16 w-full items-center gap-3 overflow-hidden px-3.5 py-3 text-left transition-colors hover:bg-tint/30 disabled:cursor-wait sm:px-4"
+            className="group relative flex w-full items-center gap-3 overflow-hidden p-3 text-left transition-colors hover:bg-tint/30 disabled:cursor-wait sm:p-4"
           >
-            <LogoPlaceholder uploading={uploading} className="h-12 w-12 group-hover:bg-tint" />
+            <LogoPlaceholder uploading={uploading} className="h-11 w-11 group-hover:bg-tint" />
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold text-ink">{uploading ? "Uploading your logo…" : "Add your store logo"}</span>
-              <span className="block text-xs text-slate">Customers see it at the top of your catalog.</span>
+              <span className="block text-sm font-semibold text-ink">{uploading ? "Uploading…" : "Add your logo"}</span>
+              <span className="block text-xs text-slate">Shown on your catalog</span>
             </span>
             {!uploading && (
               <span className="inline-flex shrink-0 items-center gap-0.5 text-[13px] font-semibold text-primary">
@@ -142,16 +142,17 @@ export default function StoreLogoPicker({
               </span>
             )}
           </button>
-          {error && <div className="px-3.5 pb-3 sm:px-4">{errorText}</div>}
+          {error && <div className="px-3 pb-3 sm:px-4">{errorText}</div>}
           {fileInput}
         </div>
       );
     }
     return (
-      <div className="px-3.5 py-2.5 sm:px-4">
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-          <span className="text-xs text-slate">Your logo</span>
-          {buttons("sm")}
+      <div className="p-3 sm:p-4">
+        <div className="flex items-center gap-3">
+          <StoreLogo logo={logo} name={storeName} className="h-11 w-11 text-base" />
+          <span className="min-w-0 flex-1 text-sm font-semibold text-ink">Logo</span>
+          {buttons("sm", true)}
         </div>
         {errorText}
         {fileInput}

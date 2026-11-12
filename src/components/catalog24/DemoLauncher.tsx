@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowUpRight, X } from "lucide-react";
+import { ArrowUpRight, Play, X } from "lucide-react";
 import CtaLink from "@/components/CtaLink";
 import DemoStart from "@/components/services/DemoStart";
 
@@ -13,15 +13,18 @@ const CLOSE_MS = 300;
 /**
  * A short phone preview with a "Start demo" button. Starting opens the live page full
  * screen (a phone-sized frame on larger screens) with Close / View full demo buttons.
+ * With `compactOnPhones`, phones get a small outline button instead of the preview.
  */
 export default function DemoLauncher({
   src,
   title,
   fullDemoHref,
+  compactOnPhones = false,
 }: {
   src: string;
   title: string;
   fullDemoHref: string;
+  compactOnPhones?: boolean;
 }) {
   const [mounted, setMounted] = useState(false); // overlay in the DOM
   const [shown, setShown] = useState(false); // overlay animated in
@@ -91,7 +94,19 @@ export default function DemoLauncher({
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[24rem] rounded-[2.75rem] bg-ink p-3 shadow-lift">
+      {compactOnPhones && (
+        <button
+          type="button"
+          onClick={open}
+          className="inline-flex h-10 items-center gap-2 rounded-md border border-line bg-white px-4 text-[13px] font-semibold text-ink shadow-[0_1px_2px_rgba(1,18,60,0.06)] transition-colors hover:bg-paper active:scale-[0.98] sm:hidden"
+        >
+          <Play className="h-3.5 w-3.5 fill-current text-primary" aria-hidden />
+          Try the live demo
+        </button>
+      )}
+      <div
+        className={`mx-auto w-full max-w-[24rem] rounded-[2.75rem] bg-ink p-3 shadow-lift ${compactOnPhones ? "hidden sm:block" : ""}`}
+      >
         <div className="relative overflow-hidden rounded-[2.1rem] bg-white pt-8">
           <span
             className="absolute left-1/2 top-2 z-10 h-5 w-24 -translate-x-1/2 rounded-full bg-ink"

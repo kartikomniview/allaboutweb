@@ -266,9 +266,10 @@ function CardActionsMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={`Actions for ${product.productName || "this product"}`}
-        className={`${floatingBtn} ${open ? "text-ink" : ""}`}
+        // Small 28px chip with 6px corners; the invisible ::before keeps a ~40px tap area.
+        className={`relative grid h-7 w-7 place-items-center rounded-md bg-white/95 text-slate shadow-[0_1px_3px_rgba(1,18,60,0.18)] transition-colors before:absolute before:-inset-1.5 before:content-[''] hover:text-ink disabled:opacity-50 ${open ? "text-ink" : ""}`}
       >
-        {toggling ? <Spinner /> : <EllipsisVertical className="h-[18px] w-[18px]" aria-hidden />}
+        {toggling ? <Spinner /> : <EllipsisVertical className="h-4 w-4" aria-hidden />}
       </button>
       {open && (
         <div

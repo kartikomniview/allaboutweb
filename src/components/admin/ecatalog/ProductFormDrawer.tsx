@@ -58,7 +58,7 @@ import {
   type ProductInput,
   type ProductSpec,
 } from "@/lib/adminProducts";
-import { categoryLabel, storeCategories } from "@/lib/taxonomy";
+import { businessTypeLabel, categoryLabel, storeCategories } from "@/lib/taxonomy";
 import { toWebP } from "@/lib/imageToWebp";
 import { detectFromFile, detectFromUrl, type DetectContext, type DetectedProduct } from "@/lib/productDetect";
 import { useAdminUser, useLiveCatalogUrl } from "../AdminShell";
@@ -452,7 +452,7 @@ type PendingUpload = {
   converting?: boolean;
 };
 
-const NEEDS_DETAILS = "Couldn't detect the product. Fill in the name, category and subcategory, then Retry.";
+const NEEDS_DETAILS = "Add the name, category and subcategory, then tap Retry.";
 
 type ImageFolder = Pick<ProductInput, "productName" | "categoryName" | "subcategoryName">;
 
@@ -1114,6 +1114,11 @@ function ImageManager({
 
 /* ---------- Details detected from a photo ---------- */
 
+// The "Auto-fill from photo" button in the Media section (re-detects the details from
+// the cover photo). Hidden for now; set to true to bring it back. Detection on the
+// first photo of a new product isn't affected.
+const SHOW_AUTOFILL_BUTTON = false;
+
 const DETECTED_FIELDS = ["productName", "description", "dimensions"] as const;
 const DETECTED_LISTS = ["keywords", "specs", "tags", "highlights"] as const;
 
@@ -1147,7 +1152,14 @@ const hasDetectedFieldsFilled = (f: FormState) =>
   DETECTED_LISTS.some((key) => f[key].filter(Boolean).length > 0) ||
   Boolean(f.subcategoryName.trim());
 
-type DetectNote = { kind: "ok" | "error"; text: string };
+// "outside": AI recognised the product, but it fits none of the store's categories.
+type DetectNote = { kind: "ok" | "outside" | "error"; text: string };
+
+// "Furniture", "Furniture and Lighting", "Furniture, Lighting and Fabrics".
+function joinLabels(labels: string[]): string {
+  if (labels.length <= 1) return labels[0] ?? "";
+  return `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
+}
 
 const detectError = (err: unknown) =>
   err instanceof Error && err.message ? err.message : "Couldn't detect the product from the photo.";
@@ -1285,7 +1297,15 @@ export default function ProductFormDrawer({
       categoryName: filled("categoryName"),
       subcategoryName: filled("subcategoryName"),
     });
-    setDetectNote({ kind: "ok", text: "Details filled in from the photo. Review them before saving." });
+    if (d.productName && !d.categoryName) {
+      const labels = joinLabels(store.businessTypes.map(businessTypeLabel));
+      setDetectNote({
+        kind: "outside",
+        text: `"${d.productName}" doesn't match your ${labels} categories. Pick a category below, or create your own.`,
+      });
+    } else {
+      setDetectNote({ kind: "ok", text: "Details filled in from the photo. Review them before saving." });
+    }
     return next;
   }
 
@@ -1639,7 +1659,9 @@ export default function ProductFormDrawer({
                   className={`flex items-start gap-1.5 rounded-[7px] px-2.5 py-2 text-[11px] leading-snug ring-1 ring-inset ${
                     detectNote.kind === "ok"
                       ? "bg-emerald-50 text-emerald-800 ring-emerald-600/15"
-                      : "bg-red-50 text-red-700 ring-red-600/15"
+                      : detectNote.kind === "outside"
+                        ? "bg-amber-50 text-amber-800 ring-amber-500/20"
+                        : "bg-red-50 text-red-700 ring-red-600/15"
                   }`}
                 >
                   {detectNote.kind === "ok" ? (
@@ -1728,6 +1750,7 @@ export default function ProductFormDrawer({
               icon={Images}
               description="Product photos"
               action={
+                SHOW_AUTOFILL_BUTTON && (
                 <>
                   <button
                     type="button"
@@ -1750,6 +1773,7 @@ export default function ProductFormDrawer({
                     )}
                   </button>
                 </>
+                )
               }
             >
               {imageManager}
@@ -2146,6 +2170,16 @@ export default function ProductFormDrawer({
         <p className="mt-1.5 text-xs text-slate">You can check and change everything in the next steps.</p>
       </div>
     </div>
+  ) : detectNote?.kind === "outside" ? (
+    <div className="admin-fade-in flex items-start gap-3 rounded-md border border-amber-500/25 bg-amber-50 p-3.5" role="status">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-white text-amber-600">
+        <Info className="h-4 w-4" aria-hidden />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] font-semibold text-ink">Not in your categories</p>
+        <p className="mt-0.5 text-xs text-slate">{detectNote.text}</p>
+      </div>
+    </div>
   ) : detectNote?.kind === "error" ? (
     <div className="admin-fade-in flex items-start gap-3 rounded-md border border-amber-500/25 bg-amber-50 p-3.5" role="status">
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-white text-amber-600">
@@ -2293,6 +2327,12 @@ export default function ProductFormDrawer({
             <p className="flex items-center gap-2 rounded-md bg-emerald-50/70 px-3 py-2 text-xs font-medium text-emerald-800">
               <WandSparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />
               Filled in from your photo. Check it and change anything that&apos;s wrong.
+            </p>
+          )}
+          {detectNote?.kind === "outside" && (
+            <p className="flex items-start gap-2 rounded-md bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+              <Info className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
+              {detectNote.text}
             </p>
           )}
           {detailsFields}

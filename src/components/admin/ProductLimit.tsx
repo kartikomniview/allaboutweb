@@ -42,53 +42,64 @@ export function ProductLimitNotice({
   compact?: boolean;
 }) {
   if (!state.near && !state.full) return null;
-  // Laid out by its own width (a container query), not the screen's: in the dashboard's
-  // narrow side column on desktop it stacks; on a wide page the buttons sit beside the text.
+  // One compact row: icon, text, and a small "Contact us" button. Laid out by its own
+  // width (a container query): where it's wide (the products page on a big screen) it
+  // gets more room and the "Manage products" button; where it's narrow (phones, the
+  // dashboard's side column) only the essentials.
   return (
     <div className="@container">
-    <div
-      role="status"
-      className={`admin-fade-in flex flex-col gap-3 rounded-lg border p-4 @lg:flex-row @lg:items-center ${
-        state.full ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"
-      }`}
-    >
-      <div className="flex min-w-0 flex-1 items-start gap-3">
+      <div
+        role="status"
+        className={`admin-fade-in flex items-center gap-2.5 rounded-lg border px-3 py-2.5 @lg:gap-3 @lg:p-4 ${
+          state.full ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"
+        }`}
+      >
         <span
-          className={`grid h-9 w-9 shrink-0 place-items-center rounded-md bg-white ${state.full ? "text-red-600" : "text-amber-600"}`}
+          className={`grid h-8 w-8 shrink-0 place-items-center rounded-md bg-white @lg:h-9 @lg:w-9 ${
+            state.full ? "text-red-600" : "text-amber-600"
+          }`}
         >
-          <Gauge className="h-[18px] w-[18px]" aria-hidden />
+          <Gauge className="h-4 w-4 @lg:h-[18px] @lg:w-[18px]" aria-hidden />
         </span>
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-ink">
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-semibold leading-snug text-ink @lg:text-sm">
             {state.full
-              ? `You've reached your limit of ${state.limit} products`
-              : `${state.remaining} product${state.remaining === 1 ? "" : "s"} left of ${state.limit}`}
+              ? `You've used all ${state.limit} products`
+              : `${state.remaining} of ${state.limit} products left`}
           </p>
-          <p className="mt-0.5 text-xs leading-relaxed text-slate">
-            {state.full
-              ? "Delete a product to add a new one, or contact us to increase your limit."
-              : "Contact us if you need room for more products."}
+          <p className="text-xs leading-snug text-slate @lg:mt-0.5">
+            {/* Narrow: "Contact us" is a link here, so the text gets the full width (no button beside it). */}
+            <a
+              href={moreProductsHref(storeName, state.limit)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-whatsapp underline-offset-2 hover:underline @lg:hidden"
+            >
+              Contact us
+            </a>
+            <span className="hidden @lg:inline">Contact us</span>
+            {state.full ? " to increase your limit." : " if you need more."}
           </p>
         </div>
+        {/* Wide only. Hidden on this wrapper: buttonClass sets inline-flex, which would
+            override a "hidden" on the buttons themselves. */}
+        <div className="hidden shrink-0 gap-2 @lg:flex">
+          {!compact && state.full && (
+            <Link href="/admin/ecatalog" className={buttonClass("secondary", "md", "h-10")}>
+              Manage products
+            </Link>
+          )}
+          <a
+            href={moreProductsHref(storeName, state.limit)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={buttonClass("secondary", "md", "h-10 text-whatsapp")}
+          >
+            <WhatsAppIcon className="h-4 w-4" />
+            Contact us
+          </a>
+        </div>
       </div>
-      {/* Stacked: the buttons share the full width under the text. */}
-      <div className="flex shrink-0 gap-2">
-        {!compact && state.full && (
-          <Link href="/admin/ecatalog" className={buttonClass("secondary", "md", "h-10 flex-1 @lg:flex-none")}>
-            Manage products
-          </Link>
-        )}
-        <a
-          href={moreProductsHref(storeName, state.limit)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={buttonClass("secondary", "md", "h-10 flex-1 text-whatsapp @lg:flex-none")}
-        >
-          <WhatsAppIcon className="h-4 w-4" />
-          Contact us
-        </a>
-      </div>
-    </div>
     </div>
   );
 }

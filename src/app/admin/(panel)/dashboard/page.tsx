@@ -16,7 +16,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useAdminUser, useLiveCatalogUrl } from "@/components/admin/AdminShell";
-import { authButtonClass } from "@/components/admin/AuthLayout";
 import { ProductThumb } from "@/components/admin/ecatalog/ProductTable";
 import ShareCatalogDialog from "@/components/admin/ecatalog/ShareCatalogDialog";
 import StoreLogoPicker, { StoreLogo } from "@/components/admin/StoreLogoPicker";
@@ -68,11 +67,33 @@ function Stat({
   /** The limit the value counts towards ("12 / 20"). */
   of?: number | null;
 }) {
+  const full = of != null && value !== null && value >= of;
+  const near = of != null && value !== null && !full && value / of >= 0.8;
   return (
+    <>
+    {/* Phones: a small chip, "12/20 Products" */}
     <Link
       href={href}
       onPointerDown={ripple}
-      className="relative flex flex-col gap-2 overflow-hidden rounded-lg border border-line bg-white p-3 transition-colors hover:bg-paper/60 active:scale-[0.98] sm:p-4"
+      className="relative inline-flex h-9 items-center gap-1.5 overflow-hidden rounded-full border border-line bg-white pl-2.5 pr-3 text-[13px] transition-colors active:scale-[0.97] sm:hidden"
+    >
+      <Icon className="h-3.5 w-3.5 text-slate" aria-hidden />
+      {value === null ? (
+        <Skeleton className="h-4 w-6" />
+      ) : (
+        <span className={`font-bold tabular-nums ${full ? "text-red-600" : near ? "text-amber-700" : "text-ink"}`}>
+          {value}
+          {of != null && <span className="font-semibold text-slate">/{of}</span>}
+        </span>
+      )}
+      <span className="font-medium text-slate">{label}</span>
+    </Link>
+
+    {/* Larger screens: a card */}
+    <Link
+      href={href}
+      onPointerDown={ripple}
+      className="relative hidden flex-col gap-2 overflow-hidden rounded-lg border border-line bg-white p-4 transition-colors hover:bg-paper/60 active:scale-[0.98] sm:flex"
     >
       <Icon className="h-4 w-4 text-slate" aria-hidden />
       <span className="text-2xl font-bold tabular-nums tracking-[-0.02em] text-ink">
@@ -95,6 +116,7 @@ function Stat({
       )}
       <span className="text-xs font-medium text-slate">{label}</span>
     </Link>
+    </>
   );
 }
 
@@ -229,8 +251,11 @@ export default function AdminDashboardPage() {
       {/* Greeting */}
       <header className="admin-fade-in flex items-end justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-sm text-slate">Welcome back</p>
-          <h1 className="truncate text-[1.5rem] font-bold leading-tight tracking-[-0.025em] text-ink">{storeName}</h1>
+          {/* Smaller on phones, where the top bar already shows the store name. */}
+          <p className="text-xs text-slate sm:text-sm">Welcome back</p>
+          <h1 className="truncate text-lg font-bold leading-tight tracking-[-0.02em] text-ink sm:text-[1.5rem] sm:tracking-[-0.025em]">
+            {storeName}
+          </h1>
         </div>
         <Link href="/admin/ecatalog/new" className={`${buttonClass("primary")} hidden lg:inline-flex`}>
           <Plus className="h-4 w-4" aria-hidden />
@@ -241,33 +266,28 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 gap-3 sm:gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
         {/* Side column on desktop, first on phones: link + stats */}
         <div className="flex flex-col gap-3 sm:gap-5 lg:order-2">
-          {/* Store link */}
+          {/* Catalog link, with copy / share / open */}
           <Card className="admin-pop-in overflow-hidden">
-            <div className="flex items-center gap-3 p-3.5 sm:p-4">
+            <div className="flex items-center gap-3 p-3 sm:p-4">
               {details ? (
-                <StoreLogo logo={details.logo} name={details.name} className="h-10 w-10 text-base" />
+                <StoreLogo logo={details.logo} name={details.name} className="h-9 w-9 text-sm sm:h-10 sm:w-10 sm:text-base" />
               ) : (
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-tint text-primary">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-tint text-primary sm:h-10 sm:w-10">
                   <Store className="h-5 w-5" aria-hidden />
                 </span>
               )}
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-slate">Your catalog link</p>
+                <p className="text-[11px] font-medium text-slate sm:text-xs">Catalog link</p>
                 <a
                   href={liveUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block truncate text-[15px] font-semibold text-ink hover:text-primary"
+                  className="block truncate text-sm font-semibold text-ink hover:text-primary sm:text-[15px]"
                 >
                   {link}
                 </a>
               </div>
             </div>
-            {details && (
-              <div className="border-t border-line">
-                <StoreLogoPicker layout="dashboard" logo={details.logo} storeName={details.name} onChange={saveLogo} />
-              </div>
-            )}
             <div className="grid grid-cols-3 border-t border-line">
               {[
                 {
@@ -289,7 +309,7 @@ export default function AdminDashboardPage() {
                   type="button"
                   onClick={onClick}
                   onPointerDown={ripple}
-                  className={`relative flex h-12 items-center justify-center gap-1.5 overflow-hidden text-[13px] font-semibold transition-colors ${tone} ${
+                  className={`relative flex h-11 items-center justify-center gap-1.5 overflow-hidden text-[13px] font-semibold transition-colors sm:h-12 ${tone} ${
                     i > 0 ? "border-l border-line" : ""
                   }`}
                 >
@@ -300,8 +320,16 @@ export default function AdminDashboardPage() {
             </div>
           </Card>
 
+          {/* Store logo: its own card (a prominent upload row until there's a logo) */}
+          {details && (
+            <Card className="admin-pop-in overflow-hidden">
+              <StoreLogoPicker layout="dashboard" logo={details.logo} storeName={details.name} onChange={saveLogo} />
+            </Card>
+          )}
+
           {/* Stats */}
-          <section aria-label="Products" className="grid grid-cols-3 gap-2.5 sm:gap-3">
+          {/* Phones: a row of small chips. Larger screens: three cards. */}
+          <section aria-label="Products" className="flex flex-wrap gap-2 sm:grid sm:grid-cols-3 sm:gap-3">
             <Stat label="Products" value={total} icon={Package} href="/admin/ecatalog" of={user.store.productLimit} />
             <Stat label="Published" value={published} icon={Eye} href="/admin/ecatalog" />
             <Stat label="Hidden" value={hidden} icon={EyeOff} href="/admin/ecatalog" />
@@ -438,14 +466,6 @@ export default function AdminDashboardPage() {
             )}
           </Card>
         </div>
-      </div>
-
-      {/* Phones: the main action, pinned in thumb reach */}
-      <div className="sticky bottom-0 z-20 -mx-3 -mb-3 mt-auto sm:-mb-5 border-t border-line bg-white/95 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:-mx-4 sm:px-4 lg:hidden">
-        <Link href="/admin/ecatalog/new" onPointerDown={ripple} className={authButtonClass}>
-          <Plus className="h-[18px] w-[18px]" aria-hidden />
-          Add product
-        </Link>
       </div>
 
       {sharing && products && (
