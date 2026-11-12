@@ -340,9 +340,10 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           </div>
           <div className="flex shrink-0 items-center gap-2">
             {install.available && (
-              <Button variant="share" size="sm" onClick={startInstall}>
+              <Button variant="share" size="sm" onClick={startInstall} aria-label="Install app">
                 <Download className="h-4 w-4" aria-hidden />
-                Install<span className="hidden sm:inline">&nbsp;app</span>
+                {/* Phones: just the icon. */}
+                <span className="hidden sm:inline">Install app</span>
               </Button>
             )}
             <Button variant="danger-soft" size="sm" onClick={handleLogout} loading={loggingOut}>

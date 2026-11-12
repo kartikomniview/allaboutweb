@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ChevronRight, ImagePlus, Trash2 } from "lucide-react";
+import { ChevronRight, ImagePlus, Pencil, Trash2 } from "lucide-react";
 import { uploadStoreLogo } from "@/lib/adminStore";
 import { ripple } from "./ripple";
 import { Button, Spinner } from "./ui";
@@ -45,16 +45,29 @@ export default function StoreLogoPicker({
   storeName,
   onChange,
   layout = "settings",
+  className = "h-10 w-10",
+  onError,
 }: {
   logo: string;
   storeName: string;
   onChange: (url: string) => void | Promise<void>;
-  /** "settings": preview, buttons and help text. "dashboard": a full-width row for a card. */
-  layout?: "settings" | "dashboard";
+  /**
+   * "settings": preview, buttons and help text. "dashboard": a full-width row for a card.
+   * "thumb": just the tile, tap to upload or change (remove lives in Settings).
+   */
+  layout?: "settings" | "dashboard" | "thumb";
+  /** "thumb" only: the tile's size. */
+  className?: string;
+  /** "thumb" only: the tile has no room for an error, so the parent shows it. */
+  onError?: (message: string | null) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState<"upload" | "remove" | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setErrorState] = useState<string | null>(null);
+  const setError = (message: string | null) => {
+    setErrorState(message);
+    onError?.(message);
+  };
   const uploading = busy === "upload";
   const openPicker = () => busy === null && inputRef.current?.click();
 
@@ -117,6 +130,38 @@ export default function StoreLogoPicker({
       {error}
     </p>
   );
+
+  if (layout === "thumb") {
+    // Just the tile: the logo with a small edit badge, or the dashed placeholder.
+    // The file input sits outside the button so its click doesn't bubble back into it.
+    return (
+      <>
+        <button
+          type="button"
+          onClick={openPicker}
+          onPointerDown={ripple}
+          disabled={busy !== null}
+          aria-label={uploading ? "Uploading logo" : logo ? "Change logo" : "Upload logo"}
+          className="group relative block shrink-0 rounded-md disabled:cursor-wait"
+        >
+          {logo && !uploading ? (
+            <>
+              <StoreLogo logo={logo} name={storeName} className={`${className} text-sm`} />
+              <span
+                className="absolute -bottom-1 -right-1 grid h-4 w-4 place-items-center rounded-full bg-white text-slate shadow ring-1 ring-line"
+                aria-hidden
+              >
+                <Pencil className="h-2.5 w-2.5" />
+              </span>
+            </>
+          ) : (
+            <LogoPlaceholder uploading={uploading} className={`${className} group-hover:bg-tint`} />
+          )}
+        </button>
+        {fileInput}
+      </>
+    );
+  }
 
   if (layout === "dashboard") {
     // No logo yet: the whole row is the upload button, with the placeholder in front.

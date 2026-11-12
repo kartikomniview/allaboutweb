@@ -9,6 +9,7 @@ import {
   Copy,
   Eye,
   EyeOff,
+  MessageCircle,
   Package,
   Plus,
   Share2,
@@ -75,7 +76,7 @@ function Stat({
     <Link
       href={href}
       onPointerDown={ripple}
-      className="relative inline-flex h-9 items-center gap-1.5 overflow-hidden rounded-full border border-line bg-white pl-2.5 pr-3 text-[13px] transition-colors active:scale-[0.97] sm:hidden"
+      className="relative inline-flex h-9 shrink-0 items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-full border border-line bg-white pl-2.5 pr-3 text-[13px] transition-colors active:scale-[0.97] sm:hidden"
     >
       <Icon className="h-3.5 w-3.5 text-slate" aria-hidden />
       {value === null ? (
@@ -120,7 +121,18 @@ function Stat({
   );
 }
 
-type Task = { id: string; title: string; text: string; done: boolean; href?: string; action?: () => void; cta: string };
+type Task = {
+  id: string;
+  title: string;
+  text: string;
+  /** Phones: the tile's icon and one-word label. */
+  icon: LucideIcon;
+  short: string;
+  done: boolean;
+  href?: string;
+  action?: () => void;
+  cta: string;
+};
 
 export default function AdminDashboardPage() {
   const user = useAdminUser();
@@ -135,6 +147,7 @@ export default function AdminDashboardPage() {
   const [details, setDetails] = useState<StoreDetails | null>(null);
   const [shared, setShared] = useState(() => readShared(slug));
   const [copied, setCopied] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
   // The share panel (the same one as on the products page). Opens once the products are in.
   const [sharing, setSharing] = useState(false);
 
@@ -213,6 +226,8 @@ export default function AdminDashboardPage() {
       id: "product",
       title: "Add your first product",
       text: "Take a photo and AI fills in the details.",
+      icon: Plus,
+      short: "Product",
       done: (total ?? 0) > 0,
       href: "/admin/ecatalog/new",
       cta: "Add",
@@ -221,6 +236,8 @@ export default function AdminDashboardPage() {
       id: "whatsapp",
       title: "Add your WhatsApp number",
       text: "Customer enquiries from your catalog go there.",
+      icon: MessageCircle,
+      short: "WhatsApp",
       done: !!whatsapp,
       href: "/admin/settings",
       cta: "Add",
@@ -229,6 +246,8 @@ export default function AdminDashboardPage() {
       id: "publish",
       title: "Publish a product",
       text: "Published products show in your catalog.",
+      icon: Eye,
+      short: "Publish",
       done: (published ?? 0) > 0,
       href: "/admin/ecatalog",
       cta: "Open",
@@ -237,6 +256,8 @@ export default function AdminDashboardPage() {
       id: "share",
       title: "Share your catalog link",
       text: "Send it to customers on WhatsApp or post it.",
+      icon: Share2,
+      short: "Share",
       done: shared,
       action: shareLink,
       cta: "Share",
@@ -270,7 +291,22 @@ export default function AdminDashboardPage() {
           <Card className="admin-pop-in overflow-hidden">
             <div className="flex items-center gap-3 p-3 sm:p-4">
               {details ? (
-                <StoreLogo logo={details.logo} name={details.name} className="h-9 w-9 text-sm sm:h-10 sm:w-10 sm:text-base" />
+                <>
+                  {/* Phones: the thumbnail is the logo picker (no separate logo card). */}
+                  <span className="sm:hidden">
+                    <StoreLogoPicker
+                      layout="thumb"
+                      className="h-9 w-9"
+                      logo={details.logo}
+                      storeName={details.name}
+                      onChange={saveLogo}
+                      onError={setLogoError}
+                    />
+                  </span>
+                  <span className="hidden sm:block">
+                    <StoreLogo logo={details.logo} name={details.name} className="h-10 w-10 text-base" />
+                  </span>
+                </>
               ) : (
                 <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-tint text-primary sm:h-10 sm:w-10">
                   <Store className="h-5 w-5" aria-hidden />
@@ -288,6 +324,11 @@ export default function AdminDashboardPage() {
                 </a>
               </div>
             </div>
+            {logoError && (
+              <p role="alert" className="admin-fade-in -mt-1 px-3 pb-2.5 text-[13px] font-medium text-red-600 sm:hidden">
+                {logoError}
+              </p>
+            )}
             <div className="grid grid-cols-3 border-t border-line">
               {[
                 {
@@ -320,16 +361,20 @@ export default function AdminDashboardPage() {
             </div>
           </Card>
 
-          {/* Store logo: its own card (a prominent upload row until there's a logo) */}
+          {/* Store logo: its own card (a prominent upload row until there's a logo).
+              Not on phones, where the link card's thumbnail handles it. */}
           {details && (
-            <Card className="admin-pop-in overflow-hidden">
+            <Card className="admin-pop-in hidden overflow-hidden sm:block">
               <StoreLogoPicker layout="dashboard" logo={details.logo} storeName={details.name} onChange={saveLogo} />
             </Card>
           )}
 
           {/* Stats */}
-          {/* Phones: a row of small chips. Larger screens: three cards. */}
-          <section aria-label="Products" className="flex flex-wrap gap-2 sm:grid sm:grid-cols-3 sm:gap-3">
+          {/* Phones: one row of small chips, scrolling sideways if it doesn't fit. Larger screens: three cards. */}
+          <section
+            aria-label="Products"
+            className="no-scrollbar flex gap-2 overflow-x-auto overscroll-x-contain sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible"
+          >
             <Stat label="Products" value={total} icon={Package} href="/admin/ecatalog" of={user.store.productLimit} />
             <Stat label="Published" value={published} icon={Eye} href="/admin/ecatalog" />
             <Stat label="Hidden" value={hidden} icon={EyeOff} href="/admin/ecatalog" />
@@ -340,7 +385,8 @@ export default function AdminDashboardPage() {
 
         {/* Main column */}
         <div className="flex flex-col gap-3 sm:gap-5 lg:order-1">
-          {/* Getting started */}
+          {/* Getting started. Phones: a sideways-scrolling row of task cards (the next
+              one peeks in). Larger screens: a list. */}
           {showTasks && (
             <Card className="admin-fade-in overflow-hidden">
               <div className="p-3.5 pb-3 sm:p-4 sm:pb-3">
@@ -357,10 +403,27 @@ export default function AdminDashboardPage() {
                   />
                 </div>
               </div>
-              <ul className="divide-y divide-line border-t border-line">
+              <ul className="grid grid-cols-4 gap-2 px-3.5 pb-3.5 sm:block sm:divide-y sm:divide-line sm:border-t sm:border-line sm:p-0">
                 {tasks.map((task) => {
+                  const Icon = task.icon;
                   const body = (
                     <>
+                    {/* Phones: icon and one-word label */}
+                    <span className="flex flex-col items-center gap-1 sm:hidden">
+                      <span
+                        className={`grid h-8 w-8 place-items-center rounded-full ${
+                          task.done ? "admin-pop-check bg-emerald-500 text-white" : "bg-tint text-primary"
+                        }`}
+                        aria-hidden
+                      >
+                        {task.done ? <Check className="h-4 w-4" strokeWidth={3} /> : <Icon className="h-4 w-4" />}
+                      </span>
+                      <span className={`text-[11px] font-semibold leading-none ${task.done ? "text-slate" : "text-ink"}`}>
+                        {task.short}
+                      </span>
+                    </span>
+                    {/* Larger screens: the full row */}
+                    <span className="hidden sm:contents">
                       <span
                         className={`grid h-6 w-6 shrink-0 place-items-center rounded-full ${
                           task.done ? "admin-pop-check bg-emerald-500 text-white" : "border-2 border-line"
@@ -381,20 +444,27 @@ export default function AdminDashboardPage() {
                           <ChevronRight className="h-4 w-4" aria-hidden />
                         </span>
                       )}
+                    </span>
                     </>
                   );
+                  // Phones: a small square tile. Larger screens: a list row.
                   const rowClass =
-                    "relative flex min-h-14 w-full items-center gap-3 overflow-hidden px-3.5 sm:px-4 py-2.5 text-left transition-colors";
+                    "relative flex h-full w-full items-center justify-center overflow-hidden rounded-md border border-line py-2.5 transition-colors sm:min-h-14 sm:justify-start sm:gap-3 sm:rounded-none sm:border-0 sm:px-4 sm:text-left";
+                  // The tile shows only a word, so screen readers get the full task.
+                  const label = `${task.title}${task.done ? " (done)" : ""}`;
                   return (
                     <li key={task.id}>
                       {task.done ? (
-                        <div className={rowClass}>{body}</div>
+                        <div className={rowClass} title={label}>
+                          <span className="sr-only sm:hidden">{label}</span>
+                          {body}
+                        </div>
                       ) : task.href ? (
-                        <Link href={task.href} onPointerDown={ripple} className={`${rowClass} hover:bg-paper/60`}>
+                        <Link href={task.href} onPointerDown={ripple} aria-label={label} title={task.title} className={`${rowClass} hover:bg-paper/60`}>
                           {body}
                         </Link>
                       ) : (
-                        <button type="button" onClick={task.action} onPointerDown={ripple} className={`${rowClass} hover:bg-paper/60`}>
+                        <button type="button" onClick={task.action} onPointerDown={ripple} aria-label={label} title={task.title} className={`${rowClass} hover:bg-paper/60`}>
                           {body}
                         </button>
                       )}

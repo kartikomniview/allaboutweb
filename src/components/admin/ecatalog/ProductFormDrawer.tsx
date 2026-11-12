@@ -36,6 +36,7 @@ import {
   Sparkles,
   Star,
   Trash2,
+  TriangleAlert,
   WandSparkles,
   X,
   type LucideIcon,
@@ -69,9 +70,13 @@ import ConfirmDialog from "./ConfirmDialog";
 import CategoryCombobox, { type ComboOption } from "./CategoryCombobox";
 import { useOverlay } from "./useOverlay";
 
-// Compact control sizing: 16px text on phones (avoids iOS zoom), 13px from sm up.
-const inputClass =
-  "h-9 w-full rounded-[7px] border border-line bg-white px-2.5 text-base text-ink transition placeholder:text-slate/55 hover:border-[#d3d7e2] focus:border-primary focus:outline-none focus:ring-[3px] focus:ring-primary/15 sm:text-[13px]";
+// Phones: 48px controls with 16px text (avoids iOS zoom). From sm up: compact, 14px.
+const fieldBase =
+  "w-full rounded-md border border-line bg-white px-3.5 text-base text-ink transition placeholder:text-slate/55 hover:border-slate/35 focus:border-primary focus:outline-none focus-visible:outline-none! focus:ring-[3px] focus:ring-primary/15 sm:px-3 sm:text-sm";
+const inputClass = `h-12 sm:h-10 ${fieldBase}`;
+const textareaClass = `resize-y py-3 leading-relaxed sm:py-2 ${fieldBase}`;
+
+const labelClass = "mb-1.5 flex items-center gap-0.5 text-[13px] font-semibold text-ink";
 
 // Numbers are kept as strings while editing so fields can be empty mid-typing.
 type FormState = Omit<ProductInput, "price" | "originalPrice" | "rating" | "reviewCount" | "keywords" | "specs"> & {
@@ -220,8 +225,10 @@ function Section({
   const [open, setOpen] = useState(defaultOpen);
   const heading = (
     <>
-      <Icon className="h-3.5 w-3.5 shrink-0 text-slate" aria-hidden />
-      <span className="text-[13px] font-semibold text-ink">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-tint text-primary" aria-hidden>
+        <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
+      </span>
+      <span className="shrink-0 text-[15px] font-semibold text-ink">
         {title}
         {required && <span className="text-primary" aria-hidden>*</span>}
       </span>
@@ -242,22 +249,23 @@ function Section({
   );
 
   return (
-    <section className="shrink-0 overflow-hidden rounded-[10px] border border-line bg-white">
+    <section className="shrink-0 overflow-hidden rounded-lg border border-line bg-white shadow-[0_1px_2px_rgba(1,18,60,0.04)]">
       {collapsible ? (
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
+          onPointerDown={ripple}
           aria-expanded={open}
-          className={`flex h-10 w-full items-center gap-2 px-3.5 text-left transition-colors hover:bg-paper/60 ${
+          className={`relative flex min-h-14 w-full items-center gap-2.5 overflow-hidden px-4 py-3 text-left transition-colors hover:bg-paper/60 ${
             open ? "border-b border-line" : ""
           }`}
         >
           {heading}
         </button>
       ) : (
-        <div className="flex h-10 items-center gap-2 border-b border-line px-3.5">{heading}</div>
+        <div className="flex min-h-14 items-center gap-2.5 border-b border-line px-4 py-3">{heading}</div>
       )}
-      {open && <div className="flex flex-col gap-3 p-3.5">{children}</div>}
+      {open && <div className="flex flex-col gap-4 p-4">{children}</div>}
     </section>
   );
 }
@@ -277,12 +285,12 @@ function Field({
 }) {
   return (
     <label className={`block min-w-0 ${className}`}>
-      <span className="mb-1 flex items-center gap-0.5 text-xs font-medium text-ink/80">
+      <span className={labelClass}>
         {label}
         {required && <span className="text-primary" aria-hidden>*</span>}
       </span>
       {children}
-      {hint && <span className="mt-1 block text-[11px] leading-snug text-slate">{hint}</span>}
+      {hint && <span className="mt-1.5 block text-xs leading-snug text-slate">{hint}</span>}
     </label>
   );
 }
@@ -290,14 +298,15 @@ function Field({
 function MoneyInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
   return (
     <div className="relative">
-      <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-xs text-slate">₹</span>
+      <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-base text-slate sm:left-3 sm:text-sm">₹</span>
       <input
         type="number"
         inputMode="numeric"
         min={0}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`${inputClass} pl-6 tabular-nums`}
+        className={`${inputClass} pl-8 tabular-nums sm:pl-7`}
+        enterKeyHint="next"
         placeholder={placeholder}
       />
     </div>
@@ -337,11 +346,11 @@ function TagInput({
   }
 
   return (
-    <div className="flex min-h-9 flex-wrap items-center gap-1 rounded-[7px] border border-line bg-white px-1.5 py-1 transition hover:border-[#d3d7e2] focus-within:border-primary focus-within:ring-[3px] focus-within:ring-primary/15">
+    <div className="flex min-h-12 flex-wrap items-center gap-1.5 rounded-md border border-line bg-white px-2 py-1.5 transition hover:border-slate/35 focus-within:border-primary focus-within:ring-[3px] focus-within:ring-primary/15 sm:min-h-10 sm:gap-1 sm:px-1.5 sm:py-1">
       {tags.map((tag, i) => (
         <span
           key={tag}
-          className={`inline-flex h-6 items-center gap-1 rounded-[5px] pl-1.5 pr-0.5 text-[11px] font-semibold ring-1 ring-inset ${
+          className={`inline-flex h-8 items-center gap-1 rounded-[5px] pl-2 pr-0.5 text-xs font-semibold ring-1 ring-inset sm:h-6 sm:pl-1.5 sm:text-[11px] ${
             badge && i === 0 ? "bg-tint text-[#c4501a] ring-primary/20" : "bg-ink/[0.04] text-ink ring-ink/10"
           }`}
         >
@@ -350,10 +359,10 @@ function TagInput({
           <button
             type="button"
             onClick={() => onChange(tags.filter((t) => t !== tag))}
-            className="grid h-4 w-4 place-items-center rounded hover:bg-ink/10"
+            className="grid h-7 w-7 place-items-center rounded hover:bg-ink/10 sm:h-4 sm:w-4"
             aria-label={`Remove ${tag}`}
           >
-            <X className="h-3 w-3" aria-hidden />
+            <X className="h-3.5 w-3.5 sm:h-3 sm:w-3" aria-hidden />
           </button>
         </span>
       ))}
@@ -363,24 +372,26 @@ function TagInput({
         onKeyDown={onKeyDown}
         onBlur={commit}
         aria-labelledby={labelledBy}
+        enterKeyHint="done"
         placeholder={tags.length ? (badge ? "Add tag…" : "Add keyword…") : "Type and press Enter"}
-        className="h-6 min-w-[7rem] flex-1 bg-transparent px-1 text-base text-ink placeholder:text-slate/55 focus:outline-none sm:text-[13px]"
+        className="h-8 min-w-[7rem] flex-1 bg-transparent px-1.5 text-base text-ink placeholder:text-slate/55 focus:outline-none focus-visible:outline-none! sm:h-6 sm:px-1 sm:text-sm"
       />
     </div>
   );
 }
 
 const iconBtn =
-  "grid h-9 w-9 shrink-0 place-items-center rounded-[7px] text-slate transition-colors hover:bg-red-50 hover:text-red-600";
+  "grid h-11 w-11 shrink-0 place-items-center rounded-md text-slate transition-colors hover:bg-red-50 hover:text-red-600 sm:h-10 sm:w-10";
 
 function AddRowButton({ children, onClick }: { children: ReactNode; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex h-8 items-center gap-1.5 self-start rounded-[7px] border border-dashed border-line px-2.5 text-xs font-semibold text-slate transition-colors hover:border-primary/50 hover:text-primary"
+      onPointerDown={ripple}
+      className="relative inline-flex h-11 items-center gap-1.5 self-start overflow-hidden rounded-md border border-dashed border-line px-3.5 text-[13px] font-semibold text-slate transition-colors hover:border-primary/50 hover:text-primary sm:h-9 sm:px-3"
     >
-      <Plus className="h-3.5 w-3.5" aria-hidden />
+      <Plus className="h-4 w-4" aria-hidden />
       {children}
     </button>
   );
@@ -1682,7 +1693,7 @@ export default function ProductFormDrawer({
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {/* Not <Field>: its <label> would re-open the dropdown when an option is clicked. */}
                 <div className="min-w-0">
-                  <span id="category-label" className="mb-1 flex items-center gap-0.5 text-xs font-medium text-ink/80">
+                  <span id="category-label" className={labelClass}>
                     Category<span className="text-primary" aria-hidden>*</span>
                     <AutoDetectedBadge show={wizard && isAutoFilled("categoryName")} />
                   </span>
@@ -1696,7 +1707,7 @@ export default function ProductFormDrawer({
                   />
                 </div>
                 <div className="min-w-0">
-                  <span id="subcategory-label" className="mb-1 flex items-center gap-0.5 text-xs font-medium text-ink/80">
+                  <span id="subcategory-label" className={labelClass}>
                     Subcategory<span className="text-primary" aria-hidden>*</span>
                     <AutoDetectedBadge show={wizard && isAutoFilled("subcategoryName")} />
                   </span>
@@ -1715,18 +1726,17 @@ export default function ProductFormDrawer({
 
   const tagsBlock = (
               <div>
-                <span className="mb-1 block text-xs font-medium text-ink/80">Tags</span>
+                <span className={labelClass}>Tags</span>
                 <TagInput tags={form.tags} onChange={(tags) => set("tags", tags)} />
-                <p className="mt-1 text-[11px] leading-snug text-slate">
-                  The first tag (<Star className="inline h-2.5 w-2.5 fill-current align-[-1px] text-primary" aria-hidden />) is
-                  shown as the badge on the product card.
+                <p className="mt-1.5 text-xs leading-snug text-slate">
+                  <Star className="inline h-3 w-3 fill-current align-[-1px] text-primary" aria-hidden /> First tag is the card badge.
                 </p>
               </div>
   );
 
   const keywordsBlock = (
               <div>
-                <span id="keywords-label" className="mb-1 block text-xs font-medium text-ink/80">
+                <span id="keywords-label" className={labelClass}>
                   Search keywords
                 </span>
                 <TagInput
@@ -1736,19 +1746,15 @@ export default function ProductFormDrawer({
                   maxItems={20}
                   labelledBy="keywords-label"
                 />
-                <p className="mt-1 text-[11px] leading-snug text-slate">
-                  Words customers might search for, e.g. almirah, jhoomar, blackout, 3 seater. Filled in from the photo;
-                  not shown on the catalog.
-                </p>
+                <p className="mt-1.5 text-xs leading-snug text-slate">Helps shoppers find it. Not shown on the catalog.</p>
               </div>
   );
 
   const mediaSection = (
             <Section
-              title="Media"
+              title="Photos"
               required
               icon={Images}
-              description="Product photos"
               action={
                 SHOW_AUTOFILL_BUTTON && (
                 <>
@@ -1782,7 +1788,7 @@ export default function ProductFormDrawer({
   );
 
   const basicSection = (
-            <Section title="Basic information" icon={FileText}>
+            <Section title="Details" icon={FileText}>
               <Field label="Product name" required>
                 <input
                   value={form.productName}
@@ -1790,6 +1796,8 @@ export default function ProductFormDrawer({
                   className={inputClass}
                   placeholder="e.g. Jaipur Brass Pendant Light"
                   maxLength={120}
+                  autoCapitalize="words"
+                  enterKeyHint="next"
                 />
               </Field>
               <Field
@@ -1802,14 +1810,14 @@ export default function ProductFormDrawer({
                   rows={3}
                   maxLength={2000}
                   placeholder="What makes this product special?"
-                  className={`${inputClass} h-auto resize-y py-2 leading-relaxed`}
+                  className={textareaClass}
                 />
               </Field>
             </Section>
   );
 
   const orgSection = (
-            <Section title="Organization" icon={Layers} description="Where it appears in the catalog">
+            <Section title="Category & tags" icon={Layers}>
               {categoryPickers}
               {tagsBlock}
               {keywordsBlock}
@@ -1819,16 +1827,17 @@ export default function ProductFormDrawer({
   const pricingSection = (
             <Section title="Pricing" icon={IndianRupee}>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <Field label="Offer price" hint="Leave empty to show “Price on request”">
-                  <MoneyInput value={form.price} onChange={(v) => set("price", v)} placeholder="0" />
+                <Field label="Offer price">
+                  <MoneyInput value={form.price} onChange={(v) => set("price", v)} placeholder="On request" />
                 </Field>
-                <Field label="MRP" hint="Leave empty if not discounted">
-                  <MoneyInput value={form.originalPrice} onChange={(v) => set("originalPrice", v)} placeholder="0" />
+                <Field label="MRP">
+                  <MoneyInput value={form.originalPrice} onChange={(v) => set("originalPrice", v)} placeholder="Optional" />
                 </Field>
                 <div className="col-span-2 sm:col-span-1">
-                  <span className="mb-1 block text-xs font-medium text-ink/80">Discount</span>
+                  <span className={labelClass}>Discount</span>
                   <div
-                    className={`flex h-9 items-center rounded-[7px] px-2.5 text-[13px] font-semibold tabular-nums ${
+                    aria-live="polite"
+                    className={`flex h-12 items-center rounded-md px-3.5 text-sm font-semibold tabular-nums sm:h-10 sm:px-3 ${
                       off > 0 ? "bg-emerald-50 text-emerald-700" : "bg-paper text-slate"
                     }`}
                   >
@@ -1868,8 +1877,8 @@ export default function ProductFormDrawer({
                 </Field>
               </div>
               <div>
-                <span className="mb-1 flex items-center gap-1 text-xs font-medium text-ink/80">
-                  <SlidersHorizontal className="h-3 w-3 text-slate" aria-hidden />
+                <span className={`${labelClass} gap-1.5`}>
+                  <SlidersHorizontal className="h-3.5 w-3.5 text-slate" aria-hidden />
                   More specs
                 </span>
                 <div className="flex flex-col gap-2">
@@ -1907,10 +1916,7 @@ export default function ProductFormDrawer({
                     </AddRowButton>
                   )}
                 </div>
-                <p className="mt-1 text-[11px] leading-snug text-slate">
-                  Anything shoppers compare, e.g. Wood: Sheesham, Bulb: LED, Width: 54 in. Shown on the product page and
-                  used for the catalog&apos;s filters.
-                </p>
+                <p className="mt-1.5 text-xs leading-snug text-slate">Shown on the product page and used for filters.</p>
               </div>
             </Section>
   );
@@ -1940,7 +1946,7 @@ export default function ProductFormDrawer({
               {form.colors.map((c, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <label
-                    className="relative h-9 w-9 shrink-0 cursor-pointer overflow-hidden rounded-[7px] ring-1 ring-inset ring-ink/15"
+                    className="relative h-12 w-12 shrink-0 cursor-pointer overflow-hidden rounded-md ring-1 ring-inset ring-ink/15 sm:h-10 sm:w-10"
                     style={{ backgroundColor: c.hex }}
                     title="Pick colour"
                   >
@@ -1981,7 +1987,6 @@ export default function ProductFormDrawer({
               title="Highlights"
               icon={ListChecks}
               collapsible
-              description="Short selling points"
               summary={filledHighlights ? `${filledHighlights} point${filledHighlights === 1 ? "" : "s"}` : "None"}
             >
               {form.highlights.map((h, i) => (
@@ -2023,7 +2028,7 @@ export default function ProductFormDrawer({
               }
             >
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Rating" hint="0 – 5">
+                <Field label="Rating (0 – 5)">
                   <input
                     type="number"
                     inputMode="decimal"
@@ -2033,6 +2038,7 @@ export default function ProductFormDrawer({
                     value={form.rating}
                     onChange={(e) => set("rating", e.target.value)}
                     className={`${inputClass} tabular-nums`}
+                    enterKeyHint="next"
                   />
                 </Field>
                 <Field label="Review count">
@@ -2053,11 +2059,11 @@ export default function ProductFormDrawer({
   const editHeader = (
         <>
         {/* Header */}
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line bg-white px-4">
-          <div className="min-w-0 flex-1">
+        <header className="flex shrink-0 items-center gap-2 border-b border-line bg-white pl-4 pr-2 pt-[env(safe-area-inset-top)] sm:gap-3 sm:pr-3 sm:pt-0">
+          <div className="min-w-0 flex-1 py-2.5">
             <p className="text-[11px] font-medium leading-none text-slate">
               {product ? "Edit product" : "New product"}
-              {product && <span className="ml-1.5 font-mono text-slate/70">#{product.id}</span>}
+              {product && <span className="ml-1.5 hidden font-mono text-slate/70 sm:inline">#{product.id}</span>}
             </p>
             <h2 id="product-form-title" className="mt-1 truncate text-[15px] font-semibold leading-tight text-ink">
               {form.productName.trim() || (product ? "Untitled product" : "Untitled")}
@@ -2066,7 +2072,7 @@ export default function ProductFormDrawer({
 
           {/* Visibility */}
           <label
-            className="flex shrink-0 cursor-pointer items-center gap-2 rounded-[7px] border border-line px-2.5 py-1.5"
+            className="flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-md border border-line px-2.5"
             title={form.isActive ? "Visible in the catalog" : "Saved, but customers won't see it"}
           >
             <span className={`text-xs font-semibold ${form.isActive ? "text-emerald-700" : "text-slate"}`}>
@@ -2090,9 +2096,10 @@ export default function ProductFormDrawer({
             onClick={requestClose}
             disabled={saving}
             aria-label="Close"
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-[7px] text-slate transition-colors hover:bg-ink/[0.05] hover:text-ink disabled:opacity-50"
+            onPointerDown={ripple}
+            className="relative grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full text-slate transition-colors hover:bg-ink/[0.05] hover:text-ink disabled:opacity-50"
           >
-            <X className="h-4 w-4" aria-hidden />
+            <X className="h-5 w-5" aria-hidden />
           </button>
         </header>
         </>
@@ -2101,39 +2108,48 @@ export default function ProductFormDrawer({
   const editFooter = (
         <>
           {/* Footer */}
-          <footer className={`shrink-0 border-t border-line bg-white px-4 py-2.5 ${footerAside}`}>
+          <footer
+            className={`shrink-0 border-t border-line bg-white px-3 pb-[calc(0.625rem+env(safe-area-inset-bottom))] pt-2.5 sm:px-4 sm:pb-2.5 ${footerAside}`}
+          >
             {error && (
               <p
                 role="alert"
-                className="mb-2 flex items-center gap-1.5 rounded-[7px] bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-700"
+                className="admin-fade-in mb-2 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3.5 py-2.5 text-[13px] font-medium text-red-700"
               >
-                <Info className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <TriangleAlert className="mt-px h-4 w-4 shrink-0" aria-hidden />
                 {error}
               </p>
             )}
             <div className="flex items-center gap-2">
               {product && onDelete && (
-                <Button variant="danger-ghost" size="sm" onClick={() => onDelete(product)} disabled={saving}>
-                  <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                <Button
+                  variant="danger-ghost"
+                  onClick={() => onDelete(product)}
+                  disabled={saving}
+                  aria-label="Delete product"
+                  size="touch-icon"
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden />
                   <span className="hidden sm:inline">Delete</span>
                 </Button>
               )}
-              <div className="ml-auto flex items-center gap-2">
+              <div className="flex flex-1 items-center gap-2 sm:ml-auto sm:flex-none">
                 {dirty && !saving && (
                   <span className="hidden items-center gap-1.5 text-[11px] font-medium text-slate sm:inline-flex">
                     <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden />
                     Unsaved changes
                   </span>
                 )}
-                <Button size="sm" onClick={requestClose} disabled={saving}>
+                <Button size="touch" onClick={requestClose} disabled={saving} className="flex-1 sm:flex-none">
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   variant="primary"
-                  size="sm"
                   loading={saving}
                   disabled={uploading || imageSave.state === "saving" || (!!product && !dirty)}
+                  size="touch"
+                  className="flex-[2] sm:flex-none"
                 >
                   {saving ? "Saving…" : uploading ? "Uploading…" : product ? "Save changes" : "Create product"}
                 </Button>
@@ -2518,7 +2534,7 @@ export default function ProductFormDrawer({
           layout === "page"
             ? "admin-pop-in flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-white focus:outline-none sm:h-[min(880px,100%)] sm:max-w-[560px] sm:flex-none sm:rounded-lg sm:border sm:border-line sm:shadow-[0_1px_2px_rgba(1,18,60,0.04),0_16px_40px_-20px_rgba(1,18,60,0.18)]"
             : `admin-slide-in flex h-full w-full flex-col shadow-2xl focus:outline-none sm:max-w-[640px] ${
-                wizard ? "bg-white sm:max-w-[560px]" : "bg-[#f7f8fb]"
+                wizard ? "bg-white sm:max-w-[560px]" : "bg-paper"
               }`
         }
       >

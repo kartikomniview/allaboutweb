@@ -15,7 +15,6 @@ import {
   SearchX,
   Share2,
   TriangleAlert,
-  Upload,
   X,
 } from "lucide-react";
 import { useAdminUser, useLiveCatalogUrl } from "@/components/admin/AdminShell";
@@ -30,12 +29,10 @@ import ProductTable, {
 } from "@/components/admin/ecatalog/ProductTable";
 import { ripple } from "@/components/admin/ripple";
 import { Button, Card, buttonClass } from "@/components/admin/ui";
-import { PRODUCTS } from "@/components/furniture-catalog/data";
 import { categoryLabel, sortCategoryNames } from "@/lib/taxonomy";
 import { AuthError } from "@/lib/adminAuth";
 import {
   deleteProduct,
-  importProducts,
   listProducts,
   productToInput,
   sortProducts,
@@ -142,7 +139,6 @@ export default function ManageEcatalogPage() {
   const liveUrl = useLiveCatalogUrl();
   const [products, setProducts] = useState<Product[] | null>(null);
   const { store } = useAdminUser();
-  const sellsFurniture = store.businessTypes.includes("furniture");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -163,7 +159,6 @@ export default function ManageEcatalogPage() {
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
-  const [importing, setImporting] = useState(false);
   const [sharing, setSharing] = useState(false);
 
   const [toast, setToast] = useState<Toast | null>(null);
@@ -317,23 +312,6 @@ export default function ManageEcatalogPage() {
     }
   }
 
-  async function handleImport() {
-    setImporting(true);
-    try {
-      const { created, skipped, limitReached } = await importProducts(PRODUCTS);
-      setProducts(await listProducts());
-      showToast(
-        `Imported ${created} product${created === 1 ? "" : "s"}${skipped ? ` · ${skipped} already existed` : ""}${
-          limitReached ? " · your product limit is reached" : ""
-        }`,
-      );
-    } catch (err) {
-      showToast(errorMessage(err, "Could not import products."), "error");
-    } finally {
-      setImporting(false);
-    }
-  }
-
   function clearFilters() {
     setQuery("");
     setCategory(DEFAULT_CATEGORY);
@@ -372,22 +350,13 @@ export default function ManageEcatalogPage() {
         icon={Inbox}
         title="No products yet"
         actions={
-          <>
-            {sellsFurniture && (
-              <Button onClick={handleImport} loading={importing}>
-                {!importing && <Upload className="h-4 w-4" aria-hidden />}
-                {importing ? "Importing…" : `Import ${PRODUCTS.length} sample furniture products`}
-              </Button>
-            )}
-            <Link href={NEW_PRODUCT_ROUTE} className={buttonClass("primary")}>
-              <Plus className="h-4 w-4" aria-hidden />
-              Add product
-            </Link>
-          </>
+          <Link href={NEW_PRODUCT_ROUTE} className={buttonClass("primary")}>
+            <Plus className="h-4 w-4" aria-hidden />
+            Add product
+          </Link>
         }
       >
         Add your first product: upload a photo and its name, category and details are filled in for you.
-        {sellsFurniture && " Or start with sample furniture products to see how the catalog looks."}
       </EmptyState>
     );
   } else if (visible.length === 0) {
@@ -448,9 +417,13 @@ export default function ManageEcatalogPage() {
             View live
             <ArrowUpRight className="h-4 w-4 text-slate" aria-hidden />
           </a>
-          <Link href={NEW_PRODUCT_ROUTE} className={`${buttonClass("primary")} hidden lg:inline-flex`}>
+          <Link
+            href={NEW_PRODUCT_ROUTE}
+            aria-label="Add product"
+            className={buttonClass("primary", "icon", "sm:w-auto sm:gap-2 sm:px-4")}
+          >
             <Plus className="h-4 w-4" aria-hidden />
-            Add product
+            <span className="hidden sm:inline">Add product</span>
           </Link>
         </div>
       </header>
@@ -577,7 +550,7 @@ export default function ManageEcatalogPage() {
       </div>
 
       <Card className="relative overflow-hidden">
-        {(refreshing || importing) && <div className="admin-progress absolute inset-x-0 top-0 z-10" role="progressbar" aria-label="Loading" />}
+        {refreshing &&<div className="admin-progress absolute inset-x-0 top-0 z-10" role="progressbar" aria-label="Loading" />}
         {content}
         {products && products.length > 0 && visible.length > 0 && (
           <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-3 text-[13px] text-slate">

@@ -20,7 +20,7 @@ export function Skeleton({ className = "" }: { className?: string }) {
 }
 
 type Variant = "primary" | "secondary" | "share" | "ghost" | "danger" | "danger-soft" | "danger-ghost";
-type Size = "sm" | "md" | "icon";
+type Size = "sm" | "md" | "icon" | "touch" | "touch-icon";
 
 const VARIANTS: Record<Variant, string> = {
   primary: "bg-button text-white shadow-[0_1px_2px_rgba(1,18,60,0.12),inset_0_1px_0_rgba(255,255,255,0.15)] hover:bg-button-hover",
@@ -38,6 +38,10 @@ const SIZES: Record<Size, string> = {
   sm: "h-8 gap-1.5 px-2.5 text-[13px]",
   md: "h-10 gap-2 px-4 text-sm",
   icon: "h-10 w-10 text-sm",
+  // Phones: a 44px touch target. From sm up: compact like "sm".
+  touch: "h-11 gap-2 px-4 text-sm sm:h-9 sm:gap-1.5 sm:px-3 sm:text-[13px]",
+  // Phones: a 44px square icon button. From sm up: a compact button with its label.
+  "touch-icon": "h-11 w-11 text-sm sm:h-9 sm:w-auto sm:gap-1.5 sm:px-3 sm:text-[13px]",
 };
 
 export const buttonClass = (variant: Variant = "secondary", size: Size = "md", extra = "") =>

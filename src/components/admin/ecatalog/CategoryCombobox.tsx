@@ -189,7 +189,7 @@ export default function CategoryCombobox({
         disabled={disabled}
         onClick={() => (open ? close() : openPanel())}
         onKeyDown={onButtonKeyDown}
-        className={`flex h-10 w-full items-center gap-2 rounded-[7px] border bg-white pl-1.5 pr-2 text-left text-base transition hover:border-[#d3d7e2] focus:outline-none focus:ring-[3px] focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-60 sm:text-[13px] ${
+        className={`flex h-12 w-full items-center gap-2 rounded-md border bg-white pl-2 pr-2.5 text-left text-base transition hover:border-slate/35 focus:outline-none focus-visible:outline-none! focus:ring-[3px] focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-60 sm:h-10 sm:pl-1.5 sm:pr-2 sm:text-sm ${
           open ? "border-primary ring-[3px] ring-primary/15" : "border-line focus:border-primary"
         }`}
       >
