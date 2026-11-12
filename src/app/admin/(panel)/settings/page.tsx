@@ -145,7 +145,7 @@ export default function StoreSettingsPage() {
                   onChange={(e) => set("whatsapp", e.target.value)}
                   maxLength={20}
                   className={inputClass}
-                  placeholder="98765 43210"
+                  placeholder="98765 XXXX"
                 />
               </Field>
               <Field label="Tagline" hint="A few words under your name, e.g. Lights & Decor.">

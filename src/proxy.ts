@@ -63,6 +63,13 @@ export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   // Behind Amplify/CloudFront the visitor's domain may arrive in either header.
   const hosts = [request.headers.get("x-forwarded-host"), request.headers.get("host")];
+
+  // One address for Catalog24: www.catalog24.in -> catalog24.in. The admin keeps its
+  // login and device id per address, and the API only accepts calls from catalog24.in.
+  if (hosts.some((h) => h?.split(",")[0].trim().split(":")[0].toLowerCase() === "www.catalog24.in")) {
+    return redirectTo(new URL(pathname + search, CATALOG_SITE_URL));
+  }
+
   const storeSlug = FORCE_CATALOG ? null : (hosts.map(storeSubdomainOf).find(Boolean) ?? null);
   const catalogHost = FORCE_CATALOG ? (hosts[1] ?? "localhost") : hosts.find(isCatalogDomain);
 

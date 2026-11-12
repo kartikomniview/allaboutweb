@@ -66,7 +66,6 @@ import { AuthProgress, authButtonClass, authSecondaryButtonClass, useTyping } fr
 import { ripple } from "../ripple";
 import { Button, Spinner } from "../ui";
 import ConfirmDialog from "./ConfirmDialog";
-import ImagePromptDialog from "./ImagePromptDialog";
 import CategoryCombobox, { type ComboOption } from "./CategoryCombobox";
 import { useOverlay } from "./useOverlay";
 
@@ -1225,7 +1224,6 @@ export default function ProductFormDrawer({
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [imageSave, setImageSave] = useState<ImageSaveStatus>({ state: "idle", label: "", seq: 0 });
-  const [promptOpen, setPromptOpen] = useState(false);
   const [detecting, setDetecting] = useState(false);
   const [detectNote, setDetectNote] = useState<DetectNote | null>(null);
   const [confirmAutofill, setConfirmAutofill] = useState(false);
@@ -1755,17 +1753,6 @@ export default function ProductFormDrawer({
                         Auto-fill<span className="hidden sm:inline"> from photo</span>
                       </>
                     )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPromptOpen(true)}
-                    disabled={!form.productName.trim()}
-                    title={form.productName.trim() ? "Prompt for an AI-generated room photo" : "Add a product name first"}
-                    className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[7px] bg-tint px-2.5 text-xs font-semibold whitespace-nowrap text-[#c4501a] ring-1 ring-inset ring-primary/25 transition-colors hover:bg-[#ffe1cf] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Sparkles className="h-3.5 w-3.5" aria-hidden />
-                    <span className="sm:hidden">Prompt</span>
-                    <span className="hidden sm:inline">Get prompt for image</span>
                   </button>
                 </>
               }
@@ -2542,7 +2529,6 @@ export default function ProductFormDrawer({
       </div>
 
 
-      {promptOpen && <ImagePromptDialog product={form} onClose={() => setPromptOpen(false)} />}
       {confirmAutofill && (
         <ConfirmDialog
           title="Replace the details?"
