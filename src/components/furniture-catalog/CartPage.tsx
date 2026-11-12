@@ -7,7 +7,8 @@ import { PRICE_ON_REQUEST, WHATSAPP_MESSAGES, formatINR, formatPrice, hasPrice }
 import { ProductVisual, WhatsAppIcon, productSubPath, useCatalog } from './shared';
 
 // Flat, bordered panels with barely-rounded corners (matches the product page footer).
-const panel = 'rounded-md border border-neutral-200 bg-white';
+// On desktop they also get the soft shadow of the catalog's section panels.
+const panel = 'rounded-md border border-neutral-200 bg-white md:rounded-lg md:shadow-[0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_-1px_rgba(0,0,0,0.04)]';
 
 // The Cart tab (/app/catalog/furniture/cart): the products the shopper added, a price
 // breakdown and one WhatsApp button that asks the store for its best price on everything.
@@ -39,7 +40,7 @@ export default function CartPage({ onBrowse }: { onBrowse: () => void }) {
 
   if (items.length === 0) {
     return (
-      <div className={`${panel} my-6 space-y-3 px-6 py-10 text-center`}>
+      <div className={`${panel} my-6 space-y-3 px-6 py-10 text-center md:mx-auto md:my-12 md:max-w-md`}>
         <ShoppingCart className="mx-auto h-8 w-8 text-neutral-300" strokeWidth={1.5} />
         <h2 className="text-sm font-semibold text-[#111111]">Your cart is empty</h2>
         <p className="mx-auto max-w-xs text-xs leading-relaxed text-neutral-500">
@@ -56,10 +57,10 @@ export default function CartPage({ onBrowse }: { onBrowse: () => void }) {
   }
 
   return (
-    <div className="space-y-3 pt-1">
+    <div className="space-y-3 pt-1 md:space-y-5 md:pt-2">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-[15px] font-semibold text-[#111111]">
-          Cart <span className="text-xs font-normal text-neutral-500">· {itemsLabel}</span>
+        <h2 className="text-[15px] font-semibold text-[#111111] md:text-2xl md:font-bold">
+          Cart <span className="text-xs font-normal text-neutral-500 md:text-sm">· {itemsLabel}</span>
         </h2>
         <button
           onClick={clearCart}
@@ -69,32 +70,36 @@ export default function CartPage({ onBrowse }: { onBrowse: () => void }) {
         </button>
       </div>
 
+      {/* Phones: one column, with the WhatsApp button sticking above the tab bar.
+          Desktop: items on the left, the price summary pinned on the right.
+          (`contents` keeps the button's sticky range the whole cart on phones.) */}
+      <div className="flex flex-col gap-3 md:grid md:grid-cols-[minmax(0,1fr)_340px] md:items-start md:gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
       {/* Items — one panel, rows split by hairlines */}
       <ul className={`${panel} divide-y divide-neutral-100`}>
         {items.map((product) => {
           const off = discountPercent(product.price, product.originalPrice);
           return (
-            <li key={product.id} className="flex items-center gap-3 p-3">
+            <li key={product.id} className="flex items-center gap-3 p-3 md:gap-4 md:p-4">
               <Link
                 href={href(productSubPath(product.id))}
                 scroll={false}
                 replace={embedded}
                 onClick={markInAppNavigation}
-                className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-[4px] bg-neutral-100"
+                className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-[4px] bg-neutral-100 md:h-24 md:w-24"
                 aria-label={product.productName}
               >
-                <ProductVisual product={product} sizes="72px" />
+                <ProductVisual product={product} sizes="96px" />
               </Link>
 
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[10px] font-medium uppercase tracking-[0.06em] text-neutral-500">
                   {product.subcategoryName || product.categoryName}
                 </p>
-                <h3 className="mt-0.5 line-clamp-2 text-[13px] font-medium leading-snug text-[#111111]">
+                <h3 className="mt-0.5 line-clamp-2 text-[13px] font-medium leading-snug text-[#111111] md:text-sm">
                   {product.productName}
                 </h3>
                 <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5 tabular-nums">
-                  <span className="text-sm font-semibold text-[#111111]">{formatPrice(product.price)}</span>
+                  <span className="text-sm font-semibold text-[#111111] md:text-[15px]">{formatPrice(product.price)}</span>
                   {off > 0 && (
                     <>
                       <span className="text-[11px] text-neutral-400 line-through">{formatINR(product.originalPrice)}</span>
@@ -108,7 +113,7 @@ export default function CartPage({ onBrowse }: { onBrowse: () => void }) {
                 onClick={() => removeFromCart(product.id)}
                 aria-label={`Remove ${product.productName}`}
                 title="Remove"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[4px] text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[4px] text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-600 md:h-10 md:w-10"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -117,8 +122,9 @@ export default function CartPage({ onBrowse }: { onBrowse: () => void }) {
         })}
       </ul>
 
+      <div className="contents md:sticky md:top-[calc(var(--catalog-header-h,0px)+1.25rem)] md:flex md:flex-col md:gap-3">
       {/* Price breakdown */}
-      <section aria-label="Price details" className={`${panel} p-3.5`}>
+      <section aria-label="Price details" className={`${panel} p-3.5 md:p-5`}>
         <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-500">Price details</h3>
         <dl className="mt-3 space-y-2 text-[13px] tabular-nums">
           {priced.length > 0 && (
@@ -153,8 +159,8 @@ export default function CartPage({ onBrowse }: { onBrowse: () => void }) {
         )}
       </section>
 
-      {/* Best-price button — stays visible above the bottom navigation */}
-      <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10">
+      {/* Best-price button — stays visible above the bottom navigation (phones) */}
+      <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10 md:static">
         <a
           href={whatsAppUrl(WHATSAPP_MESSAGES.cartEnquiry(store.name, items, total))}
           onClick={onWhatsAppLinkClick}
@@ -172,6 +178,8 @@ export default function CartPage({ onBrowse }: { onBrowse: () => void }) {
             <ArrowRight className="h-4 w-4" />
           </span>
         </a>
+      </div>
+      </div>
       </div>
     </div>
   );

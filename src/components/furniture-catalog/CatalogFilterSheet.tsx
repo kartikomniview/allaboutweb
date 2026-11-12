@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Check, X } from "lucide-react";
+import { X } from "lucide-react";
 import type { CatalogProduct } from "@/lib/adminProducts";
 import { formatINR } from "./data";
 import {
@@ -90,7 +90,7 @@ export default function CatalogFilterSheet({
 
   return createPortal(
     <div
-      className="furniture-catalog fixed inset-0 z-[90] flex items-end justify-center bg-black/40"
+      className="furniture-catalog fixed inset-0 z-[90] flex items-end justify-center bg-black/40 md:items-center md:p-6"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
@@ -99,7 +99,7 @@ export default function CatalogFilterSheet({
         aria-modal="true"
         aria-labelledby="catalog-filters-title"
         tabIndex={-1}
-        className="flex max-h-[85vh] w-full max-w-md flex-col rounded-t-lg bg-white shadow-2xl focus:outline-none"
+        className="flex max-h-[85vh] w-full max-w-md flex-col rounded-t-lg bg-white shadow-2xl focus:outline-none md:rounded-lg"
       >
         <header className="flex shrink-0 items-center justify-between border-b border-neutral-200 px-4 py-3">
           <h2 id="catalog-filters-title" className="text-sm font-bold text-neutral-900">
@@ -160,55 +160,6 @@ export default function CatalogFilterSheet({
                 </label>
               </div>
               <p className="text-[11px] text-neutral-500">Products without a listed price are hidden while a price is set.</p>
-            </Group>
-          )}
-
-          {options.colors.length > 0 && (
-            <Group title="Colour">
-              <div className="flex flex-wrap gap-2">
-                {options.colors.map((c) => {
-                  const on = draft.colors.includes(c.key);
-                  return (
-                    <button
-                      key={c.key}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => setDraft((d) => ({ ...d, colors: toggleKey(d.colors, c.key) }))}
-                      className={chip(on)}
-                    >
-                      <span
-                        className="grid h-4 w-4 place-items-center rounded-full ring-1 ring-inset ring-black/15"
-                        style={{ backgroundColor: c.hex }}
-                        aria-hidden
-                      >
-                        {on && <Check className="h-2.5 w-2.5 text-white drop-shadow" strokeWidth={3.5} />}
-                      </span>
-                      {c.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </Group>
-          )}
-
-          {options.materials.length > 0 && (
-            <Group title="Material">
-              <div className="flex flex-wrap gap-2">
-                {options.materials.map((m) => {
-                  const on = draft.materials.includes(m.key);
-                  return (
-                    <button
-                      key={m.key}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => setDraft((d) => ({ ...d, materials: toggleKey(d.materials, m.key) }))}
-                      className={chip(on)}
-                    >
-                      {m.label}
-                    </button>
-                  );
-                })}
-              </div>
             </Group>
           )}
 

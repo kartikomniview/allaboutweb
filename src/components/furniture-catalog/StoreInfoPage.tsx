@@ -4,7 +4,7 @@ import Image from "next/image";
 import { ChevronDown, ChevronRight, Clock, Mail, MapPin, Navigation, Phone, Share2, Star } from "lucide-react";
 import { telHref } from "@/lib/catalogStore";
 import { FAQS, TRUST_POINTS } from "./data";
-import { WhatsAppIcon, useCatalog } from "./shared";
+import { StoreMark, WhatsAppIcon, useCatalog } from "./shared";
 
 const directionsUrl = (address: string) =>
   `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
@@ -12,7 +12,9 @@ const directionsUrl = (address: string) =>
 const formatCount = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k` : String(n));
 
 // Same panel and section-label styles as the cart page, so the tabs read as one app.
-const panel = "rounded-md border border-neutral-200 bg-white";
+// On desktop they also get the soft shadow of the catalog's section panels.
+const panel =
+  "rounded-md border border-neutral-200 bg-white md:rounded-lg md:shadow-[0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_-1px_rgba(0,0,0,0.04)]";
 const sectionLabel = "text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-500";
 
 // The "WhatsApp" tab (/app/catalog/furniture/help): a compact store profile —
@@ -47,16 +49,17 @@ export default function StoreInfoPage() {
   const subtitle = [store.category, store.since && `Since ${store.since}`].filter(Boolean).join(" · ");
 
   return (
-    <div className="space-y-4 pt-1">
+    // Phones: one column. Desktop: the store card on the left (pinned), details and FAQs on the right.
+    <div className="space-y-4 pt-1 md:mx-auto md:grid md:max-w-5xl md:grid-cols-2 md:items-start md:gap-6 md:space-y-0 md:pt-2">
       {/* Store card: cover photo, logo, name, rating, actions */}
-      <section className={`${panel} overflow-hidden`}>
-        <div className="relative aspect-[16/6] bg-neutral-100">
+      <section className={`${panel} overflow-hidden md:sticky md:top-[calc(var(--catalog-header-h,0px)+1.25rem)]`}>
+        <div className="relative aspect-[16/6] bg-neutral-100 md:aspect-[16/8]">
           {store.coverImage && (
             <Image
               src={store.coverImage}
               alt={`${store.name} store`}
               fill
-              sizes="(min-width: 640px) 400px, 100vw"
+              sizes="(min-width: 768px) 500px, 100vw"
               className="object-cover"
             />
           )}
@@ -64,8 +67,8 @@ export default function StoreInfoPage() {
 
         <div className="px-4 pb-4">
           <div className="flex items-end justify-between gap-3">
-            <span className="-mt-8 relative flex h-16 w-16 shrink-0 items-center justify-center rounded-md bg-neutral-900 text-2xl font-bold text-white ring-4 ring-white">
-              {store.initial}
+            <span className="relative -mt-8 shrink-0 rounded-md bg-white ring-4 ring-white">
+              <StoreMark store={store} sizes="64px" className="h-16 w-16 rounded-md text-2xl" />
             </span>
             {store.rating !== null && (
               <span className="mb-0.5 flex items-center gap-1 rounded-[4px] border border-neutral-200 px-2 py-1 text-xs tabular-nums">
@@ -122,6 +125,7 @@ export default function StoreInfoPage() {
         </div>
       </section>
 
+      <div className="space-y-4">
       {/* Contact details — labelled rows; tappable ones get a chevron */}
       {details.length > 0 && (
       <section aria-label="Contact details" className={panel}>
@@ -185,6 +189,7 @@ export default function StoreInfoPage() {
       </section>
       </>
       )}
+      </div>
     </div>
   );
 }

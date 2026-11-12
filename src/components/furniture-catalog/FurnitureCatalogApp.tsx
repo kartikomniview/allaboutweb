@@ -16,7 +16,8 @@ import {
   Home,
   LayoutGrid,
   MapPin,
-  Info
+  Info,
+  Store as StoreIcon,
 } from 'lucide-react';
 import {
   AAW_PROMO,
@@ -27,13 +28,20 @@ import type { CatalogProduct } from '@/lib/adminProducts';
 import type { CatalogStore } from '@/lib/catalogStore';
 import { categoryLabel, sortCategoryNames } from '@/lib/taxonomy';
 import CartPage from './CartPage';
-import CatalogPage, { DEFAULT_CATALOG_FILTERS, type CatalogFilters } from './CatalogPage';
+import CatalogPage, { type CatalogFilters } from './CatalogPage';
+import { categorySubPath, findBySlug, parseCategoryPath, type CategoryRoute } from './categoryPath';
 import DemoWhatsAppDialog from './DemoWhatsAppDialog';
+import { EMPTY_REFINE, type RefineFilters } from './filters';
+import PicksPage from './PicksPage';
 import SavedPage from './SavedPage';
+import { parsePicksPath } from './shareLinks';
 import StoreInfoPage from './StoreInfoPage';
 import {
   CatalogContext,
+  PRODUCT_GRID,
   ProductCard,
+  SECTION_PANEL,
+  StoreMark,
   WhatsAppIcon,
   catalogBasePath,
   catalogHref,
@@ -45,8 +53,10 @@ import {
 
 type AppTab = 'catalog' | 'saved' | 'cart' | 'help';
 
-// Each bottom-nav tab has its own route (pages under app/app/catalog/furniture/(app)),
-// given relative to the catalog's base path. The catalog is the start page.
+// Each bottom-nav tab has its own route (pages under app/store/[store]/(app)),
+// given relative to the catalog's base path. The catalog is the start page; its
+// categories and product types have their own pages too (/category/sofa/l-shape), and so
+// do hand-picked products from a shared link (/picks/<id>,<id>).
 const TAB_PATHS: Record<AppTab, string> = {
   catalog: '',
   saved: '/saved',
@@ -56,11 +66,13 @@ const TAB_PATHS: Record<AppTab, string> = {
 
 const tabFromPath = (pathname: string): AppTab | null => {
   const relative = catalogRelativePath(pathname);
+  if (parseCategoryPath(relative) || parsePicksPath(relative)) return 'catalog';
   return (Object.keys(TAB_PATHS) as AppTab[]).find(tab => TAB_PATHS[tab] === relative) ?? null;
 };
 
 // The base path never changes while the catalog is open, so there's nothing to subscribe to.
 const subscribeToNothing = () => () => {};
+const NO_CATEGORY: CategoryRoute = { category: '', subCategory: '' };
 const browserBasePath = () => catalogBasePath(window.location.pathname);
 const isInIframe = () => window.self !== window.top;
 
@@ -127,8 +139,64 @@ export default function FurnitureCatalogApp({
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [activeTab]);
 
-  // Catalog tab filters — kept here so they survive tab switches and can be set from Home
-  const [catalogFilters, setCatalogFilters] = useState<CatalogFilters>(DEFAULT_CATALOG_FILTERS);
+  // The Catalog tab's category and product type come from the URL (/category/sofa/l-shape),
+  // as slugs. They're kept while other pages are open, so going back to the tab (or closing
+  // a product) shows the same ones. A tap sets them straight away, before the navigation
+  // finishes, so the chips respond instantly; the URL takes over again when it changes.
+  const [browse, setBrowse] = useState<CategoryRoute>(
+    () => (routeTab === 'catalog' && parseCategoryPath(catalogRelativePath(pathname))) || NO_CATEGORY
+  );
+  // Hand-picked products (a shared /picks/ link) show on the Catalog tab instead of the
+  // categories, and stay underneath while one of them is open.
+  const [picks, setPicks] = useState<string[] | null>(
+    () => (routeTab === 'catalog' ? parsePicksPath(catalogRelativePath(pathname)) : null)
+  );
+  const [browsePath, setBrowsePath] = useState(pathname);
+  if (pathname !== browsePath) {
+    setBrowsePath(pathname);
+    if (routeTab === 'catalog') {
+      const relative = catalogRelativePath(pathname);
+      setBrowse(parseCategoryPath(relative) ?? NO_CATEGORY);
+      setPicks(parsePicksPath(relative));
+    }
+  }
+
+  // The slugs as names. An unknown category (say, its products were unpublished) shows the first one.
+  const categoryNames = useMemo(
+    () => sortCategoryNames([...new Set(products.map(p => p.categoryName).filter(Boolean))]),
+    [products]
+  );
+  const browseCategory = findBySlug(categoryNames, browse.category) ?? categoryNames[0] ?? '';
+  const browseSubCategory = browse.subCategory
+    ? (findBySlug(
+        new Set(products.filter(p => p.categoryName === browseCategory).map(p => p.subcategoryName).filter(Boolean)),
+        browse.subCategory
+      ) ?? '')
+    : '';
+
+  // The Filters sheet's choices belong to one category; another category starts without them.
+  const [refine, setRefine] = useState<{ category: string; filters: RefineFilters }>({
+    category: '',
+    filters: EMPTY_REFINE,
+  });
+  const catalogFilters: CatalogFilters = {
+    category: browseCategory,
+    subCategory: browseSubCategory,
+    refine: refine.category === browseCategory ? refine.filters : EMPTY_REFINE,
+  };
+
+  // A new category or product type is a navigation (without scrolling); the Filters sheet isn't.
+  const changeCatalogFilters = (next: CatalogFilters) => {
+    setRefine({ category: next.category, filters: next.refine });
+    if (next.category === browseCategory && next.subCategory === browseSubCategory) return;
+    const path = categorySubPath(next.category, next.subCategory);
+    setBrowse(parseCategoryPath(path) ?? NO_CATEGORY);
+    navigate(href(path), { scroll: false });
+  };
+
+  // The Catalog tab's links go back to the category last shown.
+  const tabPath = (tab: AppTab) =>
+    tab === 'catalog' && browse.category ? categorySubPath(browseCategory, browseSubCategory) : TAB_PATHS[tab];
 
   // Unified Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -148,7 +216,7 @@ export default function FurnitureCatalogApp({
   // Switching tabs is a navigation; it also leaves search mode.
   const goToTab = (tab: AppTab) => {
     setSearchQuery('');
-    navigate(href(TAB_PATHS[tab]));
+    navigate(href(tabPath(tab)));
   };
 
   // WhatsApp goes to the store's own number. The demo store instead shows the
@@ -274,12 +342,51 @@ export default function FurnitureCatalogApp({
     onWhatsAppLinkClick,
   };
 
+  // The tab a link points at is "current" unless search results are showing.
+  const isCurrent = (tab: AppTab) => activeTab === tab && !searchQuery;
+
+  // Desktop top navigation (phones use the bottom tab bar instead).
+  const desktopNav: { tab: AppTab; label: string; icon: typeof LayoutGrid; count?: number }[] = [
+    { tab: 'catalog', label: 'Catalog', icon: LayoutGrid },
+    { tab: 'saved', label: 'Saved', icon: Heart, count: savedCount },
+    { tab: 'cart', label: 'Cart', icon: ShoppingCart, count: cartCount },
+    { tab: 'help', label: 'Store info', icon: StoreIcon },
+  ];
+
+  const searchField = (autoFocus: boolean, size: 'sm' | 'md') => (
+    <div className="relative">
+      <Search className={`text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2 ${size === 'md' ? 'w-[18px] h-[18px]' : 'w-4 h-4'}`} />
+      <input
+        type="search"
+        autoFocus={autoFocus}
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        placeholder={searchPlaceholder}
+        aria-label="Search products"
+        enterKeyHint="search"
+        className={`w-full bg-neutral-100 focus:bg-white pr-8 text-[#111111] focus:outline-none focus:ring-2 focus:ring-neutral-900/10 rounded-md transition-all [&::-webkit-search-cancel-button]:hidden ${
+          size === 'md' ? 'h-10 pl-10 text-sm' : 'pl-9 py-2 text-xs shadow-inner'
+        }`}
+      />
+      {searchQuery && (
+        <button
+          onClick={() => setSearchQuery('')}
+          aria-label="Clear search"
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black p-0.5"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <CatalogContext.Provider value={catalogContext}>
-    <div className="min-h-screen bg-white text-[#111111] font-sans antialiased flex flex-col items-center justify-start sm:py-6 sm:px-4">
+    <div className="min-h-screen bg-white text-[#111111] font-sans antialiased flex flex-col">
 
-      {/* MOBILE APP DEVICE SHELL */}
-      <div ref={shellRef} className="w-full bg-white flex flex-col relative transition-all duration-300 sm:max-w-[430px] sm:min-h-[880px] sm:rounded-lg sm:shadow-[0_25px_80px_rgba(0,0,0,0.4)] sm:ring-8 sm:ring-neutral-800 sm:border-4 sm:border-neutral-700 sm:overflow-clip">
+      {/* APP SHELL — the full window: a phone app below md, a website from md up */}
+      {/* Desktop: a light grey page, so the white section panels stand apart */}
+      <div ref={shellRef} className="w-full min-h-screen bg-white md:bg-neutral-50 flex flex-col relative">
 
         {/* ALLABOUTWEB PROMO STRIP (demo store only) */}
         {store.isDemo && (
@@ -307,34 +414,68 @@ export default function FurnitureCatalogApp({
         </div>
         )}
 
-        {/* TOP MOBILE APP BAR */}
-        <header ref={headerRef} className="sticky top-0 z-30 bg-white/95 backdrop-blur-md shadow-xs">
+        {/* TOP BAR — brand and quick actions on phones; brand, search and navigation on desktop */}
+        <header ref={headerRef} className="sticky top-0 z-30 bg-white/95 backdrop-blur-md shadow-xs md:border-b md:border-neutral-200 md:shadow-[0_4px_16px_-10px_rgba(0,0,0,0.12)]">
 
           {/* Brand & Action Row */}
-          <div className="px-4 py-2.5 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <div
-                onClick={() => goToTab('catalog')}
-                className="cursor-pointer flex items-center gap-1.5"
-              >
-                <span className="w-7 h-7 rounded-lg bg-neutral-900 text-white flex items-center justify-center font-bold text-xs shadow-xs">
-                  {store.initial}
+          <div className="mx-auto w-full max-w-7xl px-4 py-2.5 md:px-6 md:py-3 flex items-center justify-between gap-3 md:gap-6">
+            <button
+              type="button"
+              onClick={() => goToTab('catalog')}
+              className="flex min-w-0 shrink-0 items-center gap-1.5 md:gap-2.5 text-left"
+            >
+              <StoreMark store={store} sizes="36px" className="w-7 h-7 md:w-9 md:h-9 rounded-lg text-xs md:text-sm shadow-xs" />
+              <span className="min-w-0">
+                <span className="font-bold text-base md:text-lg text-[#111111] tracking-tight leading-none block truncate">
+                  {store.name}
                 </span>
-                <div>
-                  <span className="font-bold text-base text-[#111111] tracking-tight leading-none block">
-                    {store.name}
+                {store.tagline && (
+                  <span className="text-[9px] md:text-[10px] text-primary font-semibold tracking-wider uppercase block md:mt-0.5 truncate">
+                    {store.tagline}
                   </span>
-                  {store.tagline && (
-                    <span className="text-[9px] text-primary font-semibold tracking-wider uppercase block">
-                      {store.tagline}
+                )}
+              </span>
+            </button>
+
+            {/* Desktop: search always visible */}
+            <div className="hidden md:block flex-1 max-w-xl">{searchField(false, 'md')}</div>
+
+            {/* Desktop: navigation and WhatsApp */}
+            <nav aria-label="Main" className="hidden md:flex shrink-0 items-center gap-1">
+              {desktopNav.map(({ tab, label, icon: Icon, count }) => (
+                <Link
+                  key={tab}
+                  href={href(tabPath(tab))}
+                  replace={embedded}
+                  onClick={() => setSearchQuery('')}
+                  aria-current={isCurrent(tab) ? 'page' : undefined}
+                  className={`flex h-10 items-center gap-2 rounded-md px-3 text-[13px] transition-colors ${
+                    isCurrent(tab)
+                      ? 'bg-neutral-100 font-semibold text-neutral-900'
+                      : 'font-medium text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" strokeWidth={isCurrent(tab) ? 2.25 : 1.75} />
+                  <span className="hidden lg:inline">{label}</span>
+                  <span className="sr-only lg:hidden">{label}</span>
+                  {!!count && (
+                    <span className="min-w-5 h-5 px-1.5 rounded-full bg-neutral-900 text-white text-[10px] font-bold flex items-center justify-center tabular-nums">
+                      {count}
                     </span>
                   )}
-                </div>
-              </div>
-            </div>
+                </Link>
+              ))}
+              <button
+                onClick={() => openWhatsApp(whatsAppUrl())}
+                className="ml-2 flex h-10 items-center gap-2 rounded-md bg-[#25D366] px-4 text-[13px] font-semibold text-white transition-colors hover:bg-[#1fb855]"
+              >
+                <WhatsAppIcon className="h-4 w-4" />
+                WhatsApp
+              </button>
+            </nav>
 
-            {/* Quick Actions */}
-            <div className="flex items-center gap-2">
+            {/* Phones: Quick Actions */}
+            <div className="flex items-center gap-2 md:hidden">
               <button
                 onClick={() => setIsSearchOpen(!isSearchOpen)}
                 className={`p-2 rounded-full transition-colors ${isSearchOpen ? 'bg-neutral-100 text-neutral-900' : 'bg-neutral-100 text-neutral-700'}`}
@@ -360,7 +501,7 @@ export default function FurnitureCatalogApp({
 
           {/* Quick Pincode Delivery Pill */}
           {store.deliveryArea && (
-            <div className="px-4 pb-2 flex items-center justify-between text-[11px] text-neutral-600">
+            <div className="mx-auto w-full max-w-7xl px-4 md:px-6 pb-2 flex items-center justify-between text-[11px] text-neutral-600">
               <div className="flex items-center gap-1 bg-neutral-100/80 px-2.5 py-0.5 rounded-full text-[10px] text-neutral-700">
                 <MapPin className="w-3 h-3 text-neutral-500" />
                 <span className="font-semibold text-neutral-900">{store.deliveryArea}</span>
@@ -371,34 +512,16 @@ export default function FurnitureCatalogApp({
 
           {/* Collapsible Mobile Search Bar */}
           {(isSearchOpen || searchQuery) && (
-            <div className="px-4 pb-2.5 animate-in slide-in-from-top-2 duration-150">
-              <div className="relative">
-                <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  autoFocus={isSearchOpen}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={searchPlaceholder}
-                  className="w-full bg-neutral-100 focus:bg-white pl-9 pr-8 py-2 text-xs text-[#111111] focus:outline-none focus:ring-2 focus:ring-neutral-900/10 shadow-inner rounded-md transition-all"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black p-0.5"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
+            <div className="px-4 pb-2.5 animate-in slide-in-from-top-2 duration-150 md:hidden">
+              {searchField(isSearchOpen, 'sm')}
             </div>
           )}
         </header>
 
-        {/* SCROLLABLE MAIN APP BODY (with pb-24 so content never clips behind bottom navigation tab bar) */}
+        {/* SCROLLABLE MAIN APP BODY (with pb-24 on phones so content never clips behind the bottom tab bar) */}
         {/* overflow-x-clip, not overflow-auto: the window scrolls, and a scroll
             container here would stop sticky elements inside from sticking. */}
-        <main className="flex-1 overflow-x-clip pb-24 px-3 sm:px-4 pt-2">
+        <main className="flex-1 overflow-x-clip pb-24 md:pb-12 px-3 md:px-6 pt-2 md:pt-5 mx-auto w-full max-w-7xl">
 
           {/* ACTIVE SEARCH RESULTS SCREEN (When user has typed in search) */}
           {searchResults !== null ? (
@@ -419,7 +542,7 @@ export default function FurnitureCatalogApp({
               </div>
 
               {searchResults.length === 0 ? (
-                <div className="bg-white rounded-lg border border-neutral-200 p-8 text-center space-y-3 my-4">
+                <div className="bg-white rounded-lg border border-neutral-200 p-8 text-center space-y-3 my-4 md:mx-auto md:max-w-md md:my-10">
                   <Search className="w-8 h-8 text-neutral-400 mx-auto" />
                   <p className="text-xs font-semibold text-[#111111]">No products found for &ldquo;{searchQuery}&rdquo;</p>
                   <p className="text-[11px] text-neutral-500">Can&apos;t find it? Send us a photo or a message on WhatsApp.</p>
@@ -435,7 +558,7 @@ export default function FurnitureCatalogApp({
                   </a>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-x-2.5 gap-y-4">
+                <div className={`${PRODUCT_GRID} ${SECTION_PANEL} md:p-5`}>
                   {searchResults.map((product) => (
                     <ProductCard
                       key={product.id}
@@ -448,9 +571,12 @@ export default function FurnitureCatalogApp({
           ) : (
             <>
               {/* CATALOG (the start page) — its own component (CatalogPage.tsx) */}
-              {activeTab === 'catalog' && (
-                <CatalogPage filters={catalogFilters} onFiltersChange={setCatalogFilters} />
-              )}
+              {activeTab === 'catalog' &&
+                (picks ? (
+                  <PicksPage ids={picks} onBrowse={() => goToTab('catalog')} />
+                ) : (
+                  <CatalogPage filters={catalogFilters} onFiltersChange={changeCatalogFilters} />
+                ))}
 
               {/* SAVED (wishlist) — its own component (SavedPage.tsx) */}
               {activeTab === 'saved' && <SavedPage onBrowse={() => goToTab('catalog')} />}
@@ -473,16 +599,37 @@ export default function FurnitureCatalogApp({
 
         </main>
 
-        {/* NATIVE MOBILE BOTTOM NAVIGATION TAB BAR */}
+        {/* DESKTOP FOOTER — the store's name and address, and a way to reach it */}
+        <footer className="hidden md:block border-t border-neutral-200 bg-white">
+          <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-6 px-6 py-6">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-neutral-900">{store.name}</p>
+              {(store.address || store.hours) && (
+                <p className="mt-0.5 truncate text-xs text-neutral-500">
+                  {[store.address, store.hours].filter(Boolean).join(' · ')}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => openWhatsApp(whatsAppUrl())}
+              className="flex h-10 shrink-0 items-center gap-2 rounded-md border border-neutral-200 bg-white px-4 text-[13px] font-semibold text-neutral-900 transition-colors hover:bg-neutral-100"
+            >
+              <WhatsAppIcon className="h-4 w-4 text-[#25D366]" />
+              Chat on WhatsApp
+            </button>
+          </div>
+        </footer>
+
+        {/* NATIVE MOBILE BOTTOM NAVIGATION TAB BAR (phones only) */}
         <nav
           aria-label="Mobile Navigation"
-          className="fixed bottom-0 left-0 right-0 sm:sticky sm:bottom-0 z-40 bg-white/95 backdrop-blur-lg border-t border-neutral-200/80 shadow-[0_-4px_24px_rgba(0,0,0,0.06)] px-2 pb-safe select-none"
+          className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-neutral-200/80 shadow-[0_-4px_24px_rgba(0,0,0,0.06)] px-2 pb-[env(safe-area-inset-bottom)] select-none md:hidden"
         >
           <div className="max-w-md mx-auto h-16 flex items-center justify-around">
             
             {/* Tab 1: Catalog */}
             <Link
-              href={href(TAB_PATHS.catalog)}
+              href={href(tabPath('catalog'))}
               replace={embedded}
               onClick={() => setSearchQuery('')}
               aria-current={activeTab === 'catalog' && !searchQuery ? 'page' : undefined}
@@ -575,7 +722,7 @@ export default function FurnitureCatalogApp({
 
         {/* FLOATING TOAST NOTIFICATION — above product pages too */}
         {toastMessage && (
-          <div className="fixed bottom-20 left-4 right-4 sm:left-1/2 sm:right-auto sm:w-[398px] sm:-translate-x-1/2 z-[60] bg-[#111111] text-white px-4 py-2.5 text-xs font-medium shadow-2xl flex items-center justify-between gap-2 rounded-lg animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <div className="fixed bottom-20 left-4 right-4 md:bottom-6 md:left-auto md:right-6 md:w-[360px] z-[60] bg-[#111111] text-white px-4 py-2.5 text-xs font-medium shadow-2xl flex items-center justify-between gap-2 rounded-lg animate-in fade-in slide-in-from-bottom-2 duration-200">
             <div className="flex items-center gap-2">
               <Check className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>{toastMessage}</span>

@@ -25,7 +25,7 @@ import Catalog24Footer from "@/components/catalog24/Catalog24Footer";
 import Catalog24Header from "@/components/catalog24/Catalog24Header";
 import DemoLauncher from "@/components/catalog24/DemoLauncher";
 import RevealObserver from "@/components/landing/RevealObserver";
-import { CATALOG_DEMO_BASE } from "@/lib/catalogDomain";
+import { CATALOG_DEMO_BASE, CATALOG_ICONS } from "@/lib/catalogDomain";
 
 // The catalog24.in home page, served at "/" on that domain by src/proxy.ts
 // (on any other domain this route redirects to catalog24.in).
@@ -42,6 +42,7 @@ const SHARE_IMAGE = {
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
+  icons: CATALOG_ICONS,
   openGraph: { type: "website", siteName: "Catalog24", title: TITLE, description: DESCRIPTION, images: [SHARE_IMAGE] },
   twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION, images: [SHARE_IMAGE] },
 };

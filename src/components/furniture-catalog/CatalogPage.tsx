@@ -6,14 +6,22 @@ import { Check, SlidersHorizontal } from "lucide-react";
 import { categoryLabel, findCategory, sortCategoryNames } from "@/lib/taxonomy";
 import CatalogFilterSheet from "./CatalogFilterSheet";
 import { EMPTY_REFINE, activeRefineCount, applyRefine, filterOptions, type RefineFilters } from "./filters";
-import { CategoryBox, ProductCard, ProductPlaceholder, useCatalog } from "./shared";
+import {
+  CategoryBox,
+  PRODUCT_GRID,
+  ProductCard,
+  ProductPlaceholder,
+  SECTION_LABEL,
+  SECTION_PANEL,
+  useCatalog,
+} from "./shared";
 
 export type CatalogFilters = {
   /** A category name, or "" for the store's first category. */
   category: string;
   /** A subcategory name, or "" for every subcategory */
   subCategory: string;
-  /** Sort, price, colour, material and spec filters (the Filters sheet). */
+  /** Sort, price and spec filters (the Filters sheet). */
   refine: RefineFilters;
 };
 
@@ -83,12 +91,11 @@ function SubcategoryChip({
   );
 }
 
-export const DEFAULT_CATALOG_FILTERS: CatalogFilters = { category: "", subCategory: "", refine: EMPTY_REFINE };
-
 // The Catalog tab, the start page: category boxes, the subcategory chips, the
 // Filters sheet, and the matching products. Categories, subcategories and filter
 // options all come from the store's own products. The filters live in the
-// catalog app so they survive switching tabs.
+// catalog app: the category and product type in the URL (/category/sofa/l-shape),
+// the Filters sheet's choices in its state, so they survive switching tabs.
 export default function CatalogPage({
   filters,
   onFiltersChange,
@@ -142,7 +149,9 @@ export default function CatalogPage({
   const options = useMemo(() => filterOptions(categoryProducts), [categoryProducts]);
   const shown = useMemo(() => applyRefine(subProducts, refine), [subProducts, refine]);
   const refineCount = activeRefineCount(refine);
-  const hasFilterOptions = !!options.price || options.colors.length + options.materials.length + options.specs.length > 0;
+  const hasFilterOptions = !!options.price || options.specs.length > 0;
+  // Anything to browse above the products: categories (when there are several) or product types.
+  const hasBrowse = categories.length > 1 || subCategories.length > 0;
 
   // Keep the selected category box in view (it can sit off-screen in the row).
   // Scrolls the row only, never the page.
@@ -165,7 +174,7 @@ export default function CatalogPage({
 
   if (!categories.length) {
     return (
-      <div className="rounded-lg border border-neutral-200 bg-white p-6 text-center">
+      <div className="rounded-lg border border-neutral-200 bg-white p-6 text-center md:mx-auto md:my-10 md:max-w-md">
         <p className="text-xs font-semibold text-neutral-800">No products yet.</p>
         <p className="mt-1 text-[11px] text-neutral-500">Check back soon, or message us on WhatsApp.</p>
       </div>
@@ -173,12 +182,20 @@ export default function CatalogPage({
   }
 
   return (
-    <div className="space-y-3 pt-1">
-      {/* Category boxes — swipeable row (hidden for a store with a single category) */}
+    // Phones: one edge-to-edge column. Desktop: white panels on the grey page, one for
+    // browsing (categories, then product types below a divider) and one for the products.
+    // The browse wrappers are `contents` on phones, so the chips stay sticky for the whole page.
+    <div className="flex flex-col gap-3 pt-1 md:gap-5">
+      {hasBrowse && (
+      <section aria-label="Browse" className={`contents md:block ${SECTION_PANEL}`}>
+      {/* Category boxes — swipeable row (hidden for a store with a single category).
+          Fixed-size boxes on desktop, so they don't grow with the window. */}
       {categories.length > 1 && (
-        <div ref={categoryRowRef} className="-mx-2 flex gap-4 overflow-x-auto no-scrollbar px-2 pb-1">
+        <div className="contents md:block md:px-5 md:pt-4 md:pb-3">
+        <h2 className={`hidden md:block ${SECTION_LABEL}`}>Shop by category</h2>
+        <div ref={categoryRowRef} className="-mx-2 flex gap-4 overflow-x-auto no-scrollbar px-2 pb-1 md:mt-1 md:gap-6">
           {categories.map((cat) => (
-            <div key={cat} className="w-[17%] min-w-[64px] shrink-0">
+            <div key={cat} className="w-[17%] min-w-[64px] shrink-0 md:w-[104px]">
               <CategoryBox
                 category={cat}
                 photo={categoryPhotos.get(cat)}
@@ -188,16 +205,25 @@ export default function CatalogPage({
             </div>
           ))}
         </div>
+        </div>
       )}
 
-      {/* Subcategory chips — swipeable row, sticky under the app header. The top
-          padding (photos rise 16px above the chips, plus a 2px gap below the header
-          when stuck) leaves room for the photos that rise above the chips (the
-          scroll container would clip them otherwise). */}
+      {/* Subcategory chips — swipeable row, sticky under the app header, with a hairline
+          under it so the products scroll away beneath a clear edge. The top padding
+          (photos rise 16px above the chips, plus a 2px gap below the header when stuck)
+          leaves room for the photos that rise above the chips (the scroll container
+          would clip them otherwise). On desktop the chips wrap onto more rows instead,
+          below a divider in the browse panel, and scroll away with the page. */}
       {subCategories.length > 0 && (
         <div
+          className={`contents md:block md:px-5 md:pb-5 md:pt-4 ${
+            categories.length > 1 ? "md:border-t md:border-neutral-100" : ""
+          }`}
+        >
+        <h2 className={`hidden md:block ${SECTION_LABEL}`}>{categoryLabel(category)} by type</h2>
+        <div
           ref={subCategoryRowRef}
-          className="sticky top-[var(--catalog-header-h,0px)] z-20 -mx-4 flex gap-2 overflow-x-auto no-scrollbar bg-white px-4 pb-2 pt-[18px]"
+          className="sticky top-[var(--catalog-header-h,0px)] z-20 -mx-4 flex gap-2 overflow-x-auto no-scrollbar border-b border-neutral-100 bg-white px-4 pb-2.5 pt-[18px] md:static md:mx-0 md:flex-wrap md:gap-x-2.5 md:gap-y-5 md:overflow-visible md:border-0 md:bg-transparent md:px-0 md:pb-0"
         >
           {subCategories.map((sub) => (
             <SubcategoryChip
@@ -211,12 +237,15 @@ export default function CatalogPage({
             />
           ))}
         </div>
+        </div>
+      )}
+      </section>
       )}
 
-      {/* Results count, filters & product grid */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between gap-2 px-1 text-[11px] text-neutral-500">
-          <span>
+      {/* Results count, filters & product grid — on desktop a panel with a toolbar header */}
+      <section aria-label="Products" className={`space-y-2 md:space-y-0 ${SECTION_PANEL}`}>
+        <div className="flex items-center justify-between gap-2 px-1 text-[11px] text-neutral-500 md:border-b md:border-neutral-100 md:px-5 md:py-3 md:text-[13px]">
+          <span className="md:font-medium md:text-neutral-700">
             {categories.length === 1 && <span className="font-semibold text-neutral-700">{categoryLabel(category)} · </span>}
             Showing {shown.length} item{shown.length === 1 ? "" : "s"}
           </span>
@@ -229,7 +258,7 @@ export default function CatalogPage({
             {hasFilterOptions && (
               <button
                 onClick={() => setSheetOpen(true)}
-                className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 font-semibold ring-1 ring-inset transition-colors ${
+                className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 font-semibold ring-1 ring-inset transition-colors md:h-10 md:px-3.5 ${
                   refineCount > 0
                     ? "bg-neutral-900 text-white ring-neutral-900"
                     : "bg-white text-neutral-700 ring-neutral-200 hover:ring-neutral-400"
@@ -243,20 +272,20 @@ export default function CatalogPage({
         </div>
 
         {shown.length === 0 ? (
-          <div className="space-y-2 rounded-lg border border-neutral-200 bg-white p-6 text-center">
-            <p className="text-xs font-semibold text-neutral-800">No products match this combination.</p>
-            <button onClick={resetFilters} className="rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-semibold text-white">
+          <div className="space-y-2 rounded-lg border border-neutral-200 bg-white p-6 text-center md:border-0 md:py-14">
+            <p className="text-xs font-semibold text-neutral-800 md:text-sm">No products match this combination.</p>
+            <button onClick={resetFilters} className="rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-semibold text-white md:px-4 md:py-2">
               Show all {categoryLabel(category)}
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-x-2.5 gap-y-4">
+          <div className={`${PRODUCT_GRID} md:p-5`}>
             {shown.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
         )}
-      </div>
+      </section>
 
       {sheetOpen && (
         <CatalogFilterSheet

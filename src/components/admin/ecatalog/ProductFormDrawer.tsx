@@ -845,18 +845,18 @@ function ImageManager({
               type="button"
               onClick={() => cameraRef.current?.click()}
               onPointerDown={ripple}
-              className={authButtonClass}
+              className={`${authButtonClass} whitespace-nowrap px-3!`}
             >
-              <Camera className="h-[18px] w-[18px]" aria-hidden />
+              <Camera className="h-[18px] w-[18px] shrink-0" aria-hidden />
               Take photo
             </button>
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
               onPointerDown={ripple}
-              className={`${authSecondaryButtonClass} w-full`}
+              className={`${authSecondaryButtonClass} w-full whitespace-nowrap px-3!`}
             >
-              <Images className="h-[18px] w-[18px]" aria-hidden />
+              <Images className="h-[18px] w-[18px] shrink-0" aria-hidden />
               Gallery
             </button>
           </div>
@@ -1114,8 +1114,8 @@ function ImageManager({
 
 /* ---------- Details detected from a photo ---------- */
 
-const DETECTED_FIELDS = ["productName", "description", "material", "dimensions"] as const;
-const DETECTED_LISTS = ["colors", "keywords", "specs", "tags", "highlights"] as const;
+const DETECTED_FIELDS = ["productName", "description", "dimensions"] as const;
+const DETECTED_LISTS = ["keywords", "specs", "tags", "highlights"] as const;
 
 // "fill-empty" (automatic, on the first photo) only fills what the admin left
 // empty; "replace" (the Auto-fill button) overwrites with everything detected.
@@ -1155,7 +1155,7 @@ const detectError = (err: unknown) =>
 /* ---------- Steps of "Add product" ---------- */
 
 // Only the essentials. Everything else AI detects from the photo (description,
-// colours, specs, tags, search keywords, highlights) is saved too, and can be
+// specs, tags, search keywords, highlights) is saved too, and can be
 // edited later in the full form.
 const WIZARD_STEPS = [
   { title: "Add photos", subtitle: "Take or upload photos. AI fills in the details for you.", label: "Photos" },
@@ -1269,7 +1269,10 @@ export default function ProductFormDrawer({
       ]),
     [store.businessTypes, products, form.categoryName, form.subcategoryName],
   );
-  const detectContext: DetectContext = { businessTypes: store.businessTypes, categories: pickerCategories };
+  // The AI only suggests the predefined categories of the store's business types
+  // (never a custom or new one); the owner can still pick any category by hand.
+  const aiCategories = useMemo(() => storeCategories(store.businessTypes, []), [store.businessTypes]);
+  const detectContext: DetectContext = { businessTypes: store.businessTypes, categories: aiCategories };
 
   function applyDetected(d: DetectedProduct, mode: "fill-empty" | "replace"): FormState {
     const next = mergeDetected(formRef.current, d, mode);
@@ -1282,15 +1285,7 @@ export default function ProductFormDrawer({
       categoryName: filled("categoryName"),
       subcategoryName: filled("subcategoryName"),
     });
-    const suggested = next.categoryName === d.categoryName && (d.categoryIsNew || d.subcategoryIsNew);
-    setDetectNote({
-      kind: "ok",
-      text: suggested
-        ? `Details filled in from the photo. “${d.categoryIsNew ? d.categoryName : d.subcategoryName}” is a new ${
-            d.categoryIsNew ? "category" : "subcategory"
-          } suggested by AI; keep it or pick one from the list. Review the details before saving.`
-        : "Details filled in from the photo. Review them before saving.",
-    });
+    setDetectNote({ kind: "ok", text: "Details filled in from the photo. Review them before saving." });
     return next;
   }
 
@@ -2537,7 +2532,7 @@ export default function ProductFormDrawer({
           onConfirm={autofillFromCover}
           onCancel={() => setConfirmAutofill(false)}
         >
-          The name, category, subcategory, description, colours, material, size, specs, tags, highlights and search keywords
+          The name, category, subcategory, description, size, specs, tags, highlights and search keywords
           are replaced with what&apos;s detected from the cover photo. You can still edit them before saving.
         </ConfirmDialog>
       )}

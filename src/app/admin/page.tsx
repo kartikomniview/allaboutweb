@@ -124,7 +124,7 @@ export default function AdminLoginPage() {
                 autoCapitalize="none"
                 spellCheck={false}
                 enterKeyHint="next"
-                autoFocus={!email}
+                data-autofocus={email ? undefined : ""}
                 value={email}
                 onChange={(e) => {
                   setEmail(cleanUsername(e.target.value));
@@ -167,7 +167,7 @@ export default function AdminLoginPage() {
                 autoCapitalize="none"
                 spellCheck={false}
                 enterKeyHint="go"
-                autoFocus={!!email}
+                data-autofocus={email ? "" : undefined}
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);

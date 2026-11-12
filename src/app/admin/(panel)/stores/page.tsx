@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowUpRight, CircleCheck, RefreshCw, Search, ShieldAlert, TriangleAlert, X } from "lucide-react";
+import { ArrowUpRight, CircleCheck, RefreshCw, Search, ShieldAlert, TriangleAlert, UsersRound, X } from "lucide-react";
 import { useAdminUser } from "@/components/admin/AdminShell";
 import ConfirmDialog from "@/components/admin/ecatalog/ConfirmDialog";
+import StoreUsersDialog from "@/components/admin/StoreUsersDialog";
 import { Badge, Button, Card, Skeleton } from "@/components/admin/ui";
 import { AuthError } from "@/lib/adminAuth";
 import { listAllStores, updateStoreAccess, type ManagedStore } from "@/lib/adminStores";
@@ -51,11 +52,13 @@ function StoreCard({
   onSaved,
   onToast,
   onAskDeactivate,
+  onManageUsers,
 }: {
   store: ManagedStore;
   onSaved: (store: ManagedStore) => void;
   onToast: (text: string, tone?: Toast["tone"]) => void;
   onAskDeactivate: (store: ManagedStore) => void;
+  onManageUsers: (store: ManagedStore) => void;
 }) {
   const [limitText, setLimitText] = useState(store.productLimit === null ? "" : String(store.productLimit));
   const [unlimited, setUnlimited] = useState(store.productLimit === null);
@@ -187,6 +190,20 @@ function StoreCard({
           Save
         </Button>
       </div>
+
+      {/* Logins: device resets, extra users */}
+      <div className="flex items-center gap-2.5 border-t border-line px-4 py-3">
+        <UsersRound className="h-4 w-4 shrink-0 text-slate" aria-hidden />
+        <span className="min-w-0 flex-1 text-[13px] font-medium text-ink">
+          Users
+          {typeof store.userCount === "number" && (
+            <span className="font-semibold tabular-nums text-slate"> · {store.userCount}</span>
+          )}
+        </span>
+        <Button size="sm" className="h-10 px-3.5" onClick={() => onManageUsers(store)}>
+          Manage users
+        </Button>
+      </div>
     </Card>
   );
 }
@@ -202,6 +219,7 @@ export default function AllStoresPage() {
   const [deactivating, setDeactivating] = useState<ManagedStore | null>(null);
   const [deactivateBusy, setDeactivateBusy] = useState(false);
   const [deactivateError, setDeactivateError] = useState<string | null>(null);
+  const [managingUsers, setManagingUsers] = useState<ManagedStore | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
 
   const showToast = useCallback((text: string, tone: Toast["tone"] = "ok") => setToast({ id: Date.now(), text, tone }), []);
@@ -366,6 +384,7 @@ export default function AllStoresPage() {
                 setDeactivateError(null);
                 setDeactivating(s);
               }}
+              onManageUsers={setManagingUsers}
             />
           ))}
         </div>
@@ -383,6 +402,17 @@ export default function AllStoresPage() {
           Its owner is logged out and can&apos;t log in, and its catalog link shows &ldquo;Store unavailable&rdquo;. Nothing is
           deleted: switch it back on any time.
         </ConfirmDialog>
+      )}
+
+      {managingUsers && (
+        <StoreUsersDialog
+          store={managingUsers}
+          onClose={() => setManagingUsers(null)}
+          onToast={showToast}
+          onCountChange={(userCount) =>
+            setStores((list) => (list ?? []).map((s) => (s.slug === managingUsers.slug ? { ...s, userCount } : s)))
+          }
+        />
       )}
 
       {toast && (

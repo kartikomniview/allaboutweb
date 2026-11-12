@@ -286,9 +286,9 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             </div>
             {pageTitle && <h2 className="hidden truncate text-[15px] font-semibold text-ink lg:block">{pageTitle}</h2>}
           </div>
-          <Button variant="secondary" size="sm" onClick={handleLogout} loading={loggingOut} aria-label="Log out">
+          <Button variant="danger-soft" size="sm" onClick={handleLogout} loading={loggingOut}>
             {!loggingOut && <LogOut className="h-4 w-4" aria-hidden />}
-            <span className="hidden sm:inline">Log out</span>
+            {loggingOut ? "Logging out…" : "Log out"}
           </Button>
         </header>
         <div className="w-full flex-1 px-3 py-3 sm:px-4 sm:py-5 lg:px-5 lg:py-6">{children}</div>

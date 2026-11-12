@@ -5,6 +5,8 @@ import { ArrowUpRight, CircleCheck, TriangleAlert } from "lucide-react";
 import { useLiveCatalogUrl, useSetAdminStore } from "@/components/admin/AdminShell";
 import { Button, Card, PageHeader, Skeleton, buttonClass } from "@/components/admin/ui";
 import BusinessTypePicker from "@/components/admin/BusinessTypePicker";
+import StoreLogoPicker from "@/components/admin/StoreLogoPicker";
+import { discardUploads } from "@/lib/adminProducts";
 import { AuthError } from "@/lib/adminAuth";
 import { getOwnStore, updateOwnStore, type StoreDetails, type StoreDetailsInput } from "@/lib/adminStore";
 
@@ -24,6 +26,7 @@ const toForm = (s: StoreDetails): Form => ({
   category: s.category,
   since: s.since ? String(s.since) : "",
   coverImage: s.coverImage,
+  logo: s.logo,
   businessTypes: s.businessTypes,
 });
 
@@ -73,6 +76,13 @@ export default function StoreSettingsPage() {
 
   const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm((f) => (f ? { ...f, [key]: value } : f));
   const dirty = !!store && !!form && JSON.stringify(form) !== JSON.stringify(toForm(store));
+
+  // A logo uploaded but not saved is deleted again.
+  function discardChanges() {
+    if (!store || !form) return;
+    if (form.logo && form.logo !== store.logo) discardUploads([form.logo]).catch(() => {});
+    setForm(toForm(store));
+  }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -125,6 +135,18 @@ export default function StoreSettingsPage() {
         <form onSubmit={handleSubmit} noValidate className="flex max-w-3xl flex-col gap-5">
           <Card className="flex flex-col gap-4 p-5">
             <h2 className="text-sm font-semibold text-ink">Store</h2>
+            <div>
+              <span className="mb-1.5 block text-xs font-medium text-ink/80">Logo</span>
+              <StoreLogoPicker
+                logo={form.logo}
+                storeName={form.name || store.name}
+                onChange={(url) => {
+                  // An earlier upload that was never saved isn't needed any more.
+                  if (form.logo && form.logo !== store.logo) discardUploads([form.logo]).catch(() => {});
+                  set("logo", url);
+                }}
+              />
+            </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field
                 label="Store name"
@@ -223,7 +245,7 @@ export default function StoreSettingsPage() {
           )}
 
           <div className="flex justify-end gap-2">
-            <Button onClick={() => setForm(toForm(store))} disabled={!dirty || saving}>
+            <Button onClick={discardChanges} disabled={!dirty || saving}>
               Discard changes
             </Button>
             <Button type="submit" variant="primary" loading={saving} disabled={!dirty}>

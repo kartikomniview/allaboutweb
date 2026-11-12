@@ -34,7 +34,11 @@ const MAIN_DEMO_PATH = "/app/catalog/furniture";
 
 // A store catalog's own pages, relative to its base path.
 const isStorePath = (path: string) =>
-  path === "/" || ["/saved", "/cart", "/help"].includes(path) || path.startsWith("/product/");
+  path === "/" ||
+  ["/saved", "/cart", "/help"].includes(path) ||
+  path.startsWith("/product/") ||
+  path.startsWith("/category/") ||
+  path.startsWith("/picks/");
 
 // Local dev: `npm run dev:catalog24` serves Catalog24 on every host, for testing from a
 // phone on the LAN. Otherwise open http://catalog24.localhost:3000.

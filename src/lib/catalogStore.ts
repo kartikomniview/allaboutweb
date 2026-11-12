@@ -20,12 +20,14 @@ export type PublicStore = {
   category: string;
   since: number | null;
   coverImage: string;
+  /** The store's logo (an uploaded image URL), or "" to show its initial instead. */
+  logo: string;
   /** What the store sells (src/lib/taxonomy.ts). */
   businessTypes: BusinessTypeId[];
 };
 
 export type CatalogStore = PublicStore & {
-  /** The letter in the round logo. */
+  /** The letter shown in place of a logo. */
   initial: string;
   /** The demo store keeps the "try it" WhatsApp dialog and the sample rating. */
   isDemo: boolean;
@@ -52,6 +54,7 @@ export function toCatalogStore(raw: Record<string, unknown>): CatalogStore {
     category: str(raw.category),
     since: typeof raw.since === "number" ? raw.since : null,
     coverImage: str(raw.coverImage),
+    logo: str(raw.logo),
     businessTypes: toBusinessTypes(raw.businessTypes),
     initial: (name.match(/[\p{L}\p{N}]/u)?.[0] ?? "S").toUpperCase(),
     isDemo,

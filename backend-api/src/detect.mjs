@@ -3,12 +3,13 @@ import { HttpError } from "./http.mjs";
 import { isStoreImageUrl } from "./storage.mjs";
 
 // Product details detected from a photo with Claude (vision). Used by the admin
-// product form to fill in the name, category, subcategory, details, specs, tags
+// product form to fill in the name, category, subcategory, description, size, specs, tags
 // and search keywords, for any kind of product (furniture, decor, lighting,
 // flooring, curtains, fabrics, electronics...).
 //
-// The category is chosen from the store's own list when one fits; otherwise the
-// model may suggest a new one (categoryIsNew / subcategoryIsNew in the answer).
+// The category and subcategory are always chosen from the list the website sends
+// (the predefined categories of the store's business types): the closest one when
+// nothing fits exactly. The model never invents a new category.
 //
 // Env: ANTHROPIC_API_KEY (required), ANTHROPIC_MODEL (optional, default below).
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-5-5";
@@ -17,7 +18,6 @@ const MEDIA_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_IMAGE_BASE64 = 4 * 1024 * 1024; // the browser sends a ~1024px JPEG, far smaller
 const MAX_CATEGORIES = 80;
 const MAX_SUBCATEGORIES = 40;
-const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
 // Caps on the answer (products accept more; see validateProduct).
 const MAX_KEYWORDS = 15;
 const MAX_SPECS = 6;
@@ -39,8 +39,8 @@ function client() {
 
 const isName = (v) => typeof v === "string" && v.trim() && v.length <= 60;
 
-// [{ name, subcategories: [name] }] sent by the website: the store's categories
-// (its business types' predefined ones plus the ones its products already use).
+// [{ name, subcategories: [name] }] sent by the website: the predefined categories
+// of the store's business types.
 function categoryList(value) {
   if (!Array.isArray(value) || value.length > MAX_CATEGORIES) {
     throw bad(`categories must be a list of at most ${MAX_CATEGORIES} items`);
@@ -85,35 +85,27 @@ const SYSTEM = `You catalogue products for an Indian retail store's online catal
 Look at the product photo and describe the main product in it.
 
 - productName: 3 to 6 words, a short appealing name followed by the product type, e.g. "Nilgiri L-Shape Corner Sofa", "Jaipur Brass Pendant Light", "Ivory Sheer Window Curtain", "Kashmiri Wool Area Rug", "Velvet Upholstery Fabric", "Banarasi Silk Saree", "55-inch 4K Smart LED TV".
-- categoryName and subcategoryName: use the exact names from the store's list when one fits; the subcategory must belong to the chosen category. Only if nothing in the list fits, write a short new name in Title Case (e.g. "Wall Clocks"). For a new category, also write a new subcategory.
+- categoryName and subcategoryName: always use the exact names from the store's list; the subcategory must belong to the chosen category. If nothing fits exactly, choose the closest category and subcategory from the list. Never make up a new name.
 - description: 1 to 2 plain, friendly sentences for shoppers, at most 300 characters. Describe only what is visible: no prices, warranty or delivery claims.
-- colors: the 1 to 3 main visible colours of the product, each with a short shopper-friendly name and its hex code.
-- material: the main visible material, e.g. "Velvet Fabric Upholstery", "Brass with Glass Shade", "Polyester Blend". Empty string if unclear.
 - dimensions: only if a size is printed on the product or its packaging; otherwise an empty string. Never guess a size.
-- specs: 2 to 6 short label/value pairs that matter for this kind of product and are visible or clearly implied, e.g. Wood: Sheesham, Seating: 3 Seater, Bulb: LED, Mount: Ceiling, Pattern: Floral, Opacity: Sheer, Screen: 55 inch. Labels are 1 or 2 words. No prices, warranty or delivery.
+- specs: 2 to 6 short label/value pairs that matter for this kind of product and are visible or clearly implied, e.g. Wood: Sheesham, Seating: 3 Seater, Bulb: LED, Mount: Ceiling, Pattern: Floral, Opacity: Sheer, Screen: 55 inch. Labels are 1 or 2 words. No Colour or Material labels. No prices, warranty or delivery.
 - tags: 1 to 3 short descriptive labels for the product card, e.g. "Handcrafted", "Modern", "Space Saver", "Festive". No price or offer claims like "Hot Deal" or "Best Price".
 - highlights: 2 to 4 short selling points, each at most 60 characters, based only on what is visible.
 - keywords: 8 to 15 lowercase search terms a shopper might type to find this product, each 1 to 3 words. Cover the product type and its synonyms, including common Indian names (e.g. "almirah", "diwan", "jhoomar", "parda", "dari"), the room it suits, style, visible colours, material and visible features. Only what the photo supports; no brand names unless visible on the product.`;
 
-// No enums for the category: a new name is allowed when nothing in the list fits.
-// clean() maps the answer back onto the store's list.
-const SCHEMA = {
+// The category and subcategory are limited to the store's list with enums (the
+// subcategory enum holds every category's subcategories; clean() fixes the pair).
+// The list depends only on the store's business types, so few distinct schemas
+// are compiled (each is cached by the API for 24 hours).
+const nameSchema = (names) => (names.length ? { type: "string", enum: names } : { type: "string" });
+
+const schemaFor = (categories) => ({
   type: "object",
   properties: {
     productName: { type: "string" },
-    categoryName: { type: "string" },
-    subcategoryName: { type: "string" },
+    categoryName: nameSchema([...new Set(categories.map((c) => c.name))]),
+    subcategoryName: nameSchema([...new Set(categories.flatMap((c) => c.subcategories))]),
     description: { type: "string" },
-    colors: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: { name: { type: "string" }, hex: { type: "string" } },
-        required: ["name", "hex"],
-        additionalProperties: false,
-      },
-    },
-    material: { type: "string" },
     dimensions: { type: "string" },
     specs: {
       type: "array",
@@ -133,8 +125,6 @@ const SCHEMA = {
     "categoryName",
     "subcategoryName",
     "description",
-    "colors",
-    "material",
     "dimensions",
     "specs",
     "tags",
@@ -142,7 +132,7 @@ const SCHEMA = {
     "keywords",
   ],
   additionalProperties: false,
-};
+});
 
 const clip = (v, max) => (typeof v === "string" ? v.trim().slice(0, max).trim() : "");
 const same = (a, b) => a.toLowerCase() === b.toLowerCase();
@@ -158,14 +148,23 @@ function strings(v, max, limit) {
   return out.slice(0, limit);
 }
 
-// Maps the category onto the store's list (keeping the list's spelling), flags
-// new names, and keeps every field inside the product limits (validateProduct).
-export function clean(raw, categories) {
+// The category and subcategory from the store's list (with the list's spelling),
+// as a matching pair; empty if the category isn't in the list.
+function pickCategory(raw, categories) {
   const categoryText = clip(raw.categoryName, 60);
   const subText = clip(raw.subcategoryName, 60);
-  const category = categoryText ? categories.find((c) => same(c.name, categoryText)) : undefined;
-  const subcategory = category && subText ? category.subcategories.find((s) => same(s, subText)) : undefined;
+  const inList = (c) => subText && c.subcategories.find((s) => same(s, subText));
+  let category = categoryText ? categories.find((c) => same(c.name, categoryText)) : undefined;
+  // No usable category: take the one the subcategory belongs to.
+  category ??= categories.find(inList);
+  if (!category) return { categoryName: "", subcategoryName: "" };
+  // A subcategory of another category: the category's first one instead.
+  return { categoryName: category.name, subcategoryName: inList(category) || category.subcategories[0] || "" };
+}
 
+// Maps the category onto the store's list and keeps every field inside the
+// product limits (validateProduct).
+export function clean(raw, categories) {
   const specs = [];
   for (const spec of list(raw.specs)) {
     const label = clip(spec?.label, 40);
@@ -175,16 +174,8 @@ export function clean(raw, categories) {
 
   return {
     productName: clip(raw.productName, 120),
-    categoryName: category ? category.name : categoryText,
-    subcategoryName: subcategory ?? subText,
-    categoryIsNew: Boolean(categoryText) && !category,
-    subcategoryIsNew: Boolean(subText) && !subcategory,
+    ...pickCategory(raw, categories),
     description: clip(raw.description, 2000),
-    colors: list(raw.colors)
-      .filter((c) => HEX_RE.test(c?.hex ?? "") && clip(c?.name, 60))
-      .slice(0, 3)
-      .map((c) => ({ name: clip(c.name, 60), hex: c.hex.toUpperCase() })),
-    material: clip(raw.material, 200),
     dimensions: clip(raw.dimensions, 200),
     specs: specs.slice(0, MAX_SPECS),
     tags: strings(raw.tags, 40, MAX_TAGS),
@@ -219,7 +210,7 @@ export async function detectProduct(storeSlug, body) {
       model: MODEL,
       max_tokens: 4000, // room for adaptive thinking plus the JSON answer
       system: SYSTEM,
-      output_config: { effort: "low", format: { type: "json_schema", schema: SCHEMA } },
+      output_config: { effort: "low", format: { type: "json_schema", schema: schemaFor(categories) } },
       messages: [
         {
           role: "user",

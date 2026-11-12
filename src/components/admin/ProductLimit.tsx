@@ -42,10 +42,13 @@ export function ProductLimitNotice({
   compact?: boolean;
 }) {
   if (!state.near && !state.full) return null;
+  // Laid out by its own width (a container query), not the screen's: in the dashboard's
+  // narrow side column on desktop it stacks; on a wide page the buttons sit beside the text.
   return (
+    <div className="@container">
     <div
       role="status"
-      className={`admin-fade-in flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center ${
+      className={`admin-fade-in flex flex-col gap-3 rounded-lg border p-4 @lg:flex-row @lg:items-center ${
         state.full ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"
       }`}
     >
@@ -68,9 +71,10 @@ export function ProductLimitNotice({
           </p>
         </div>
       </div>
+      {/* Stacked: the buttons share the full width under the text. */}
       <div className="flex shrink-0 gap-2">
         {!compact && state.full && (
-          <Link href="/admin/ecatalog" className={buttonClass("secondary", "md", "h-10")}>
+          <Link href="/admin/ecatalog" className={buttonClass("secondary", "md", "h-10 flex-1 @lg:flex-none")}>
             Manage products
           </Link>
         )}
@@ -78,12 +82,13 @@ export function ProductLimitNotice({
           href={moreProductsHref(storeName, state.limit)}
           target="_blank"
           rel="noopener noreferrer"
-          className={buttonClass("secondary", "md", "h-10 text-whatsapp")}
+          className={buttonClass("secondary", "md", "h-10 flex-1 text-whatsapp @lg:flex-none")}
         >
           <WhatsAppIcon className="h-4 w-4" />
           Contact us
         </a>
       </div>
+    </div>
     </div>
   );
 }

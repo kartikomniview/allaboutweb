@@ -4,6 +4,7 @@ import { Plus_Jakarta_Sans, Poppins } from "next/font/google";
 import FurnitureCatalogApp from "@/components/furniture-catalog/FurnitureCatalogApp";
 import StoreUnavailable from "@/components/furniture-catalog/StoreUnavailable";
 import { getStoreCatalog, isInactive } from "@/lib/catalogProducts";
+import { CATALOG_ICONS } from "@/lib/catalogDomain";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -38,8 +39,8 @@ const DEMO_SHARE = {
 
 export async function generateMetadata({ params }: LayoutProps<"/store/[store]">): Promise<Metadata> {
   const catalog = await getStoreCatalog((await params).store);
-  if (!catalog) return { title: "Store not found" };
-  if (isInactive(catalog)) return { title: `${catalog.name} · Store unavailable`, robots: { index: false } };
+  if (!catalog) return { title: "Store not found", icons: CATALOG_ICONS };
+  if (isInactive(catalog)) return { title: `${catalog.name} · Store unavailable`, robots: { index: false }, icons: CATALOG_ICONS };
   const { store } = catalog;
 
   const description =
@@ -53,6 +54,7 @@ export async function generateMetadata({ params }: LayoutProps<"/store/[store]">
     // Tab pages set just their own name: "Cart | Demo Store".
     title: { default: store.name, template: `%s | ${store.name}` },
     description,
+    icons: CATALOG_ICONS,
     openGraph: { type: "website", siteName: store.name, title: share.title, description: share.description, images },
     twitter: { card: images ? "summary_large_image" : "summary", title: share.title, description: share.description, images },
   };

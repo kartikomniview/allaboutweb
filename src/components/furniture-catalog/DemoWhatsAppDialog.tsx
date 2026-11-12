@@ -74,7 +74,7 @@ export default function DemoWhatsAppDialog({ message, onClose }: { message: stri
         aria-modal="true"
         aria-labelledby="demo-whatsapp-title"
         onClick={(e) => e.stopPropagation()}
-        className="fc-page-enter w-full rounded-t-lg bg-white p-5 pb-safe shadow-2xl sm:max-w-[400px] sm:rounded-lg"
+        className="fc-page-enter w-full rounded-t-lg bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:max-w-[400px] sm:rounded-lg"
       >
         <div className="flex items-start gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-white">

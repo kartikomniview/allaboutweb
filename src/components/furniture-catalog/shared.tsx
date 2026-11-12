@@ -592,6 +592,19 @@ export const ProductVisual: React.FC<{ product: CatalogProduct; sizes: string; f
     />
   );
 
+// The store's logo, or its first letter on a dark tile when it has none.
+// `className` sets the size, corners and text size; `sizes` is the logo's display width.
+export const StoreMark: React.FC<{ store: CatalogStore; className: string; sizes: string }> = ({ store, className, sizes }) =>
+  store.logo ? (
+    <span className={`relative block shrink-0 overflow-hidden bg-white ring-1 ring-inset ring-neutral-200 ${className}`}>
+      <Image src={store.logo} alt={`${store.name} logo`} fill sizes={sizes} className="object-contain" />
+    </span>
+  ) : (
+    <span className={`flex shrink-0 items-center justify-center bg-neutral-900 font-bold text-white ${className}`} aria-hidden>
+      {store.initial}
+    </span>
+  );
+
 // Heart toggle on the product page that saves a product to the Saved tab.
 // `className` sets size and placement.
 export const SaveButton: React.FC<{ product: CatalogProduct; className?: string; iconClassName?: string }> = ({
@@ -617,6 +630,17 @@ export const SaveButton: React.FC<{ product: CatalogProduct; className?: string;
   );
 };
 
+// Desktop sections sit on a light grey page as white panels: a hairline border and a
+// soft shadow. On phones the panel styles are off and sections run edge to edge.
+export const SECTION_PANEL =
+  'md:rounded-lg md:border md:border-neutral-200 md:bg-white md:shadow-[0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_-1px_rgba(0,0,0,0.04)]';
+// A section's small heading (desktop panels, Store info).
+export const SECTION_LABEL = 'text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-500';
+
+// The product grid: two columns on phones, up to five on wide screens.
+export const PRODUCT_GRID =
+  'grid grid-cols-2 gap-x-2.5 gap-y-4 md:grid-cols-3 md:gap-x-5 md:gap-y-7 lg:grid-cols-4 xl:grid-cols-5';
+
 // Image-first product card: a square photo with a small badge, then just name + price.
 // The card links to the product's own page (where it can be added to the cart or saved).
 export const ProductCard: React.FC<{ product: CatalogProduct }> = ({ product }) => {
@@ -635,27 +659,31 @@ export const ProductCard: React.FC<{ product: CatalogProduct }> = ({ product }) 
         className="flex flex-col active:scale-[0.99] transition-transform duration-300"
       >
         <div className="relative aspect-square overflow-hidden rounded-md bg-neutral-100 shadow-[0_2px_12px_rgba(0,0,0,0.05)] group-hover:shadow-[0_10px_24px_rgba(0,0,0,0.10)] transition-shadow duration-300">
-          <ProductVisual product={product} sizes="(min-width: 640px) 200px, 50vw" fit="contain" />
+          <ProductVisual
+            product={product}
+            sizes="(min-width: 1280px) 240px, (min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
+            fit="contain"
+          />
 
           {badge && (
-            <span className="absolute top-2 left-2 max-w-[70%] truncate rounded-full bg-black/45 backdrop-blur-sm px-2 py-0.5 text-[9px] font-semibold text-white">
+            <span className="absolute top-2 left-2 max-w-[70%] truncate rounded-full bg-black/45 backdrop-blur-sm px-2 py-0.5 text-[9px] md:text-[10px] font-semibold text-white">
               {badge}
             </span>
           )}
         </div>
 
         <div className="px-1 pt-2">
-          <h2 className="text-[11px] sm:text-xs font-medium text-neutral-600 line-clamp-1">
+          <h2 className="text-[11px] md:text-[13px] font-medium text-neutral-600 line-clamp-1 group-hover:text-neutral-900 transition-colors">
             {product.productName}
           </h2>
           <p className="mt-0.5 flex items-baseline gap-1.5 tabular-nums">
             {hasPrice(product) ? (
-              <span className="text-sm font-bold text-[#111111]">{formatINR(product.price)}</span>
+              <span className="text-sm md:text-[15px] font-bold text-[#111111]">{formatINR(product.price)}</span>
             ) : (
-              <span className="text-xs font-semibold text-neutral-700">{PRICE_ON_REQUEST}</span>
+              <span className="text-xs md:text-[13px] font-semibold text-neutral-700">{PRICE_ON_REQUEST}</span>
             )}
             {hasDiscount && (
-              <span className="text-[10px] text-neutral-400 line-through">{formatINR(product.originalPrice)}</span>
+              <span className="text-[10px] md:text-xs text-neutral-400 line-through">{formatINR(product.originalPrice)}</span>
             )}
           </p>
         </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
+import { AppIcon, Wordmark } from "@/components/catalog24/Logo";
 import { ripple } from "./ripple";
 import { Spinner } from "./ui";
 
@@ -35,19 +36,8 @@ export const authSecondaryButtonClass =
 /** The page's <form>: grows to fill the screen so <AuthActions> can sit at the bottom. */
 export const authFormClass = "flex flex-1 flex-col";
 
-export function BrandMark({ className = "h-9 w-9 text-base" }: { className?: string }) {
-  return (
-    <span className={`grid shrink-0 place-items-center rounded-md bg-primary font-bold text-white ${className}`}>C</span>
-  );
-}
-
 function Logo() {
-  return (
-    <span className="flex items-center gap-2">
-      <BrandMark className="h-7 w-7 text-sm" />
-      <span className="text-base font-bold tracking-[-0.02em] text-ink">Catalog24</span>
-    </span>
-  );
+  return <Wordmark className="h-6" eager />;
 }
 
 /** "Step 2 of 3" with a segmented bar. */
@@ -131,6 +121,14 @@ export default function AuthLayout({
   contentClassName?: string;
   children: ReactNode;
 }) {
+  // Focus the screen's first field (the input marked data-autofocus) on tablets and
+  // desktops only. On phones it would open the keyboard, with the pinned button above
+  // it, before the owner has even seen the screen. Runs again for each new step.
+  useEffect(() => {
+    if (!window.matchMedia("(min-width: 640px)").matches) return;
+    document.querySelector<HTMLElement>("[data-autofocus]")?.focus();
+  }, [contentKey]);
+
   return (
     <div className="flex min-h-dvh flex-1 flex-col bg-white sm:items-center sm:justify-center sm:bg-paper sm:px-6 sm:py-12">
       {/* Larger screens: logo above the card */}
@@ -181,7 +179,7 @@ export default function AuthLayout({
 export function AuthLoading({ label }: { label: string }) {
   return (
     <div className="flex min-h-dvh flex-1 flex-col items-center justify-center gap-4 bg-white px-4 py-10 sm:bg-paper" role="status">
-      <BrandMark className="h-11 w-11 text-lg" />
+      <AppIcon className="h-12 w-12" />
       <span className="flex items-center gap-2 text-sm font-medium text-slate">
         <Spinner className="h-4 w-4 text-primary" />
         {label}

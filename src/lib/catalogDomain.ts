@@ -12,6 +12,12 @@ const CATALOG_ROOT_DOMAIN = "catalog24.in";
  */
 export const CATALOG_DOMAINS = ["catalog24.in", "www.catalog24.in", "catalog24.localhost"];
 
+/**
+ * The Catalog24 favicon, for every Catalog24 page (landing, admin, store catalogs).
+ * A segment's `icons` replaces the AllAboutWeb src/app/icon.png and apple-icon.png.
+ */
+export const CATALOG_ICONS = { icon: { url: "/catalog24/favicon.webp", type: "image/webp", sizes: "128x128" } };
+
 /** The store that holds the original demo products (demo.catalog24.in). */
 export const DEMO_STORE_SLUG = "demo";
 

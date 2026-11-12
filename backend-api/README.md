@@ -13,17 +13,21 @@ This is the backend for Catalog24: store registration, the store owners' admin p
 | `POST /auth/logout` | Header `Authorization: Bearer <token>`. Deletes the session |
 | `GET /catalog/{store}/products` | **Public, no login.** A store's public details and its published products (`isActive: true`): `{ store, products }`, or 404 `STORE_NOT_FOUND`. Each store's catalog page reads this |
 | `GET /catalog/products` | **Public.** The demo store's products, as `{ products }`. Kept for older website builds |
-| `GET /store` / `PUT /store` | The logged-in owner's store details (name, WhatsApp, business types, phone, email, address, hours, tagline, category, year started). The slug can't be changed. `PUT` keeps the business types when `businessTypes` isn't sent. Stores from before business types (the Demo store) count as `["furniture"]` |
+| `GET /store` / `PUT /store` | The logged-in owner's store details (name, WhatsApp, business types, phone, email, address, hours, tagline, category, year started, logo). The slug can't be changed. `PUT` keeps the business types when `businessTypes` isn't sent, and the logo when `logo` isn't sent (an empty `logo` removes it). The logo is uploaded with `POST /products/uploads` like a product photo, and a replaced logo file is deleted. Stores from before business types (the Demo store) count as `["furniture"]` |
 | `GET /products` | Lists the store's products as `{ products }` |
 | `POST /products` | Body is one product. Creates it with an auto id and returns `{ product }` |
 | `POST /products/import` | Body `{ products: [{ id, ...product }] }`. Creates products with fixed ids and skips ids that already exist. Returns `{ created, skipped }` |
 | `PUT /products/{id}` | Body is the full product. Replaces its fields and returns `{ product }` |
 | `DELETE /products/{id}` | Deletes the product and its images in S3 |
-| `GET /admin/stores` | **Super admins only.** Every store: `{ stores: [{ slug, name, email, active, productLimit, productCount, createdAt }] }` |
+| `GET /admin/stores` | **Super admins only.** Every store: `{ stores: [{ slug, name, email, active, productLimit, productCount, userCount, createdAt }] }` |
+| `GET /admin/stores/{slug}/users` | **Super admins only.** The store's logins, owner first: `{ users: [{ uid, email, isOwner, deviceBound, deviceBoundAt, lastLoginAt, addedAt }] }` |
+| `POST /admin/stores/{slug}/users` | **Super admins only.** Body `{ email, password }`. Creates another login for the store, with the same access as the owner. Returns `{ user }` (201), or 409 `EMAIL_TAKEN` |
+| `POST /admin/stores/{slug}/users/{uid}/reset-device` | **Super admins only.** Clears the user's device lock and ends their sessions; their next login binds the new device. Returns `{ user }` |
+| `DELETE /admin/stores/{slug}/users/{uid}` | **Super admins only.** Deletes an extra login: its sessions, `users/{uid}` and the Firebase account. The store owner and your own account can't be removed |
 | `PUT /admin/stores/{slug}` | **Super admins only.** Body `{ active?, productLimit? }`. `productLimit` is a whole number from 0 to 10000, or `null` for unlimited. Returns `{ store }` |
 | `POST /products/uploads` | Body `{ categoryName, subcategoryName, productName, files: [{ contentType, size }] }`. Returns `{ uploads: [{ uploadUrl, fields, publicUrl }] }`, one signed S3 upload form per file. The browser then uploads each file straight to S3 |
 | `POST /products/uploads/discard` | Body `{ urls }`. Deletes images that were uploaded but never saved to a product (for example when the editor is cancelled) |
-| `POST /products/detect` | Body `{ businessTypes, categories: [{ name, subcategories }], image: { data, mediaType } }` (a base64 photo) or `{ businessTypes, categories, imageUrl }` (an uploaded image). `businessTypes` are labels for the prompt ("Furniture", "Lighting"); `categories` (at most 80) are the store's own. Asks Claude to identify any kind of product and returns `{ detected: { productName, categoryName, subcategoryName, categoryIsNew, subcategoryIsNew, description, colors, material, dimensions, specs, tags, highlights, keywords } }`. The category is one of the `categories` sent (with its spelling) when one fits; otherwise it is a new name and `categoryIsNew` / `subcategoryIsNew` is `true` |
+| `POST /products/detect` | Body `{ businessTypes, categories: [{ name, subcategories }], image: { data, mediaType } }` (a base64 photo) or `{ businessTypes, categories, imageUrl }` (an uploaded image). `businessTypes` are labels for the prompt ("Furniture", "Lighting"); `categories` (at most 80) are the predefined categories of the store's business types. Asks Claude to identify any kind of product and returns `{ detected: { productName, categoryName, subcategoryName, description, dimensions, specs, tags, highlights, keywords } }`. The category and subcategory are always one of the `categories` sent (with its spelling), the closest one when nothing fits exactly; the model never suggests a new category |
 
 Every `/products` and `/store` route needs a logged-in store owner: the same `Authorization: Bearer <token>` and `X-Device-Id` headers as `GET /auth/session`. They only ever see and change that owner's own store: another store's product id returns 404. Each store's images are stored under `ecatalog/stores/{slug}/` in S3 (the demo store's older images stay under `ecatalog/`).
 
@@ -39,7 +43,7 @@ Firestore layout:
 
 ```
 stores/{slug}      { name, slug, ownerUid, email, whatsapp, businessTypes[], phone, publicEmail,
-                     address, hours, tagline, category, since, coverImage, createdAt, updatedAt }
+                     address, hours, tagline, category, since, coverImage, logo, createdAt, updatedAt }
 users/{uid}        { email, storeSlug, deviceId, deviceBoundAt, lastLoginAt }
 sessions/{sha256}  { uid, email, deviceId, createdAt, expiresAt }   // doc id = SHA-256 of the token
 products/{id}      { storeSlug, productName, categoryName, subcategoryName, price, originalPrice,
@@ -215,7 +219,9 @@ The Lambda signs uploads with its own role, so the role needs permission to writ
 2. Run `npm run dev` and open <http://localhost:3000/admin>.
 3. On your hosting provider, set the same `NEXT_PUBLIC_API_BASE_URL` variable before you build. `NEXT_PUBLIC_` values are baked into the build, so changing the variable means rebuilding the site.
 
-### 8. Reset a user's device (manual)
+### 8. Reset a user's device
+
+Super admins do this on the website: **All stores → Manage users → Reset device**. To do it by hand instead:
 
 1. Go to **Firebase Console → Firestore → `users` → the user's document**. The document ID is the user's UID, which you can find in Authentication → Users.
 2. Delete the **`deviceId`** field.
@@ -306,6 +312,19 @@ Super admins (`SUPER_ADMIN_EMAILS`) change both on the website's **All stores** 
    - `GET /admin/stores`
    - `PUT /admin/stores/{slug}`
 
+### Adding store users (super admin) to an existing deployment
+
+On **All stores → Manage users**, super admins see each store's logins, reset a login's device lock, add another login for the store (same access as the owner) and remove extra logins. Extra logins are `users/{uid}` documents with the store's `storeSlug`, like the owner's.
+
+1. Run `npm run package` and upload `lambda.zip`.
+2. In API Gateway, add these routes with the `aaw-admin-auth` integration:
+   - `GET /admin/stores/{slug}/users`
+   - `POST /admin/stores/{slug}/users`
+   - `POST /admin/stores/{slug}/users/{uid}/reset-device`
+   - `DELETE /admin/stores/{slug}/users/{uid}`
+
+   CORS already allows `POST` and `DELETE`.
+
 ### Adding photo detection to an existing deployment
 
 When a photo is added to a new product, the admin form fills in the name, category, subcategory, description, colours, material and wood type from it. The Lambda asks Claude (model `claude-haiku-5-5`) to identify the product.
@@ -339,6 +358,7 @@ If the key is missing or invalid, the admin form shows "Photo detection is not s
 | 403 | `PRODUCT_LIMIT` | The store has reached its product limit |
 | 403 | `FORBIDDEN` | A super-admin route called by someone else |
 | 404 | `STORE_NOT_FOUND` | No store with that slug |
+| 404 | `USER_NOT_FOUND` | Store users: the uid isn't a login of that store |
 | 409 | `STORE_TAKEN` / `EMAIL_TAKEN` | Registration: the store name or the email is already used |
 | 403 | `USER_DISABLED` | The account is disabled in Firebase Auth |
 | 429 | `TOO_MANY_ATTEMPTS` | Firebase rate-limited this account |

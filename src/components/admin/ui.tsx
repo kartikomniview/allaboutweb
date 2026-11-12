@@ -19,14 +19,18 @@ export function Skeleton({ className = "" }: { className?: string }) {
   return <div className={`admin-skeleton ${className}`} aria-hidden />;
 }
 
-type Variant = "primary" | "secondary" | "ghost" | "danger" | "danger-ghost";
+type Variant = "primary" | "secondary" | "share" | "ghost" | "danger" | "danger-soft" | "danger-ghost";
 type Size = "sm" | "md" | "icon";
 
 const VARIANTS: Record<Variant, string> = {
   primary: "bg-button text-white shadow-[0_1px_2px_rgba(1,18,60,0.12),inset_0_1px_0_rgba(255,255,255,0.15)] hover:bg-button-hover",
   secondary: "bg-white text-ink ring-1 ring-inset ring-line shadow-[0_1px_2px_rgba(1,18,60,0.06)] hover:bg-paper",
+  // Share buttons: a light green, so sharing (mostly on WhatsApp) stands out.
+  share: "bg-emerald-50 text-emerald-800 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-100",
   ghost: "text-slate hover:bg-ink/[0.05] hover:text-ink",
   danger: "bg-red-600 text-white hover:bg-red-700",
+  // A light red, for actions like Log out that leave but don't destroy anything.
+  "danger-soft": "bg-red-50 text-red-700 ring-1 ring-inset ring-red-200 hover:bg-red-100",
   "danger-ghost": "text-red-600 hover:bg-red-50",
 };
 

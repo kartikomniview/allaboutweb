@@ -1,7 +1,7 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { auth, db } from "./firebase.mjs";
 import { HttpError } from "./http.mjs";
-import { isStoreImageUrl } from "./storage.mjs";
+import { deleteImages, isStoreImageUrl } from "./storage.mjs";
 
 // One store per registered owner. stores/{slug} holds the store's public
 // details; the slug (the store name without spaces) is its subdomain:
@@ -26,6 +26,25 @@ export const BUSINESS_TYPE_IDS = ["furniture", "decor", "lighting", "flooring", 
 const DEFAULT_BUSINESS_TYPES = ["furniture"];
 
 const bad = (message) => new HttpError(400, "BAD_REQUEST", message);
+
+// A new login's email and password (registration and super admins adding a user).
+export function checkLogin(body) {
+  const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+  const password = typeof body?.password === "string" ? body.password : "";
+  if (!EMAIL_RE.test(email)) throw bad("Enter a valid email address");
+  if (password.length < 6 || password.length > 128) throw bad("Password must be at least 6 characters");
+  return { email, password };
+}
+
+// Firebase createUser errors -> the API's messages.
+export function accountError(err) {
+  if (err?.code === "auth/email-already-exists") {
+    return new HttpError(409, "EMAIL_TAKEN", "An account with this email already exists. Log in instead.");
+  }
+  if (err?.code === "auth/invalid-email") return bad("Enter a valid email address");
+  if (err?.code === "auth/invalid-password") return bad("Password must be at least 6 characters");
+  return err;
+}
 
 // How many products a store may have. New stores get the default; a store
 // without the field (from before limits existed, e.g. the Demo store) is unlimited.
@@ -99,6 +118,7 @@ export function publicStore(data) {
     category: data.category ?? "",
     since: typeof data.since === "number" ? data.since : null,
     coverImage: data.coverImage ?? "",
+    logo: data.logo ?? "",
     businessTypes: businessTypesOf(data),
   };
 }
@@ -135,10 +155,7 @@ export async function registerStoreOwner(body) {
   // Optional at sign-up: the owner adds it in Store settings.
   const whatsapp = normalizeWhatsapp(body?.whatsapp, { required: false });
   const businessTypes = checkBusinessTypes(body?.businessTypes);
-  const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
-  const password = typeof body?.password === "string" ? body.password : "";
-  if (!EMAIL_RE.test(email)) throw bad("Enter a valid email address");
-  if (password.length < 8 || password.length > 128) throw bad("Password must be at least 8 characters");
+  const { email, password } = checkLogin(body);
 
   const storeRef = db().collection(STORES).doc(slug);
   try {
@@ -164,12 +181,7 @@ export async function registerStoreOwner(body) {
     user = await auth().createUser({ email, password });
   } catch (err) {
     await storeRef.delete().catch(() => {});
-    if (err?.code === "auth/email-already-exists") {
-      throw new HttpError(409, "EMAIL_TAKEN", "An account with this email already exists. Log in instead.");
-    }
-    if (err?.code === "auth/invalid-email") throw bad("Enter a valid email address");
-    if (err?.code === "auth/invalid-password") throw bad("Password must be at least 8 characters");
-    throw err;
+    throw accountError(err);
   }
 
   await storeRef.update({ ownerUid: user.uid });
@@ -208,6 +220,10 @@ export async function updateStore(slug, body) {
   if (coverImage && !isStoreImageUrl(coverImage, slug)) throw bad("coverImage must be an uploaded image");
   const publicEmail = text(body, "email", 120);
   if (publicEmail && !EMAIL_RE.test(publicEmail)) throw bad("Enter a valid store email, or leave it empty");
+  // The store logo: an uploaded image, "" to remove it, or left as is when not sent (older admin builds).
+  const previousLogo = snap.data().logo ?? "";
+  const logo = body.logo === undefined ? previousLogo : text(body, "logo", 500);
+  if (logo && !isStoreImageUrl(logo, slug)) throw bad("logo must be an uploaded image");
 
   await ref.update({
     name,
@@ -220,34 +236,43 @@ export async function updateStore(slug, body) {
     category: text(body, "category", 60),
     since,
     coverImage,
+    logo,
     // Left as is when not sent (older admin builds).
     businessTypes: body.businessTypes === undefined ? businessTypesOf(snap.data()) : checkBusinessTypes(body.businessTypes),
     updatedAt: FieldValue.serverTimestamp(),
   });
+  // A replaced or removed logo file is deleted (best effort).
+  if (previousLogo && previousLogo !== logo) await deleteImages([previousLogo], slug);
   return publicStore((await ref.get()).data());
 }
 
 /* ---------- Super admin: every store ---------- */
 
-// GET /admin/stores: each store with its owner, limit, status and product count.
+const countWhereStore = async (collection, slug) =>
+  (await db().collection(collection).where("storeSlug", "==", slug).count().get()).data().count;
+
+// A store as the All stores page shows it, with its product and login counts.
+async function managedStore(slug, data) {
+  const [productCount, userCount] = await Promise.all([
+    countWhereStore("products", slug),
+    countWhereStore(USERS, slug),
+  ]);
+  return {
+    slug,
+    name: data.name ?? slug,
+    email: data.email ?? "",
+    active: isStoreActive(data),
+    productLimit: productLimitOf(data),
+    productCount,
+    userCount,
+    createdAt: typeof data.createdAt?.toDate === "function" ? data.createdAt.toDate().toISOString() : null,
+  };
+}
+
+// GET /admin/stores: each store with its owner, limit, status, product and user counts.
 export async function listAllStores() {
   const snap = await db().collection(STORES).get();
-  const products = db().collection("products");
-  const stores = await Promise.all(
-    snap.docs.map(async (doc) => {
-      const data = doc.data();
-      const count = await products.where("storeSlug", "==", doc.id).count().get();
-      return {
-        slug: doc.id,
-        name: data.name ?? doc.id,
-        email: data.email ?? "",
-        active: isStoreActive(data),
-        productLimit: productLimitOf(data),
-        productCount: count.data().count,
-        createdAt: typeof data.createdAt?.toDate === "function" ? data.createdAt.toDate().toISOString() : null,
-      };
-    }),
-  );
+  const stores = await Promise.all(snap.docs.map((doc) => managedStore(doc.id, doc.data())));
   return stores.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? "") || a.slug.localeCompare(b.slug));
 }
 
@@ -274,15 +299,5 @@ export async function updateStoreAccess(slug, body) {
   if (!snap.exists) throw new HttpError(404, "STORE_NOT_FOUND", "Store not found");
   await ref.update({ ...change, updatedAt: FieldValue.serverTimestamp() });
 
-  const data = (await ref.get()).data();
-  const count = await db().collection("products").where("storeSlug", "==", slug).count().get();
-  return {
-    slug,
-    name: data.name ?? slug,
-    email: data.email ?? "",
-    active: isStoreActive(data),
-    productLimit: productLimitOf(data),
-    productCount: count.data().count,
-    createdAt: typeof data.createdAt?.toDate === "function" ? data.createdAt.toDate().toISOString() : null,
-  };
+  return managedStore(slug, (await ref.get()).data());
 }

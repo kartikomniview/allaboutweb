@@ -220,7 +220,7 @@ Don't add looping, parallax or decorative animation.
 ## Forms: behaviour rules
 
 - **When to validate:** on submit or Continue. Show the message **under the field**, focus and shake the first bad field, and clear its message as the user types.
-- **Messages:** short, human and specific ("Use at least 8 characters.", "The passwords don't match.").
+- **Messages:** short, human and specific ("Use at least 6 characters.", "The passwords don't match.").
 - **Server errors** that belong to a field (e.g. `EMAIL_TAKEN`) go under that field. The rest go in the alert above the button.
 - **Phone keyboard attributes on every input:**
   - `type` / `inputMode`: `email`, `tel`, `numeric`.

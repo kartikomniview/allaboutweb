@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Search,
   SearchX,
+  Share2,
   TriangleAlert,
   Upload,
   X,
@@ -21,6 +22,7 @@ import { useAdminUser, useLiveCatalogUrl } from "@/components/admin/AdminShell";
 import { ProductLimitNotice, limitState, usageLabel } from "@/components/admin/ProductLimit";
 import ConfirmDialog from "@/components/admin/ecatalog/ConfirmDialog";
 import ProductFormDrawer from "@/components/admin/ecatalog/ProductFormDrawer";
+import ShareCatalogDialog from "@/components/admin/ecatalog/ShareCatalogDialog";
 import ProductTable, {
   ProductGrid,
   ProductGridSkeleton,
@@ -163,6 +165,7 @@ export default function ManageEcatalogPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   const [toast, setToast] = useState<Toast | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -416,9 +419,10 @@ export default function ManageEcatalogPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
-      {/* Title */}
+      {/* Title: hidden on phones (the top bar says where you are), kept for screen readers.
+          There the Share and View live buttons share the width instead. */}
       <header className="admin-fade-in flex items-end justify-between gap-3">
-        <div className="min-w-0">
+        <div className="sr-only min-w-0 sm:not-sr-only">
           <h1 className="text-[1.5rem] font-bold leading-tight tracking-[-0.025em] text-ink">Products</h1>
           <p className="mt-0.5 text-sm text-slate">
             {products ? (
@@ -430,13 +434,17 @@ export default function ManageEcatalogPage() {
             )}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
+          <Button variant="share" onClick={() => setSharing(true)} disabled={products === null} className="flex-1 px-3 sm:flex-none sm:px-4">
+            <Share2 className="h-4 w-4" aria-hidden />
+            Share
+          </Button>
           <a
             href={liveUrl}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="View live catalog"
-            className={`${buttonClass("secondary")} px-3 sm:px-4`}
+            className={`${buttonClass("secondary")} flex-1 px-3 sm:flex-none sm:px-4`}
           >
             View live
             <ArrowUpRight className="h-4 w-4 text-slate" aria-hidden />
@@ -605,6 +613,16 @@ export default function ManageEcatalogPage() {
           onDelete={askDelete}
           onImagesSaved={replaceProduct}
           products={products ?? []}
+        />
+      )}
+
+      {sharing && products && (
+        <ShareCatalogDialog
+          products={products}
+          storeName={store.name}
+          liveUrl={liveUrl}
+          initialCategory={category === DEFAULT_CATEGORY ? undefined : category}
+          onClose={() => setSharing(false)}
         />
       )}
 

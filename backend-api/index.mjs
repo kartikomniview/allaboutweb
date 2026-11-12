@@ -30,6 +30,7 @@ import {
   updateStore,
   updateStoreAccess,
 } from "./src/stores.mjs";
+import { addStoreUser, listStoreUsers, removeStoreUser, resetUserDevice } from "./src/storeUsers.mjs";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DEVICE_ID_RE = /^[A-Za-z0-9-]{8,128}$/;
@@ -206,7 +207,7 @@ async function getOwnStore(event) {
   return json(200, { store: publicStore(store) });
 }
 
-// PUT /store  { name, whatsapp, phone, email, address, hours, tagline, category, since, coverImage }
+// PUT /store  { name, whatsapp, phone, email, address, hours, tagline, category, since, coverImage, logo }
 async function putOwnStore(event) {
   const { storeSlug } = await requireSession(event);
   return json(200, { store: await updateStore(storeSlug, parseBody(event)) });
@@ -232,6 +233,34 @@ async function putStoreAccess(event) {
   return json(200, { store: await updateStoreAccess(slug, parseBody(event)) });
 }
 
+const slugParam = (event) => String(event.pathParameters?.slug ?? "").toLowerCase();
+const uidParam = (event) => String(event.pathParameters?.uid ?? "");
+
+// GET /admin/stores/{slug}/users: the store's logins and their device locks.
+async function getStoreUsers(event) {
+  await requireSuperAdmin(event);
+  return json(200, { users: await listStoreUsers(slugParam(event)) });
+}
+
+// POST /admin/stores/{slug}/users  { email, password }: another login for the store.
+async function postStoreUser(event) {
+  await requireSuperAdmin(event);
+  return json(201, { user: await addStoreUser(slugParam(event), parseBody(event)) });
+}
+
+// POST /admin/stores/{slug}/users/{uid}/reset-device: lets the user log in on a new device.
+async function postResetDevice(event) {
+  await requireSuperAdmin(event);
+  return json(200, { user: await resetUserDevice(slugParam(event), uidParam(event)) });
+}
+
+// DELETE /admin/stores/{slug}/users/{uid}: removes an extra login (never the owner).
+async function deleteStoreUser(event) {
+  const { uid } = await requireSuperAdmin(event);
+  await removeStoreUser(slugParam(event), uidParam(event), uid);
+  return json(200, { ok: true });
+}
+
 const routes = {
   "POST /auth/login": login,
   "POST /auth/register": register,
@@ -252,6 +281,10 @@ const routes = {
   "DELETE /products/{id}": removeProduct,
   "GET /admin/stores": getAllStores,
   "PUT /admin/stores/{slug}": putStoreAccess,
+  "GET /admin/stores/{slug}/users": getStoreUsers,
+  "POST /admin/stores/{slug}/users": postStoreUser,
+  "POST /admin/stores/{slug}/users/{uid}/reset-device": postResetDevice,
+  "DELETE /admin/stores/{slug}/users/{uid}": deleteStoreUser,
 };
 
 export async function handler(event) {

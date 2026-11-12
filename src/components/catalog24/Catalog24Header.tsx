@@ -30,7 +30,7 @@ export default function Catalog24Header() {
     >
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6 header:px-8">
         <Link href="/" className="flex shrink-0 items-center" aria-label="Catalog24 home">
-          <Logo size="sm" />
+          <Logo size="sm" eager />
         </Link>
 
         <nav className="hidden items-center gap-1 header:flex" aria-label="Primary">

@@ -18,12 +18,14 @@ import {
 import { useAdminUser, useLiveCatalogUrl } from "@/components/admin/AdminShell";
 import { authButtonClass } from "@/components/admin/AuthLayout";
 import { ProductThumb } from "@/components/admin/ecatalog/ProductTable";
+import ShareCatalogDialog from "@/components/admin/ecatalog/ShareCatalogDialog";
+import StoreLogoPicker, { StoreLogo } from "@/components/admin/StoreLogoPicker";
 import { ripple } from "@/components/admin/ripple";
 import { ProductLimitNotice, limitState } from "@/components/admin/ProductLimit";
 import { Badge, Card, Skeleton, buttonClass } from "@/components/admin/ui";
 import { formatPrice } from "@/components/furniture-catalog/data";
-import { listProducts, type Product } from "@/lib/adminProducts";
-import { getOwnStore } from "@/lib/adminStore";
+import { discardUploads, listProducts, type Product } from "@/lib/adminProducts";
+import { getOwnStore, toStoreInput, updateOwnStore, type StoreDetails } from "@/lib/adminStore";
 import { categoryLabel } from "@/lib/taxonomy";
 
 // Remembers (in this browser) that the owner has shared their catalog link.
@@ -107,15 +109,22 @@ export default function AdminDashboardPage() {
   const [products, setProducts] = useState<Product[] | null>(null);
   const [productsError, setProductsError] = useState(false);
   const [whatsapp, setWhatsapp] = useState<string | null>(null);
+  // The store's saved details, for saving a new logo straight from the dashboard.
+  const [details, setDetails] = useState<StoreDetails | null>(null);
   const [shared, setShared] = useState(() => readShared(slug));
   const [copied, setCopied] = useState(false);
+  // The share panel (the same one as on the products page). Opens once the products are in.
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     listProducts()
       .then(setProducts)
       .catch(() => setProductsError(true));
     getOwnStore()
-      .then((s) => setWhatsapp(s.whatsapp))
+      .then((s) => {
+        setDetails(s);
+        setWhatsapp(s.whatsapp);
+      })
       .catch(() => setWhatsapp(""));
   }, []);
 
@@ -124,6 +133,17 @@ export default function AdminDashboardPage() {
     const timer = setTimeout(() => setCopied(false), 1800);
     return () => clearTimeout(timer);
   }, [copied]);
+
+  // A new logo (or none) is saved right away. If saving fails, the uploaded file is deleted again.
+  async function saveLogo(url: string) {
+    if (!details) return;
+    try {
+      setDetails(await updateOwnStore({ ...toStoreInput(details), logo: url }));
+    } catch (err) {
+      if (url) discardUploads([url]).catch(() => {});
+      throw err;
+    }
+  }
 
   const markShared = () => {
     saveShared(slug);
@@ -137,7 +157,13 @@ export default function AdminDashboardPage() {
     }
   }
 
+  // The share panel: the whole catalog, a category, a subcategory or chosen products.
+  // If the products couldn't be loaded, share the plain catalog link instead.
   async function shareLink() {
+    if (!productsError) {
+      setSharing(true);
+      return;
+    }
     const text = `Browse ${storeName}'s catalog and enquire on WhatsApp:`;
     if (navigator.share) {
       try {
@@ -218,9 +244,13 @@ export default function AdminDashboardPage() {
           {/* Store link */}
           <Card className="admin-pop-in overflow-hidden">
             <div className="flex items-center gap-3 p-3.5 sm:p-4">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-tint text-primary">
-                <Store className="h-5 w-5" aria-hidden />
-              </span>
+              {details ? (
+                <StoreLogo logo={details.logo} name={details.name} className="h-10 w-10 text-base" />
+              ) : (
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-tint text-primary">
+                  <Store className="h-5 w-5" aria-hidden />
+                </span>
+              )}
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium text-slate">Your catalog link</p>
                 <a
@@ -233,20 +263,25 @@ export default function AdminDashboardPage() {
                 </a>
               </div>
             </div>
+            {details && (
+              <div className="border-t border-line">
+                <StoreLogoPicker layout="dashboard" logo={details.logo} storeName={details.name} onChange={saveLogo} />
+              </div>
+            )}
             <div className="grid grid-cols-3 border-t border-line">
               {[
                 {
                   label: copied ? "Copied" : "Copy",
                   icon: copied ? Check : Copy,
                   onClick: copyLink,
-                  tone: copied ? "text-emerald-700" : "text-ink",
+                  tone: copied ? "text-emerald-700 hover:bg-paper/70" : "text-ink hover:bg-paper/70",
                 },
-                { label: "Share", icon: Share2, onClick: shareLink, tone: "text-ink" },
+                { label: "Share", icon: Share2, onClick: shareLink, tone: "bg-emerald-50 text-emerald-800 hover:bg-emerald-100" },
                 {
                   label: "Open",
                   icon: ArrowUpRight,
                   onClick: () => window.open(liveUrl, "_blank", "noopener,noreferrer"),
-                  tone: "text-ink",
+                  tone: "text-ink hover:bg-paper/70",
                 },
               ].map(({ label, icon: Icon, onClick, tone }, i) => (
                 <button
@@ -254,7 +289,7 @@ export default function AdminDashboardPage() {
                   type="button"
                   onClick={onClick}
                   onPointerDown={ripple}
-                  className={`relative flex h-12 items-center justify-center gap-1.5 overflow-hidden text-[13px] font-semibold transition-colors hover:bg-paper/70 ${tone} ${
+                  className={`relative flex h-12 items-center justify-center gap-1.5 overflow-hidden text-[13px] font-semibold transition-colors ${tone} ${
                     i > 0 ? "border-l border-line" : ""
                   }`}
                 >
@@ -412,6 +447,16 @@ export default function AdminDashboardPage() {
           Add product
         </Link>
       </div>
+
+      {sharing && products && (
+        <ShareCatalogDialog
+          products={products}
+          storeName={storeName}
+          liveUrl={liveUrl}
+          onShared={markShared}
+          onClose={() => setSharing(false)}
+        />
+      )}
     </div>
   );
 }

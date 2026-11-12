@@ -1,22 +1,18 @@
-// Detects product details (name, category, subcategory, description, colours,
-// material, size, specs, tags, highlights, search keywords) from a photo. The
-// Lambda asks Claude, guided by the store's own categories (sent from here): it
-// picks one of them when it fits, or suggests a new category when none does.
+// Detects product details (name, category, subcategory, description, size,
+// specs, tags, highlights, search keywords) from a photo. The
+// Lambda asks Claude to pick the category and subcategory from the predefined
+// categories of the store's business types (sent from here), the closest one
+// when nothing fits exactly. It never suggests a custom or new category.
 
 import { apiRequest } from "./adminAuth";
-import type { ProductColor, ProductSpec } from "./adminProducts";
+import type { ProductSpec } from "./adminProducts";
 import { businessTypeLabel, type PickerCategory } from "./taxonomy";
 
 export type DetectedProduct = {
   productName: string;
   categoryName: string;
   subcategoryName: string;
-  /** The AI suggested a category / subcategory that isn't in the store's list. */
-  categoryIsNew: boolean;
-  subcategoryIsNew: boolean;
   description: string;
-  colors: ProductColor[];
-  material: string;
   dimensions: string;
   specs: ProductSpec[];
   tags: string[];
@@ -24,7 +20,7 @@ export type DetectedProduct = {
   keywords: string[];
 };
 
-/** What the store sells, and the categories to choose from (storeCategories in taxonomy.ts). */
+/** What the store sells, and the categories the AI may choose from (its business types' ones). */
 export type DetectContext = { businessTypes: readonly string[]; categories: readonly PickerCategory[] };
 
 // The API takes at most 80 categories with 40 subcategories each.
@@ -50,11 +46,7 @@ async function detect(
     productName: detected.productName ?? "",
     categoryName: detected.categoryName ?? "",
     subcategoryName: detected.subcategoryName ?? "",
-    categoryIsNew: Boolean(detected.categoryIsNew),
-    subcategoryIsNew: Boolean(detected.subcategoryIsNew),
     description: detected.description ?? "",
-    colors: list(detected.colors),
-    material: detected.material ?? "",
     dimensions: detected.dimensions ?? "",
     specs: list(detected.specs),
     tags: list(detected.tags),

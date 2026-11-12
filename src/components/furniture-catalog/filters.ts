@@ -1,4 +1,4 @@
-// The catalog's refine filters (sort, price, colour, material, specs). The options
+// The catalog's refine filters (sort, price, specs). The options
 // are built from the products themselves, so every store gets filters that fit
 // what it sells: a furniture store sees Wood, a lighting store sees Bulb, etc.
 // Pure functions, no React: easy to test.
@@ -11,10 +11,6 @@ export type RefineFilters = {
   sort: SortOrder;
   minPrice: number | null;
   maxPrice: number | null;
-  /** Lower-cased colour names. */
-  colors: string[];
-  /** Lower-cased materials. */
-  materials: string[];
   /** Lower-cased spec label -> lower-cased values (any of them matches). */
   specs: Record<string, string[]>;
 };
@@ -23,25 +19,18 @@ export const EMPTY_REFINE: RefineFilters = {
   sort: 'featured',
   minPrice: null,
   maxPrice: null,
-  colors: [],
-  materials: [],
   specs: {},
 };
 
 export type FilterOption = { key: string; label: string; count: number };
-export type ColorOption = FilterOption & { hex: string };
 export type SpecFilter = { key: string; label: string; values: FilterOption[] };
 
 export type FilterOptions = {
   /** Lowest and highest price among priced products; null when fewer than 2 prices differ. */
   price: { min: number; max: number } | null;
-  colors: ColorOption[];
-  materials: FilterOption[];
   specs: SpecFilter[];
 };
 
-const MAX_COLORS = 12;
-const MAX_MATERIALS = 10;
 const MAX_SPEC_LABELS = 5;
 const MAX_SPEC_VALUES = 8;
 
@@ -66,21 +55,7 @@ export function filterOptions(products: CatalogProduct[]): FilterOptions {
   const min = prices.length ? Math.min(...prices) : 0;
   const max = prices.length ? Math.max(...prices) : 0;
 
-  // Each product counts once per colour / material / spec value.
-  const colors = tally(
-    products.flatMap((p) => {
-      const seen = new Set<string>();
-      return p.colors
-        .filter((c) => c.name.trim() && !seen.has(key(c.name)) && seen.add(key(c.name)))
-        .map((c) => ({ key: key(c.name), label: c.name.trim(), hex: c.hex }));
-    }),
-  ).slice(0, MAX_COLORS);
-
-  const materials = tally(
-    products.filter((p) => p.material.trim()).map((p) => ({ key: key(p.material), label: p.material.trim() })),
-  ).slice(0, MAX_MATERIALS);
-
-  // Spec labels on at least 2 products, most common first.
+  // Spec labels on at least 2 products (each product counts once per value), most common first.
   const byLabel = new Map<string, { label: string; products: number; values: { key: string; label: string }[] }>();
   for (const p of products) {
     const seen = new Set<string>();
@@ -105,8 +80,6 @@ export function filterOptions(products: CatalogProduct[]): FilterOptions {
 
   return {
     price: prices.length >= 2 && min < max ? { min, max } : null,
-    colors: colors.length > 1 ? colors : [],
-    materials: materials.length > 1 ? materials : [],
     specs,
   };
 }
@@ -116,8 +89,6 @@ export function activeRefineCount(f: RefineFilters): number {
   return (
     (f.sort !== 'featured' ? 1 : 0) +
     (f.minPrice !== null || f.maxPrice !== null ? 1 : 0) +
-    f.colors.length +
-    f.materials.length +
     Object.values(f.specs).reduce((n, values) => n + values.length, 0)
   );
 }
@@ -132,8 +103,6 @@ export function applyRefine(products: CatalogProduct[], f: RefineFilters): Catal
     if (priced && (p.price <= 0 || (f.minPrice !== null && p.price < f.minPrice) || (f.maxPrice !== null && p.price > f.maxPrice))) {
       return false;
     }
-    if (f.colors.length && !p.colors.some((c) => f.colors.includes(key(c.name)))) return false;
-    if (f.materials.length && !f.materials.includes(key(p.material))) return false;
     for (const [label, values] of specFilters) {
       const spec = specsOf(p).find((s) => key(s.label) === label);
       if (!spec || !values.includes(key(spec.value))) return false;

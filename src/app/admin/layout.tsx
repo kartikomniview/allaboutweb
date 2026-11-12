@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import { CATALOG_ICONS } from "@/lib/catalogDomain";
 
 export const metadata: Metadata = {
   title: "Store admin — Catalog24",
+  icons: CATALOG_ICONS,
   robots: { index: false, follow: false },
 };
 

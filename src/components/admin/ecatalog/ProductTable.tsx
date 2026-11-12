@@ -1,7 +1,7 @@
 "use client";
 
-import type { MouseEvent } from "react";
-import { ChevronRight, Eye, EyeOff, Pencil, Table2, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { ChevronRight, Eye, EyeOff, EllipsisVertical, Pencil, Table2, Trash2 } from "lucide-react";
 import { formatINR, formatPrice } from "@/components/furniture-catalog/data";
 import { discountPercent, type Product } from "@/lib/adminProducts";
 import { categoryLabel } from "@/lib/taxonomy";
@@ -220,9 +220,92 @@ export default function ProductTable({ products, onEdit, onDelete, onToggleActiv
 const floatingBtn =
   "grid h-9 w-9 place-items-center rounded-full bg-white/95 text-slate shadow-[0_1px_3px_rgba(1,18,60,0.18)] transition-colors hover:text-ink disabled:opacity-50";
 
-// Card grid: a large photo per product. Clicking a card opens the editor; the
-// hide/publish and delete buttons sit on the photo (always visible on touch
-// screens, on hover with a mouse).
+const menuItem =
+  "relative flex h-11 w-full items-center gap-2.5 overflow-hidden rounded-[4px] px-3 text-left text-[13px] font-semibold transition-colors disabled:opacity-50";
+
+// Phones: a ⋮ button on the card's photo with a small menu of labelled actions
+// (hide or publish, delete). Closes on a tap outside, Escape, or after a choice.
+function CardActionsMenu({
+  product,
+  toggling,
+  onToggleActive,
+  onDelete,
+}: {
+  product: Product;
+  toggling: boolean;
+  onToggleActive: (product: Product) => void;
+  onDelete: (product: Product) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  const choose = (action: (product: Product) => void) => {
+    setOpen(false);
+    action(product);
+  };
+
+  return (
+    <div ref={rootRef} className="absolute inset-x-2 top-2 flex flex-col items-end md:hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`Actions for ${product.productName || "this product"}`}
+        className={`${floatingBtn} ${open ? "text-ink" : ""}`}
+      >
+        {toggling ? <Spinner /> : <EllipsisVertical className="h-[18px] w-[18px]" aria-hidden />}
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="admin-pop-in mt-1.5 w-full max-w-[200px] rounded-md border border-line bg-white p-1 shadow-[0_12px_32px_-12px_rgba(1,18,60,0.35)]"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => choose(onToggleActive)}
+            onPointerDown={ripple}
+            disabled={toggling}
+            className={`${menuItem} text-ink hover:bg-paper`}
+          >
+            {product.isActive ? <EyeOff className="h-4 w-4 text-slate" aria-hidden /> : <Eye className="h-4 w-4 text-slate" aria-hidden />}
+            {product.isActive ? "Hide from catalog" : "Publish to catalog"}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => choose(onDelete)}
+            onPointerDown={ripple}
+            className={`${menuItem} text-red-600 hover:bg-red-50`}
+          >
+            <Trash2 className="h-4 w-4" aria-hidden />
+            Delete
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Card grid: a large photo per product. Clicking a card opens the editor. The
+// hide/publish and delete actions: on phones in a ⋮ menu with labels; on larger
+// screens as icon buttons on the photo (always visible on touch screens, on hover
+// with a mouse).
 export function ProductGrid({ products, onEdit, onDelete, onToggleActive, togglingId }: Props) {
   return (
     <ul className="grid grid-cols-2 gap-2 p-2 sm:grid-cols-3 sm:gap-3 sm:p-4 lg:grid-cols-4 xl:grid-cols-5">
@@ -247,8 +330,9 @@ export function ProductGrid({ products, onEdit, onDelete, onToggleActive, toggli
                 <p className="truncate text-[13px] font-semibold leading-snug text-ink group-hover:text-primary" title={p.productName}>
                   {p.productName || <span className="italic text-slate">Untitled product</span>}
                 </p>
+                {/* Category · subcategory: not on phones, where the cards are small. */}
                 <p
-                  className="truncate text-xs text-slate"
+                  className="hidden truncate text-xs text-slate sm:block"
                   title={[p.categoryName, p.subcategoryName].filter(Boolean).join(" · ")}
                 >
                   {categoryLabel(p.categoryName)}
@@ -258,7 +342,9 @@ export function ProductGrid({ products, onEdit, onDelete, onToggleActive, toggli
               </div>
             </button>
 
-            <div className="absolute right-2 top-2 flex gap-1 transition-opacity focus-within:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100">
+            <CardActionsMenu product={p} toggling={toggling} onToggleActive={onToggleActive} onDelete={onDelete} />
+
+            <div className="absolute right-2 top-2 hidden gap-1 transition-opacity focus-within:opacity-100 md:flex [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100">
               <button
                 type="button"
                 onClick={() => onToggleActive(p)}
