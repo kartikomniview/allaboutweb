@@ -309,13 +309,13 @@ function CardActionsMenu({
 // with a mouse).
 export function ProductGrid({ products, onEdit, onDelete, onToggleActive, togglingId }: Props) {
   return (
-    <ul className="grid grid-cols-2 gap-2 p-2 sm:grid-cols-3 sm:gap-3 sm:p-4 lg:grid-cols-4 xl:grid-cols-5">
+    <ul className="grid grid-cols-2 gap-1.5 p-0 sm:grid-cols-3 sm:gap-3 sm:p-4 lg:grid-cols-4 xl:grid-cols-5">
       {products.map((p) => {
         const toggling = togglingId === p.id;
         return (
           <li
             key={p.id}
-            className="group relative flex flex-col overflow-hidden rounded-lg border border-line bg-white transition-shadow hover:shadow-[0_8px_24px_-12px_rgba(1,18,60,0.25)]"
+            className="group relative flex flex-col overflow-hidden rounded-lg border border-line bg-white transition-shadow [@media(hover:hover)]:hover:shadow-[0_8px_24px_-12px_rgba(1,18,60,0.25)]"
           >
             <button type="button" onClick={() => onEdit(p)} onPointerDown={ripple} className="relative flex flex-1 flex-col overflow-hidden text-left">
               <div className="relative w-full">
@@ -378,7 +378,7 @@ export function ProductGridSkeleton({ cards = 10 }: { cards?: number }) {
     <ul
       aria-busy="true"
       aria-label="Loading products"
-      className="grid grid-cols-2 gap-2 p-2 sm:grid-cols-3 sm:gap-3 sm:p-4 lg:grid-cols-4 xl:grid-cols-5"
+      className="grid grid-cols-2 gap-1.5 p-0 sm:grid-cols-3 sm:gap-3 sm:p-4 lg:grid-cols-4 xl:grid-cols-5"
     >
       {Array.from({ length: cards }, (_, i) => (
         <li key={i} className="overflow-hidden rounded-lg border border-line bg-white">

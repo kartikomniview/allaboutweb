@@ -1,15 +1,24 @@
 // Detects product details (name, category, subcategory, description, size,
 // specs, tags, highlights, search keywords) from a photo. The
 // Lambda asks Claude to pick the category and subcategory from the predefined
-// categories of the store's business types (sent from here), the closest one
-// when nothing fits exactly. It never suggests a custom or new category.
+// categories of the store's business types (sent from here), the closest
+// subcategory when none fits exactly. When the product is a different kind of
+// thing (a jug in a furniture store) the category comes back empty with
+// categoryFit "none", and the form asks the owner to choose one. It never
+// suggests a custom or new category.
 
 import { apiRequest } from "./adminAuth";
 import type { ProductSpec } from "./adminProducts";
 import { businessTypeLabel, type PickerCategory } from "./taxonomy";
 
+/** How well the product fits the store's categories ("" from an older API build). */
+export type CategoryFit = "exact" | "close" | "none" | "";
+
 export type DetectedProduct = {
   productName: string;
+  /** What the product is, e.g. "ceramic jug" ("" from an older API build). */
+  productType: string;
+  categoryFit: CategoryFit;
   categoryName: string;
   subcategoryName: string;
   description: string;
@@ -44,6 +53,8 @@ async function detect(
   // An older API build answers without the newer fields.
   return {
     productName: detected.productName ?? "",
+    productType: detected.productType ?? "",
+    categoryFit: detected.categoryFit ?? "",
     categoryName: detected.categoryName ?? "",
     subcategoryName: detected.subcategoryName ?? "",
     description: detected.description ?? "",
@@ -76,6 +87,9 @@ async function smallJpegBase64(file: File, maxSide = 1024): Promise<string> {
     bitmap.close();
   }
 }
+
+/** AI recognised the product but it fits none of the store's categories. */
+export const isCategoryMismatch = (d: DetectedProduct) => Boolean(d.productName && !d.categoryName);
 
 export async function detectFromFile(file: File, context: DetectContext): Promise<DetectedProduct> {
   return detect({ image: { data: await smallJpegBase64(file), mediaType: "image/jpeg" } }, context);

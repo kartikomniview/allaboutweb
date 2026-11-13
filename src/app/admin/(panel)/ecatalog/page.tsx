@@ -14,12 +14,14 @@ import {
   Search,
   SearchX,
   Share2,
+  SlidersHorizontal,
   TriangleAlert,
   X,
 } from "lucide-react";
 import { useAdminUser, useLiveCatalogUrl } from "@/components/admin/AdminShell";
 import { ProductLimitNotice, limitState, usageLabel } from "@/components/admin/ProductLimit";
 import ConfirmDialog from "@/components/admin/ecatalog/ConfirmDialog";
+import { useOverlay } from "@/components/admin/ecatalog/useOverlay";
 import ProductFormDrawer from "@/components/admin/ecatalog/ProductFormDrawer";
 import ShareCatalogDialog from "@/components/admin/ecatalog/ShareCatalogDialog";
 import ProductTable, {
@@ -134,6 +136,88 @@ function EmptyState({
   );
 }
 
+// Phones: status, category and layout live in this bottom sheet, so the page
+// keeps a single row (search, Filters, Share, View live) above the products.
+function FilterSheet({
+  onClose,
+  onRefresh,
+  refreshing,
+  onClear,
+  canClear,
+  resultCount,
+  children,
+}: {
+  onClose: () => void;
+  onRefresh: () => void;
+  refreshing: boolean;
+  onClear: () => void;
+  canClear: boolean;
+  resultCount: number;
+  children: ReactNode;
+}) {
+  const panelRef = useOverlay<HTMLDivElement>(onClose);
+  return (
+    <div
+      className="admin-fade-in fixed inset-0 z-[110] flex items-end bg-ink/40 backdrop-blur-[2px]"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="filter-sheet-title"
+        tabIndex={-1}
+        className="admin-pop-in flex max-h-[85dvh] w-full flex-col overflow-hidden rounded-t-lg bg-white shadow-2xl focus:outline-none"
+      >
+        <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-line pl-5 pr-2">
+          <h2 id="filter-sheet-title" className="text-base font-semibold text-ink">
+            Filter &amp; view
+          </h2>
+          <div className="flex items-center">
+            <button
+              type="button"
+              onClick={onRefresh}
+              onPointerDown={ripple}
+              disabled={refreshing}
+              aria-label="Refresh"
+              title="Refresh"
+              className="relative grid h-11 w-11 place-items-center overflow-hidden rounded-full text-slate hover:text-ink disabled:opacity-50"
+            >
+              <RefreshCw className={`h-[18px] w-[18px] ${refreshing ? "animate-spin" : ""}`} aria-hidden />
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              onPointerDown={ripple}
+              aria-label="Close"
+              className="relative grid h-11 w-11 place-items-center overflow-hidden rounded-full text-slate hover:text-ink"
+            >
+              <X className="h-5 w-5" aria-hidden />
+            </button>
+          </div>
+        </div>
+        <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 py-4">{children}</div>
+        <div className="flex gap-2 border-t border-line px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+          {canClear && (
+            <Button onClick={onClear} className="h-12 px-4 text-[15px]">
+              Clear
+            </Button>
+          )}
+          <Button variant="primary" onClick={onClose} className="h-12 flex-1 text-[15px]">
+            Show {resultCount} {resultCount === 1 ? "product" : "products"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SheetLabel({ children }: { children: ReactNode }) {
+  return <h3 className="mb-2 text-[13px] font-semibold text-ink">{children}</h3>;
+}
+
 export default function ManageEcatalogPage() {
   const router = useRouter();
   const liveUrl = useLiveCatalogUrl();
@@ -160,6 +244,7 @@ export default function ManageEcatalogPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const [toast, setToast] = useState<Toast | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -325,6 +410,68 @@ export default function ManageEcatalogPage() {
     { key: "published", label: "Published" },
     { key: "hidden", label: "Hidden" },
   ];
+  // Filters set in the phone sheet (the search has its own box), shown as a badge on its button.
+  const sheetFilterCount = (category !== DEFAULT_CATEGORY ? 1 : 0) + (status !== "all" ? 1 : 0);
+
+  // Status and category filters: in the sticky bar from sm up, in the filter sheet on phones.
+  const statusTabs = (className: string) => (
+    <div role="tablist" aria-label="Filter by status" className={className}>
+      {tabs.map(({ key, label }) => {
+        const selected = status === key;
+        return (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={selected}
+            onClick={() => setStatus(key)}
+            className={`flex h-9 items-center justify-center gap-1.5 rounded-[4px] px-3 text-[13px] font-semibold transition-colors ${
+              selected ? "bg-white text-ink shadow-[0_1px_2px_rgba(1,18,60,0.12)]" : "text-slate hover:text-ink"
+            }`}
+          >
+            {label}
+            <span className={`text-[11px] tabular-nums ${selected ? "text-primary" : "text-slate/80"}`}>
+              {products ? counts[key] : "–"}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  // Categories (counts follow the status and search)
+  const categoryChips = (className: string) =>
+    categoryNames.length > 0 && (
+      <div role="group" aria-label="Filter by category" className={className}>
+        {[
+          { name: "All", label: "All categories", count: matching.length },
+          ...categoryNames.map((name) => ({ name, label: categoryLabel(name), count: categoryCounts.get(name) ?? 0 })),
+        ].map(({ name, label, count }) => {
+          const selected = category === name;
+          return (
+            <button
+              key={name}
+              type="button"
+              onClick={() => setCategory(name)}
+              onPointerDown={ripple}
+              aria-pressed={selected}
+              className={`relative inline-flex h-9 shrink-0 items-center gap-1.5 overflow-hidden rounded-md border px-3 text-[13px] font-semibold whitespace-nowrap transition-colors ${
+                selected
+                  ? "border-ink bg-ink text-white"
+                  : count === 0
+                    ? "border-line bg-white text-slate/60"
+                    : "border-line bg-white text-ink hover:border-slate/35"
+              }`}
+            >
+              {label}
+              <span className={`text-[11px] tabular-nums ${selected ? "text-white/70" : "text-slate/80"}`}>
+                {products ? count : "–"}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    );
 
   let content: ReactNode;
   if (loadError) {
@@ -386,11 +533,11 @@ export default function ManageEcatalogPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
-      {/* Title: hidden on phones (the top bar says where you are), kept for screen readers.
-          There the Share and View live buttons share the width instead. */}
-      <header className="admin-fade-in flex items-end justify-between gap-3">
-        <div className="sr-only min-w-0 sm:not-sr-only">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 sm:gap-4">
+      {/* Title and actions: from sm up. Phones have a single row instead (the sticky bar
+          below), so the title is kept only for screen readers there. */}
+      <header className="admin-fade-in sr-only sm:not-sr-only sm:flex sm:items-end sm:justify-between sm:gap-3">
+        <div className="min-w-0">
           <h1 className="text-[1.5rem] font-bold leading-tight tracking-[-0.025em] text-ink">Products</h1>
           <p className="mt-0.5 text-sm text-slate">
             {products ? (
@@ -402,8 +549,8 @@ export default function ManageEcatalogPage() {
             )}
           </p>
         </div>
-        <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
-          <Button variant="share" onClick={() => setSharing(true)} disabled={products === null} className="flex-1 px-3 sm:flex-none sm:px-4">
+        <div className="hidden shrink-0 items-center gap-2 sm:flex">
+          <Button variant="share" onClick={() => setSharing(true)} disabled={products === null}>
             <Share2 className="h-4 w-4" aria-hidden />
             Share
           </Button>
@@ -412,27 +559,25 @@ export default function ManageEcatalogPage() {
             target="_blank"
             rel="noopener noreferrer"
             aria-label="View live catalog"
-            className={`${buttonClass("secondary")} flex-1 px-3 sm:flex-none sm:px-4`}
+            className={buttonClass("secondary")}
           >
             View live
             <ArrowUpRight className="h-4 w-4 text-slate" aria-hidden />
           </a>
-          <Link
-            href={NEW_PRODUCT_ROUTE}
-            aria-label="Add product"
-            className={buttonClass("primary", "icon", "sm:w-auto sm:gap-2 sm:px-4")}
-          >
+          <Link href={NEW_PRODUCT_ROUTE} className={buttonClass("primary")}>
             <Plus className="h-4 w-4" aria-hidden />
-            <span className="hidden sm:inline">Add product</span>
+            Add product
           </Link>
         </div>
       </header>
 
       {products && <ProductLimitNotice state={limit} storeName={store.name} compact />}
 
-      {/* Search & filters: stick under the top bar while scrolling */}
-      <div className="sticky top-14 z-20 -mx-3 flex flex-col gap-2 bg-paper/95 px-3 py-1.5 backdrop-blur sm:-mx-4 sm:gap-2.5 sm:px-4 sm:py-2 lg:top-16 lg:-mx-5 lg:px-5">
-        <div className="flex gap-2">
+      {/* Search & filters: stick under the top bar while scrolling. On phones this is the
+          page's only row: search, Filters (opens the sheet), Share and View live. Add product
+          is the raised button in the bottom tab bar. */}
+      <div className="sticky top-14 z-20 -mx-3 flex flex-col gap-2 bg-paper/95 px-2 py-2 backdrop-blur sm:-mx-4 sm:gap-2.5 sm:px-4 lg:top-16 lg:-mx-5 lg:px-5">
+        <div className="flex gap-1.5 sm:gap-2">
           <label className="relative min-w-0 flex-1">
             <span className="sr-only">Search products</span>
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate/60" aria-hidden />
@@ -442,7 +587,7 @@ export default function ManageEcatalogPage() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search products"
               enterKeyHint="search"
-              className="h-11 w-full rounded-md border border-line bg-white pl-11 pr-10 text-base text-ink transition-[border-color,box-shadow] placeholder:text-slate/55 focus:border-primary focus:outline-none focus-visible:outline-none! focus:ring-[3px] focus:ring-primary/15 [&::-webkit-search-cancel-button]:hidden"
+              className={`h-11 w-full rounded-md border border-line bg-white pl-11 text-base ${query ? "pr-10" : "pr-3"} text-ink transition-[border-color,box-shadow] placeholder:text-slate/55 focus:border-primary focus:outline-none focus-visible:outline-none! focus:ring-[3px] focus:ring-primary/15 [&::-webkit-search-cancel-button]:hidden`}
             />
             {query && (
               <button
@@ -455,7 +600,47 @@ export default function ManageEcatalogPage() {
               </button>
             )}
           </label>
-          <div role="group" aria-label="Layout" className="flex h-11 shrink-0 items-center gap-0.5 rounded-md border border-line bg-white p-1">
+
+          {/* Phones only: the rest of the controls as 44px icon buttons */}
+          <button
+            type="button"
+            onClick={() => setFiltersOpen(true)}
+            onPointerDown={ripple}
+            aria-label={sheetFilterCount ? `Filters, ${sheetFilterCount} on` : "Filters"}
+            aria-haspopup="dialog"
+            className={`relative grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-md border bg-white transition-colors sm:hidden ${
+              sheetFilterCount ? "border-ink text-ink" : "border-line text-ink"
+            }`}
+          >
+            <SlidersHorizontal className="h-[18px] w-[18px]" aria-hidden />
+            {sheetFilterCount > 0 && (
+              <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-white">
+                {sheetFilterCount}
+              </span>
+            )}
+          </button>
+          <Button
+            variant="share"
+            size="icon"
+            onClick={() => setSharing(true)}
+            disabled={products === null}
+            aria-label="Share catalog"
+            className="h-11 w-11 sm:hidden"
+          >
+            <Share2 className="h-[18px] w-[18px]" aria-hidden />
+          </Button>
+          <a
+            href={liveUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="View live catalog"
+            onPointerDown={ripple}
+            className={buttonClass("secondary", "icon", "h-11 w-11 sm:hidden")}
+          >
+            <ArrowUpRight className="h-[18px] w-[18px]" aria-hidden />
+          </a>
+
+          <div role="group" aria-label="Layout" className="hidden h-11 shrink-0 items-center gap-0.5 rounded-md border border-line bg-white p-1 sm:flex">
             {VIEW_OPTIONS.map(({ key, label, icon: Icon }) => {
               const selected = view === key;
               return (
@@ -487,73 +672,23 @@ export default function ManageEcatalogPage() {
           </Button>
         </div>
 
-        {/* Status: a segmented control */}
-        <div role="tablist" aria-label="Filter by status" className="grid grid-cols-3 gap-1 rounded-md bg-ink/[0.05] p-1 sm:inline-grid sm:w-auto sm:self-start">
-          {tabs.map(({ key, label }) => {
-            const selected = status === key;
-            return (
-              <button
-                key={key}
-                type="button"
-                role="tab"
-                aria-selected={selected}
-                onClick={() => setStatus(key)}
-                className={`flex h-9 items-center justify-center gap-1.5 rounded-[4px] px-3 text-[13px] font-semibold transition-colors ${
-                  selected ? "bg-white text-ink shadow-[0_1px_2px_rgba(1,18,60,0.12)]" : "text-slate hover:text-ink"
-                }`}
-              >
-                {label}
-                <span className={`text-[11px] tabular-nums ${selected ? "text-primary" : "text-slate/80"}`}>
-                  {products ? counts[key] : "–"}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Categories (counts follow the status and search) */}
-        {categoryNames.length > 0 && (
-          <div
-            role="group"
-            aria-label="Filter by category"
-            className="-mx-3 flex gap-1.5 overflow-x-auto px-3 [scrollbar-width:none] sm:-mx-4 sm:px-4 lg:mx-0 lg:flex-wrap lg:px-0 [&::-webkit-scrollbar]:hidden"
-          >
-            {[
-              { name: "All", label: "All categories", count: matching.length },
-              ...categoryNames.map((name) => ({ name, label: categoryLabel(name), count: categoryCounts.get(name) ?? 0 })),
-            ].map(({ name, label, count }) => {
-              const selected = category === name;
-              return (
-                <button
-                  key={name}
-                  type="button"
-                  onClick={() => setCategory(name)}
-                  onPointerDown={ripple}
-                  aria-pressed={selected}
-                  className={`relative inline-flex h-9 shrink-0 items-center gap-1.5 overflow-hidden rounded-md border px-3 text-[13px] font-semibold whitespace-nowrap transition-colors ${
-                    selected
-                      ? "border-ink bg-ink text-white"
-                      : count === 0
-                        ? "border-line bg-white text-slate/60"
-                        : "border-line bg-white text-ink hover:border-slate/35"
-                  }`}
-                >
-                  {label}
-                  <span className={`text-[11px] tabular-nums ${selected ? "text-white/70" : "text-slate/80"}`}>
-                    {products ? count : "–"}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+        {statusTabs("hidden grid-cols-3 gap-1 rounded-md bg-ink/[0.05] p-1 sm:inline-grid sm:self-start")}
+        {categoryChips(
+          "-mx-4 hidden gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:flex lg:mx-0 lg:flex-wrap lg:px-0 [&::-webkit-scrollbar]:hidden",
         )}
       </div>
 
-      <Card className="relative overflow-hidden">
+      {/* Phones: 8px from the screen edge (the shell pads 12px), no shadow, and in grid view no
+          panel at all, so the cards sit straight on the page. */}
+      <Card
+        className={`relative overflow-hidden max-sm:-mx-1 max-sm:shadow-none! ${
+          view === "grid" ? "max-sm:rounded-none! max-sm:border-0! max-sm:bg-transparent!" : ""
+        }`}
+      >
         {refreshing &&<div className="admin-progress absolute inset-x-0 top-0 z-10" role="progressbar" aria-label="Loading" />}
         {content}
         {products && products.length > 0 && visible.length > 0 && (
-          <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-3 text-[13px] text-slate">
+          <div className="flex items-center justify-between gap-3 border-t border-line px-3 py-2.5 text-[13px] text-slate sm:px-4 sm:py-3">
             <span>
               Showing <span className="font-semibold text-ink">{shownCount}</span> of{" "}
               <span className="font-semibold text-ink">{visible.length}</span>
@@ -578,6 +713,54 @@ export default function ManageEcatalogPage() {
           onImagesSaved={replaceProduct}
           products={products ?? []}
         />
+      )}
+
+      {filtersOpen && (
+        <FilterSheet
+          onClose={() => setFiltersOpen(false)}
+          onRefresh={() => load("refresh")}
+          refreshing={refreshing}
+          onClear={() => {
+            setCategory(DEFAULT_CATEGORY);
+            setStatus("all");
+          }}
+          canClear={sheetFilterCount > 0}
+          resultCount={visible.length}
+        >
+          <section>
+            <SheetLabel>Status</SheetLabel>
+            {statusTabs("grid grid-cols-3 gap-1 rounded-md bg-ink/[0.05] p-1")}
+          </section>
+          {categoryNames.length > 0 && (
+            <section>
+              <SheetLabel>Category</SheetLabel>
+              {categoryChips("flex flex-wrap gap-1.5")}
+            </section>
+          )}
+          <section>
+            <SheetLabel>Layout</SheetLabel>
+            <div role="group" aria-label="Layout" className="grid grid-cols-2 gap-2">
+              {VIEW_OPTIONS.map(({ key, label, icon: Icon }) => {
+                const selected = view === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => changeView(key)}
+                    onPointerDown={ripple}
+                    aria-pressed={selected}
+                    className={`relative flex h-11 items-center justify-center gap-2 overflow-hidden rounded-md border text-[13px] font-semibold transition-colors ${
+                      selected ? "border-ink bg-ink text-white" : "border-line bg-white text-ink"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" aria-hidden />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        </FilterSheet>
       )}
 
       {sharing && products && (

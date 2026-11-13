@@ -12,6 +12,10 @@ export type ComboOption = {
   /** Heading the option is listed under, e.g. "Lighting" or "Your categories". */
   group?: string;
   note?: string;
+  /** Searched but not shown: other words for the option ("jug" for Vases & Planters). */
+  keywords?: string[];
+  /** A category's subcategories: typing one finds the category and picks both. */
+  subs?: string[];
 };
 
 // Small square photo for an option; falls back to its icon when there's no image
@@ -35,16 +39,32 @@ const LIST_MAX_HEIGHT = 340;
 const GAP = 4;
 const norm = (s: string) => s.trim().toLowerCase();
 
-type Entry = { kind: "option"; option: ComboOption } | { kind: "create"; text: string };
+// `sub`: the option was found through one of its subcategories.
+type Entry = { kind: "option"; option: ComboOption; sub?: string } | { kind: "create"; text: string };
+
+// Whether every typed word is in the option (label, value, group or keywords), and
+// if not, the first subcategory that completes the match ("vase" -> Flower Vases).
+function matchOption(o: ComboOption, words: string[]): { sub?: string } | null {
+  const text = `${o.label} ${o.value} ${o.group ?? ""} ${(o.keywords ?? []).join(" ")}`.toLowerCase();
+  if (words.every((w) => text.includes(w))) return {};
+  for (const sub of o.subs ?? []) {
+    const name = sub.toLowerCase();
+    if (words.some((w) => name.includes(w)) && words.every((w) => name.includes(w) || text.includes(w))) return { sub };
+  }
+  return null;
+}
 
 // A dropdown with a search box. Typing filters the options (every word must
-// match the label or its group); when nothing matches exactly, "+ Add “…”"
-// creates a new value. Keyboard: arrows, Enter, Escape (without closing the
-// drawer around it). The panel is portaled to <body> with fixed positioning so
-// the drawer's scroll area can't clip it, and opens upwards when there's more room.
+// match the label, its group, its keywords or one of its subcategories) and then
+// lists the matching `suggestions` (e.g. other business types' categories); when
+// nothing matches exactly, "+ Add “…”" creates a new value. Keyboard: arrows,
+// Enter, Escape (without closing the drawer around it). The panel is portaled to
+// <body> with fixed positioning so the drawer's scroll area can't clip it, and
+// opens upwards when there's more room.
 export default function CategoryCombobox({
   value,
   options,
+  suggestions = [],
   onChange,
   placeholder = "Select…",
   searchPlaceholder = "Search…",
@@ -54,7 +74,10 @@ export default function CategoryCombobox({
 }: {
   value: string;
   options: ComboOption[];
-  onChange: (value: string) => void;
+  /** Only listed while searching, after the matching options. */
+  suggestions?: ComboOption[];
+  /** `sub`: the subcategory the option was found through, if any. */
+  onChange: (value: string, sub?: string) => void;
   placeholder?: string;
   searchPlaceholder?: string;
   disabled?: boolean;
@@ -71,21 +94,23 @@ export default function CategoryCombobox({
   const searchRef = useRef<HTMLInputElement>(null);
   const [panelStyle, setPanelStyle] = useState<CSSProperties>({});
   const listId = useId();
-  const selected = options.find((o) => o.value === value);
+  const selected = options.find((o) => o.value === value) ?? suggestions.find((o) => o.value === value);
 
-  // Matching options, then the "+ Add" entry.
+  // Matching options, then (while searching) matching suggestions, then the "+ Add" entry.
   const entries = useMemo<Entry[]>(() => {
     const words = norm(query).split(/\s+/).filter(Boolean);
-    const matches = options.filter((o) => {
-      const text = `${o.label} ${o.value} ${o.group ?? ""}`.toLowerCase();
-      return words.every((w) => text.includes(w));
-    });
+    const find = (list: ComboOption[]): Entry[] =>
+      list.flatMap((option) => {
+        const match = matchOption(option, words);
+        return match ? [{ kind: "option" as const, option, sub: match.sub }] : [];
+      });
+    const list = find(options);
+    if (words.length) list.push(...find(suggestions));
     const typed = query.trim().replace(/\s+/g, " ");
-    const exact = options.some((o) => norm(o.label) === norm(typed) || norm(o.value) === norm(typed));
-    const list: Entry[] = matches.map((option) => ({ kind: "option", option }));
+    const exact = [...options, ...suggestions].some((o) => norm(o.label) === norm(typed) || norm(o.value) === norm(typed));
     if (allowCreate && typed && !exact) list.push({ kind: "create", text: typed.slice(0, 60) });
     return list;
-  }, [options, query, allowCreate]);
+  }, [options, suggestions, query, allowCreate]);
 
   // Place the panel under (or above) the button, and follow it while anything scrolls.
   useLayoutEffect(() => {
@@ -126,7 +151,8 @@ export default function CategoryCombobox({
   };
 
   const pick = (entry: Entry) => {
-    onChange(entry.kind === "option" ? entry.option.value : entry.text);
+    if (entry.kind === "option") onChange(entry.option.value, entry.sub);
+    else onChange(entry.text);
     close();
   };
 
@@ -268,10 +294,12 @@ export default function CategoryCombobox({
                   );
                 }
 
-                const { option } = entry;
+                const { option, sub } = entry;
                 const isSelected = option.value === value;
+                // Found through a subcategory: say which one (picking it sets both).
+                const note = sub ? `› ${sub}` : option.note;
                 return (
-                  <Fragment key={option.value}>
+                  <Fragment key={`${option.group ?? ""}|${option.value}`}>
                   {header}
                   <li
                     id={`${listId}-${i}`}
@@ -287,7 +315,7 @@ export default function CategoryCombobox({
                     <Thumb src={option.image} icon={option.icon} size="md" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate">{option.label}</span>
-                      {option.note && <span className="block truncate text-[11px] font-normal text-slate">{option.note}</span>}
+                      {note && <span className="block truncate text-[11px] font-normal text-slate">{note}</span>}
                     </span>
                     {isSelected && <Check className="h-4 w-4 shrink-0 text-primary" aria-hidden />}
                   </li>

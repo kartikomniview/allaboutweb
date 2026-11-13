@@ -59,9 +59,21 @@ import {
   type ProductInput,
   type ProductSpec,
 } from "@/lib/adminProducts";
-import { businessTypeLabel, categoryLabel, storeCategories } from "@/lib/taxonomy";
+import {
+  businessTypeLabel,
+  categoryLabel,
+  otherCategories,
+  storeCategories,
+  type PickerCategory,
+} from "@/lib/taxonomy";
 import { toWebP } from "@/lib/imageToWebp";
-import { detectFromFile, detectFromUrl, type DetectContext, type DetectedProduct } from "@/lib/productDetect";
+import {
+  detectFromFile,
+  detectFromUrl,
+  isCategoryMismatch,
+  type DetectContext,
+  type DetectedProduct,
+} from "@/lib/productDetect";
 import { useAdminUser, useLiveCatalogUrl } from "../AdminShell";
 import { AuthProgress, authButtonClass, authSecondaryButtonClass, useTyping } from "../AuthLayout";
 import { ripple } from "../ripple";
@@ -1214,6 +1226,82 @@ function AutoDetectedBadge({ show }: { show: boolean }) {
   );
 }
 
+// AI recognised the product, but it isn't one of the store's kinds of products (a
+// jug in a furniture store): asks the owner for the right category before the
+// photo is uploaded into that category's folder. A bottom sheet on phones.
+function CategoryMismatchDialog({
+  productName,
+  productType,
+  storeLabel,
+  error,
+  onUse,
+  onSkip,
+  children,
+}: {
+  productName: string;
+  productType: string;
+  /** "Furniture", "Furniture and Lighting". */
+  storeLabel: string;
+  error: string | null;
+  onUse: () => void;
+  onSkip: () => void;
+  /** The category and subcategory pickers. */
+  children: ReactNode;
+}) {
+  const panelRef = useOverlay<HTMLDivElement>(onSkip);
+  return (
+    <div
+      className="admin-fade-in fixed inset-0 z-[110] flex items-end justify-center bg-ink/40 backdrop-blur-[2px] sm:items-center sm:p-6"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onSkip();
+      }}
+    >
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="mismatch-title"
+        aria-describedby="mismatch-text"
+        tabIndex={-1}
+        className="admin-pop-in w-full rounded-t-lg bg-white shadow-2xl focus:outline-none sm:max-w-md sm:rounded-lg"
+      >
+        <div className="flex flex-col gap-4 px-5 pb-4 pt-5 sm:px-6 sm:pt-6">
+          <div className="flex gap-3.5">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-amber-50 text-amber-600">
+              <TriangleAlert className="h-5 w-5" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <h2 id="mismatch-title" className="text-base font-semibold text-ink">
+                Category doesn&apos;t match
+              </h2>
+              <p id="mismatch-text" className="mt-1 text-sm leading-relaxed text-slate">
+                <span className="font-semibold text-ink">{productName}</span>
+                {productType ? ` looks like a ${productType}, which isn't` : " isn't"} one of your {storeLabel} categories. Choose the
+                right category, or type a new one.
+              </p>
+            </div>
+          </div>
+          {children}
+          {error && (
+            <p role="alert" className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3.5 py-3 text-[13px] font-medium text-red-700">
+              <TriangleAlert className="mt-px h-4 w-4 shrink-0" aria-hidden />
+              {error}
+            </p>
+          )}
+        </div>
+        <div className="flex flex-col-reverse gap-2 border-t border-line px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:flex-row sm:justify-end sm:px-6 sm:pb-4">
+          <button type="button" onClick={onSkip} onPointerDown={ripple} className={`${authSecondaryButtonClass} sm:w-auto sm:px-5`}>
+            Skip for now
+          </button>
+          <button type="button" onClick={onUse} onPointerDown={ripple} className={`${authButtonClass} sm:w-auto sm:px-5`}>
+            Use this category
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ---------- Drawer ---------- */
 
 export default function ProductFormDrawer({
@@ -1250,6 +1338,12 @@ export default function ProductFormDrawer({
   const [detecting, setDetecting] = useState(false);
   const [detectNote, setDetectNote] = useState<DetectNote | null>(null);
   const [confirmAutofill, setConfirmAutofill] = useState(false);
+  // AI recognised the product but it fits none of the store's categories: a popup asks for one.
+  const [mismatch, setMismatch] = useState<{ productName: string; productType: string } | null>(null);
+  const [mismatchError, setMismatchError] = useState<string | null>(null);
+  // The first photo's upload waits for that popup (it goes into the chosen category's
+  // folder); this resumes it with the form as the owner left it.
+  const mismatchDone = useRef<((folder: ImageFolder) => void) | null>(null);
   const dirty = JSON.stringify(form) !== JSON.stringify(initial);
 
   // New products are added step by step (photos, details, price, extras, review);
@@ -1296,6 +1390,8 @@ export default function ProductFormDrawer({
   // (never a custom or new one); the owner can still pick any category by hand.
   const aiCategories = useMemo(() => storeCategories(store.businessTypes, []), [store.businessTypes]);
   const detectContext: DetectContext = { businessTypes: store.businessTypes, categories: aiCategories };
+  // What the store sells, for messages: "Furniture", "Furniture and Lighting".
+  const storeLabel = joinLabels(store.businessTypes.map(businessTypeLabel));
 
   function applyDetected(d: DetectedProduct, mode: "fill-empty" | "replace"): FormState {
     const next = mergeDetected(formRef.current, d, mode);
@@ -1308,12 +1404,16 @@ export default function ProductFormDrawer({
       categoryName: filled("categoryName"),
       subcategoryName: filled("subcategoryName"),
     });
-    if (d.productName && !d.categoryName) {
-      const labels = joinLabels(store.businessTypes.map(businessTypeLabel));
+    if (isCategoryMismatch(d)) {
       setDetectNote({
         kind: "outside",
-        text: `"${d.productName}" doesn't match your ${labels} categories. Pick a category below, or create your own.`,
+        text: `"${d.productName}" doesn't match your ${storeLabel} categories. Pick a category below, or create your own.`,
       });
+      // Only when the form has no category yet (one the owner chose is kept).
+      if (!next.categoryName.trim()) {
+        setMismatchError(null);
+        setMismatch({ productName: d.productName, productType: d.productType });
+      }
     } else {
       setDetectNote({ kind: "ok", text: "Details filled in from the photo. Review them before saving." });
     }
@@ -1324,10 +1424,11 @@ export default function ProductFormDrawer({
   async function detectForUpload(file: File): Promise<ImageFolder> {
     setDetecting(true);
     setDetectNote(null);
+    let detected: DetectedProduct;
+    let next: FormState;
     try {
-      const next = applyDetected(await detectFromFile(file, detectContext), "fill-empty");
-      if (wizard && isCompleteFolder(next)) setQuick(true);
-      return next;
+      detected = await detectFromFile(file, detectContext);
+      next = applyDetected(detected, "fill-empty");
     } catch (err) {
       setDetectNote({ kind: "error", text: detectError(err) });
       return formRef.current;
@@ -1335,6 +1436,35 @@ export default function ProductFormDrawer({
       setDetecting(false);
       setDetectTried(true);
     }
+    // Category mismatch: the upload waits until the owner picks a category in the popup.
+    // (Same condition as the popup in applyDetected.)
+    if (isCategoryMismatch(detected) && !next.categoryName.trim()) {
+      return new Promise((resolve) => (mismatchDone.current = resolve));
+    }
+    if (wizard && isCompleteFolder(next)) setQuick(true);
+    return next;
+  }
+
+  // Closes the category popup and lets the waiting upload carry on. Without a full
+  // category it uploads nothing, and the photo asks for the details (as before).
+  function finishMismatch() {
+    const f = formRef.current;
+    setMismatch(null);
+    setMismatchError(null);
+    if (isCompleteFolder(f)) {
+      setDetectNote({ kind: "ok", text: "Details filled in from the photo. Review them before saving." });
+      if (wizard) setQuick(true);
+    }
+    mismatchDone.current?.(f);
+    mismatchDone.current = null;
+  }
+
+  function confirmMismatchCategory() {
+    const f = formRef.current;
+    if (!f.categoryName.trim()) return setMismatchError("Choose a category.");
+    if (!f.subcategoryName.trim()) return setMismatchError("Choose a subcategory.");
+    if (!f.productName.trim()) return setMismatchError("Enter a product name first.");
+    finishMismatch();
   }
 
   // "Auto-fill from photo": re-detect from the cover image, replacing the details.
@@ -1457,13 +1587,22 @@ export default function ProductFormDrawer({
   // Picker options: the store's categories (see pickerCategories), grouped by
   // business type; the store's own ones are listed under "Your categories".
   const currentCategory = pickerCategories.find((c) => c.name === form.categoryName);
-  const categoryOptions: ComboOption[] = pickerCategories.map((c) => ({
+  const toOption = (c: PickerCategory, group = c.group): ComboOption => ({
     value: c.name,
     label: c.label,
     image: c.image,
     icon: c.icon,
-    group: c.group,
-  }));
+    group,
+    keywords: c.keywords,
+    subs: c.subcategories.map((s) => s.name),
+  });
+  const categoryOptions: ComboOption[] = pickerCategories.map((c) => toOption(c));
+  // While searching, the other business types' categories are suggested too
+  // (a jug in a furniture store finds "Vases & Planters").
+  const suggestedCategories = useMemo(() => otherCategories(store.businessTypes), [store.businessTypes]);
+  const categorySuggestions: ComboOption[] = suggestedCategories
+    .filter((c) => !pickerCategories.some((p) => p.name === c.name))
+    .map((c) => toOption(c, `Suggested · ${c.group}`));
   const subcategoryOptions: ComboOption[] = (currentCategory?.subcategories ?? []).map((sub) => ({
     value: sub.name,
     label: sub.name,
@@ -1471,14 +1610,17 @@ export default function ProductFormDrawer({
     icon: currentCategory?.icon,
   }));
 
-  // A new category clears a subcategory that doesn't belong to it.
-  const changeCategory = (name: string) =>
+  // A new category clears a subcategory that doesn't belong to it. `pickedSub`: the
+  // category was found by searching for one of its subcategories, which is set too.
+  const changeCategory = (name: string, pickedSub?: string) =>
     setForm((f) => {
-      const subs = pickerCategories.find((c) => c.name === name)?.subcategories ?? [];
+      const subs =
+        (pickerCategories.find((c) => c.name === name) ?? suggestedCategories.find((c) => c.name === name))?.subcategories ?? [];
+      const keep = subs.some((sub) => sub.name === f.subcategoryName) ? f.subcategoryName : "";
       return {
         ...f,
         categoryName: name,
-        subcategoryName: subs.some((sub) => sub.name === f.subcategoryName) ? f.subcategoryName : "",
+        subcategoryName: pickedSub && subs.some((sub) => sub.name === pickedSub) ? pickedSub : keep,
       };
     });
 
@@ -1701,6 +1843,7 @@ export default function ProductFormDrawer({
                     labelledBy="category-label"
                     value={form.categoryName}
                     options={categoryOptions}
+                    suggestions={categorySuggestions}
                     onChange={changeCategory}
                     placeholder="Choose or add a category"
                     searchPlaceholder="Search or type a new category"
@@ -2591,6 +2734,55 @@ export default function ProductFormDrawer({
           The name, category, subcategory, description, size, specs, tags, highlights and search keywords
           are replaced with what&apos;s detected from the cover photo. You can still edit them before saving.
         </ConfirmDialog>
+      )}
+
+      {mismatch && (
+        <CategoryMismatchDialog
+          productName={mismatch.productName}
+          productType={mismatch.productType}
+          storeLabel={storeLabel}
+          error={mismatchError}
+          onUse={confirmMismatchCategory}
+          onSkip={finishMismatch}
+        >
+          <div className="flex flex-col gap-3">
+            {/* Not <label>: it would re-open the dropdown when an option is clicked. */}
+            <div className="min-w-0">
+              <span id="mismatch-category-label" className={labelClass}>
+                Category<span className="text-primary" aria-hidden>*</span>
+              </span>
+              <CategoryCombobox
+                labelledBy="mismatch-category-label"
+                value={form.categoryName}
+                options={categoryOptions}
+                suggestions={categorySuggestions}
+                onChange={(v, sub) => {
+                  setMismatchError(null);
+                  changeCategory(v, sub);
+                }}
+                placeholder="Choose or add a category"
+                searchPlaceholder="Search or type a new category"
+              />
+            </div>
+            <div className="min-w-0">
+              <span id="mismatch-subcategory-label" className={labelClass}>
+                Subcategory<span className="text-primary" aria-hidden>*</span>
+              </span>
+              <CategoryCombobox
+                labelledBy="mismatch-subcategory-label"
+                value={form.subcategoryName}
+                options={subcategoryOptions}
+                onChange={(v) => {
+                  setMismatchError(null);
+                  set("subcategoryName", v);
+                }}
+                placeholder={form.categoryName ? "Choose or add a subcategory" : "Choose a category first"}
+                searchPlaceholder="Search or type a new subcategory"
+                disabled={!form.categoryName}
+              />
+            </div>
+          </div>
+        </CategoryMismatchDialog>
       )}
     </div>
   );

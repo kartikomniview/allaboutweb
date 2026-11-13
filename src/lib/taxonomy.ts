@@ -93,6 +93,61 @@ export type TaxonomyCategory = {
   /** Thumbnail in public/ (furniture only; other categories use a product photo). */
   image?: string;
   subcategories: { name: string; image?: string }[];
+  /** Other words shoppers and owners use for these products (for the picker's search). */
+  keywords: string[];
+};
+
+// Other names for each category's products, so typing "jug", "almirah" or "parda"
+// in the category picker finds it. Lowercase; matched as substrings.
+const KEYWORDS: Record<string, string> = {
+  Sofa: "couch settee divan sectional recliner",
+  Wardrobe: "almirah cupboard closet armoire",
+  Dresser: "dressing table vanity drawers chest mirror",
+  Bed: "cot palang bunk mattress",
+  Dining: "dining table bench stool",
+  CenterTable: "coffee table tea table centre table",
+  Chair: "armchair seat kursi office chair stool",
+  "TV Unit": "tv stand entertainment unit media console",
+  "Shoe Rack": "shoe stand footwear",
+  "Wall Decor": "painting frame art clock mirror shelf hanging",
+  "Vases & Planters": "vase jug pitcher pot planter urn matka",
+  Showpieces: "showpiece figurine idol statue sculpture bowl brass ornament decor",
+  "Cushions & Throws": "cushion pillow throw blanket",
+  "Candles & Fragrance": "candle diya lantern diffuser fragrance incense",
+  "Table Decor": "tray coaster runner photo frame desk",
+  "Artificial Plants": "fake plant artificial flower bonsai",
+  "Ceiling Lights": "chandelier jhoomar pendant hanging light",
+  "Wall Lights": "sconce wall lamp",
+  "Table & Floor Lamps": "lamp study lamp bedside",
+  "Outdoor Lights": "garden light gate light solar flood",
+  "LED & Strip Lights": "bulb led panel strip spot light",
+  "Decorative Lights": "fairy lights string lights lantern festive night lamp",
+  Flooring: "floor tiles laminate vinyl wooden grass",
+  "Carpets & Rugs": "carpet rug dari durrie runner",
+  Doormats: "mat doormat",
+  Curtains: "parda drape curtain",
+  Blinds: "blind roller roman zebra",
+  Wallpaper: "wallpaper wall panel sticker",
+  "Curtain Accessories": "rod track hook ring tie back",
+  "Upholstery Fabric": "upholstery cloth velvet leatherette",
+  "Curtain Fabric": "curtain cloth sheer blackout",
+  "Dress Material": "cloth suit piece cotton silk",
+  "Bed Linen": "bedsheet chadar quilt comforter razai pillow cover",
+  "Bath Linen": "towel bath mat",
+  "Table Linen": "tablecloth table cover napkin",
+  "Men's Wear": "shirt tshirt trouser jeans kurta blazer suit men",
+  "Women's Wear": "saree sari kurti suit lehenga dress top women",
+  "Kids' Wear": "kids children baby boys girls",
+  "Winter Wear": "jacket sweater shawl stole thermal woollen",
+  "Innerwear & Nightwear": "innerwear nightwear pyjama night suit lounge",
+  TVs: "tv television led smart",
+  "Home Appliances": "fridge refrigerator washing machine ac air conditioner purifier geyser",
+  "Kitchen Appliances": "mixer grinder microwave oven induction chimney kettle toaster",
+  "Fans & Coolers": "fan cooler exhaust",
+  Audio: "speaker soundbar home theatre headphones earbuds",
+  "Mobiles & Accessories": "mobile phone smartphone charger cable power bank cover",
+  Computers: "laptop desktop monitor printer keyboard mouse computer",
+  "Air Purifiers": "air purifier heater dehumidifier",
 };
 
 // Thumbnail for a furniture subcategory: public/e-catalog/subcategories/<slug>.webp,
@@ -246,6 +301,7 @@ export const TAXONOMY: TaxonomyCategory[] = BUSINESS_TYPES.flatMap(({ id }) =>
       // Only furniture has subcategory thumbnails (public/e-catalog/subcategories/).
       image: id === "furniture" ? subcategoryImage(sub) : undefined,
     })),
+    keywords: KEYWORDS[name]?.split(" ") ?? [],
   })),
 );
 
@@ -285,7 +341,28 @@ export type PickerCategory = {
   /** Business type label, or CUSTOM_GROUP for the store's own categories. */
   group: string;
   subcategories: { name: string; image?: string }[];
+  /** Other words for its products, for the picker's search (none on custom categories). */
+  keywords: string[];
 };
+
+const toPicker = (c: TaxonomyCategory): PickerCategory => ({
+  name: c.name,
+  label: c.label,
+  icon: c.icon,
+  image: c.image,
+  group: businessTypeLabel(c.businessType),
+  subcategories: [...c.subcategories],
+  keywords: c.keywords,
+});
+
+/**
+ * The predefined categories of the business types a store does NOT sell, offered as
+ * suggestions while searching the category picker (e.g. "Vases & Planters" for a jug
+ * in a furniture store).
+ */
+export function otherCategories(types: readonly string[]): PickerCategory[] {
+  return types.length ? TAXONOMY.filter((c) => !types.includes(c.businessType)).map(toPicker) : [];
+}
 
 /**
  * The categories a store works with: the predefined categories of its business
@@ -296,14 +373,7 @@ export function storeCategories(
   types: readonly string[],
   products: readonly { categoryName: string; subcategoryName: string }[],
 ): PickerCategory[] {
-  const result: PickerCategory[] = categoriesFor(types).map((c) => ({
-    name: c.name,
-    label: c.label,
-    icon: c.icon,
-    image: c.image,
-    group: businessTypeLabel(c.businessType),
-    subcategories: [...c.subcategories],
-  }));
+  const result: PickerCategory[] = categoriesFor(types).map(toPicker);
   const byName = new Map(result.map((c) => [key(c.name), c]));
 
   for (const p of products) {
@@ -313,15 +383,8 @@ export function storeCategories(
     if (!category) {
       const known = findCategory(name);
       category = known
-        ? {
-            name: known.name,
-            label: known.label,
-            icon: known.icon,
-            image: known.image,
-            group: businessTypeLabel(known.businessType),
-            subcategories: [...known.subcategories],
-          }
-        : { name, label: name, icon: Package, group: CUSTOM_GROUP, subcategories: [] };
+        ? toPicker(known)
+        : { name, label: name, icon: Package, group: CUSTOM_GROUP, subcategories: [], keywords: [] };
       result.push(category);
       byName.set(key(name), category);
     }

@@ -8,8 +8,10 @@ import { isStoreImageUrl } from "./storage.mjs";
 // flooring, curtains, fabrics, electronics...).
 //
 // The category and subcategory are always chosen from the list the website sends
-// (the predefined categories of the store's business types): the closest one when
-// nothing fits exactly. The model never invents a new category.
+// (the predefined categories of the store's business types): the closest subcategory
+// when none fits exactly. When the product is a different kind of thing from what the
+// categories cover (categoryFit "none", e.g. a jug in a furniture store), the category
+// is left empty and the website asks the owner. The model never invents a new category.
 //
 // Env: ANTHROPIC_API_KEY (required), ANTHROPIC_MODEL (optional, default below).
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-5-5";
@@ -85,7 +87,9 @@ const SYSTEM = `You catalogue products for an Indian retail store's online catal
 Look at the product photo and describe the main product in it.
 
 - productName: 3 to 6 words, a short appealing name followed by the product type, e.g. "Nilgiri L-Shape Corner Sofa", "Jaipur Brass Pendant Light", "Ivory Sheer Window Curtain", "Kashmiri Wool Area Rug", "Velvet Upholstery Fabric", "Banarasi Silk Saree", "55-inch 4K Smart LED TV".
-- categoryName and subcategoryName: always use the exact names from the store's list; the subcategory must belong to the chosen category. If the product belongs in one of the categories but no subcategory fits exactly, choose the closest one. If the product clearly belongs in none of the categories (it's a different kind of product from what the store sells, e.g. a bottle in a furniture store), set both to an empty string; never force a poor fit. Never make up a new name.
+- productType: what the product is, in 1 to 3 plain lowercase words, e.g. "ceramic jug", "corner sofa", "pendant light", "sheer curtain".
+- categoryFit: decide this from the productType alone, before choosing a category. "exact" when one of the store's categories is this kind of product and one of its subcategories fits; "close" when a category is this kind of product but no subcategory fits exactly; "none" when none of the categories is this kind of product. Something used on, in or near furniture is not furniture: a jug, vase, bottle, bowl, lamp, cushion or clock in a store that only lists furniture categories is "none". Never choose a category only because it is the least bad option.
+- categoryName and subcategoryName: always use the exact names from the store's list; the subcategory must belong to the chosen category. When categoryFit is "close", choose the closest subcategory. When categoryFit is "none", set both to an empty string. Never make up a new name.
 - description: 1 to 2 plain, friendly sentences for shoppers, at most 300 characters. Describe only what is visible: no prices, warranty or delivery claims.
 - dimensions: only if a size is printed on the product or its packaging; otherwise an empty string. Never guess a size.
 - specs: 2 to 6 short label/value pairs that matter for this kind of product and are visible or clearly implied, e.g. Wood: Sheesham, Seating: 3 Seater, Bulb: LED, Mount: Ceiling, Pattern: Floral, Opacity: Sheer, Screen: 55 inch. Labels are 1 or 2 words. No Colour or Material labels. No prices, warranty or delivery.
@@ -100,10 +104,18 @@ Look at the product photo and describe the main product in it.
 // "" is allowed: the product fits none of the store's categories.
 const nameSchema = (names) => (names.length ? { type: "string", enum: ["", ...names] } : { type: "string" });
 
+// How well the product fits the store's categories. "none": it's a different kind of
+// product (a jug in a furniture store); the website then asks the owner for a category.
+const FITS = ["exact", "close", "none"];
+
+// productType and categoryFit come before the category, so the model names what the
+// product is and judges the fit before it picks one (the answer follows this order).
 const schemaFor = (categories) => ({
   type: "object",
   properties: {
     productName: { type: "string" },
+    productType: { type: "string" },
+    categoryFit: { type: "string", enum: FITS },
     categoryName: nameSchema([...new Set(categories.map((c) => c.name))]),
     subcategoryName: nameSchema([...new Set(categories.flatMap((c) => c.subcategories))]),
     description: { type: "string" },
@@ -123,6 +135,8 @@ const schemaFor = (categories) => ({
   },
   required: [
     "productName",
+    "productType",
+    "categoryFit",
     "categoryName",
     "subcategoryName",
     "description",
@@ -175,9 +189,17 @@ export function clean(raw, categories) {
     if (label && value && !specs.some((s) => same(s.label, label))) specs.push({ label, value });
   }
 
+  // A product the model judged a different kind of thing gets no category, even if
+  // it filled one in anyway: a wrong category is worse than asking the owner.
+  const fit = FITS.includes(raw.categoryFit) ? raw.categoryFit : "";
+  const category = fit === "none" ? { categoryName: "", subcategoryName: "" } : pickCategory(raw, categories);
+
   return {
     productName: clip(raw.productName, 120),
-    ...pickCategory(raw, categories),
+    productType: clip(raw.productType, 40).toLowerCase(),
+    // "none" also when the answer named no usable category (outside the store's list).
+    categoryFit: category.categoryName ? fit || "close" : "none",
+    ...category,
     description: clip(raw.description, 2000),
     dimensions: clip(raw.dimensions, 200),
     specs: specs.slice(0, MAX_SPECS),

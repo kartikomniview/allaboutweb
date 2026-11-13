@@ -68,33 +68,11 @@ function Stat({
   /** The limit the value counts towards ("12 / 20"). */
   of?: number | null;
 }) {
-  const full = of != null && value !== null && value >= of;
-  const near = of != null && value !== null && !full && value / of >= 0.8;
   return (
-    <>
-    {/* Phones: a small chip, "12/20 Products" */}
     <Link
       href={href}
       onPointerDown={ripple}
-      className="relative inline-flex h-9 shrink-0 items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-full border border-line bg-white pl-2.5 pr-3 text-[13px] transition-colors active:scale-[0.97] sm:hidden"
-    >
-      <Icon className="h-3.5 w-3.5 text-slate" aria-hidden />
-      {value === null ? (
-        <Skeleton className="h-4 w-6" />
-      ) : (
-        <span className={`font-bold tabular-nums ${full ? "text-red-600" : near ? "text-amber-700" : "text-ink"}`}>
-          {value}
-          {of != null && <span className="font-semibold text-slate">/{of}</span>}
-        </span>
-      )}
-      <span className="font-medium text-slate">{label}</span>
-    </Link>
-
-    {/* Larger screens: a card */}
-    <Link
-      href={href}
-      onPointerDown={ripple}
-      className="relative hidden flex-col gap-2 overflow-hidden rounded-lg border border-line bg-white p-4 transition-colors hover:bg-paper/60 active:scale-[0.98] sm:flex"
+      className="relative flex flex-col gap-2 overflow-hidden rounded-lg border border-line bg-white p-4 transition-colors hover:bg-paper/60 active:scale-[0.98]"
     >
       <Icon className="h-4 w-4 text-slate" aria-hidden />
       <span className="text-2xl font-bold tabular-nums tracking-[-0.02em] text-ink">
@@ -117,7 +95,6 @@ function Stat({
       )}
       <span className="text-xs font-medium text-slate">{label}</span>
     </Link>
-    </>
   );
 }
 
@@ -217,8 +194,10 @@ export default function AdminDashboardPage() {
   const published = products ? products.filter((p) => p.isActive).length : null;
   const hidden = total !== null && published !== null ? total - published : null;
   const recent = products
-    ? [...products].sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? "")).slice(0, 5)
+    ? [...products].sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? "")).slice(0, 6)
     : null;
+  // Larger screens list 5; phones show 6, so their 3-column grid has two full rows.
+  const recentListed = recent?.slice(0, 5) ?? null;
 
   // Getting the store ready. Shown until everything is done.
   const tasks: Task[] = [
@@ -370,16 +349,13 @@ export default function AdminDashboardPage() {
           )}
 
           {/* Stats */}
-          {/* Phones: one row of small chips, scrolling sideways if it doesn't fit. Larger screens: three cards. */}
-          <section
-            aria-label="Products"
-            className="no-scrollbar flex gap-2 overflow-x-auto overscroll-x-contain sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible"
-          >
+          {/* Larger screens only: three cards. Phones skip them (the Products tab has the counts). */}
+          <section aria-label="Products" className="hidden grid-cols-3 gap-3 sm:grid">
             <Stat label="Products" value={total} icon={Package} href="/admin/ecatalog" of={user.store.productLimit} />
             <Stat label="Published" value={published} icon={Eye} href="/admin/ecatalog" />
             <Stat label="Hidden" value={hidden} icon={EyeOff} href="/admin/ecatalog" />
           </section>
-          {productsError && <p className="-mt-2 text-xs text-slate">Product counts are unavailable right now.</p>}
+          {productsError && <p className="-mt-2 hidden text-xs text-slate sm:block">Product counts are unavailable right now.</p>}
           {total !== null && <ProductLimitNotice state={limitState(total, user.store.productLimit)} storeName={storeName} />}
         </div>
 
@@ -486,7 +462,17 @@ export default function AdminDashboardPage() {
               )}
             </div>
             {recent === null && !productsError ? (
-              <ul className="divide-y divide-line border-t border-line">
+              <>
+              {/* Phones: thumbnail grid */}
+              <ul className="grid grid-cols-3 gap-2 border-t border-line p-2.5 sm:hidden" aria-busy="true">
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <li key={i} className="flex flex-col gap-1.5">
+                    <Skeleton className="aspect-square w-full rounded-md" />
+                    <Skeleton className="h-3 w-4/5" />
+                  </li>
+                ))}
+              </ul>
+              <ul className="hidden divide-y divide-line border-t border-line sm:block">
                 {[0, 1, 2].map((i) => (
                   <li key={i} className="flex items-center gap-3 px-3.5 sm:px-4 py-3">
                     <Skeleton className="h-11 w-11 rounded-md" />
@@ -497,9 +483,34 @@ export default function AdminDashboardPage() {
                   </li>
                 ))}
               </ul>
+              </>
             ) : recent && recent.length > 0 ? (
-              <ul className="divide-y divide-line border-t border-line">
+              <>
+              {/* Phones: thumbnail grid, 3 per row */}
+              <ul className="grid grid-cols-3 gap-2 border-t border-line p-2.5 sm:hidden">
                 {recent.map((p) => (
+                  <li key={p.id}>
+                    <Link
+                      href={`/admin/ecatalog?edit=${encodeURIComponent(p.id)}`}
+                      onPointerDown={ripple}
+                      className="relative flex flex-col gap-1 overflow-hidden rounded-md transition-transform active:scale-[0.97]"
+                    >
+                      <span className="relative block">
+                        <ProductThumb product={p} className="aspect-square w-full" rounded="rounded-md" fit="contain" />
+                        {!p.isActive && (
+                          <span className="absolute bottom-1 left-1 rounded-sm bg-ink/75 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                            Hidden
+                          </span>
+                        )}
+                      </span>
+                      <span className="block truncate px-0.5 text-xs font-semibold text-ink">{p.productName}</span>
+                      <span className="-mt-1 block truncate px-0.5 text-[11px] tabular-nums text-slate">{formatPrice(p.price)}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <ul className="hidden divide-y divide-line border-t border-line sm:block">
+                {(recentListed ?? []).map((p) => (
                   <li key={p.id}>
                     <Link
                       href={`/admin/ecatalog?edit=${encodeURIComponent(p.id)}`}
@@ -519,6 +530,7 @@ export default function AdminDashboardPage() {
                   </li>
                 ))}
               </ul>
+              </>
             ) : (
               <div className="flex flex-col items-center gap-3 border-t border-line px-6 py-10 text-center">
                 <span className="grid h-12 w-12 place-items-center rounded-full bg-paper text-slate">
