@@ -863,24 +863,27 @@ function ImageManager({
             <p className="text-[15px] font-semibold text-ink">Add product photos</p>
             <p className="mt-1 text-[13px] leading-relaxed text-slate">The first photo is used to fill in the details.</p>
           </div>
-          <div className="grid w-full max-w-xs grid-cols-2 gap-2.5">
-            <button
-              type="button"
-              onClick={() => cameraRef.current?.click()}
-              onPointerDown={ripple}
-              className={`${authButtonClass} whitespace-nowrap px-3!`}
-            >
-              <Camera className="h-[18px] w-[18px] shrink-0" aria-hidden />
-              Take photo
-            </button>
+          {/* Main action: choose existing photos. The camera is a quieter second option,
+              and only on touch devices (with a mouse it would just open the same file picker). */}
+          <div className="flex w-full max-w-xs flex-col items-center gap-1">
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
               onPointerDown={ripple}
-              className={`${authSecondaryButtonClass} w-full whitespace-nowrap px-3!`}
+              className={`${authButtonClass} whitespace-nowrap`}
             >
               <Images className="h-[18px] w-[18px] shrink-0" aria-hidden />
-              Gallery
+              <span className="sm:hidden">Select from gallery</span>
+              <span className="hidden sm:inline">Upload photos</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => cameraRef.current?.click()}
+              onPointerDown={ripple}
+              className="relative inline-flex h-11 items-center gap-1.5 overflow-hidden rounded-md px-3 text-[13px] font-semibold text-slate transition-colors hover:text-ink focus-visible:outline-none! focus-visible:ring-[3px] focus-visible:ring-primary/15 [@media(pointer:fine)]:hidden"
+            >
+              <Camera className="h-4 w-4 shrink-0" aria-hidden />
+              or take a photo
             </button>
           </div>
           <p className="hidden text-[11px] text-slate sm:block">or drag and drop, or paste with Ctrl+V</p>

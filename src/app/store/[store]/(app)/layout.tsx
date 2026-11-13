@@ -5,6 +5,8 @@ import FurnitureCatalogApp from "@/components/furniture-catalog/FurnitureCatalog
 import StoreUnavailable from "@/components/furniture-catalog/StoreUnavailable";
 import { getStoreCatalog, isInactive } from "@/lib/catalogProducts";
 import { CATALOG_ICONS } from "@/lib/catalogDomain";
+import { firstPhoto, productCount, shareTags } from "@/lib/shareMeta";
+import { categoryLabel, sortCategoryNames } from "@/lib/taxonomy";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -41,22 +43,35 @@ export async function generateMetadata({ params }: LayoutProps<"/store/[store]">
   const catalog = await getStoreCatalog((await params).store);
   if (!catalog) return { title: "Store not found", icons: CATALOG_ICONS };
   if (isInactive(catalog)) return { title: `${catalog.name} · Store unavailable`, robots: { index: false }, icons: CATALOG_ICONS };
-  const { store } = catalog;
+  const { store, products } = catalog;
 
   const description =
     [store.tagline, store.category].filter(Boolean).join(" · ") || `Browse ${store.name}'s catalog and enquire on WhatsApp.`;
+
+  // A shared store link: the store's name and what it sells ("Sofas, Beds, Dining and
+  // more · 48 products"), with its cover photo, else a product photo, else its logo.
+  const categories = sortCategoryNames(products.map((p) => p.categoryName).filter(Boolean)).map(categoryLabel);
+  const selling = categories.length
+    ? `${categories.slice(0, 3).join(", ")}${categories.length > 3 ? " and more" : ""} · ${productCount(products.length)}.`
+    : "";
   const share = store.isDemo
     ? DEMO_SHARE
-    : { title: store.name, description, image: store.coverImage ? { url: store.coverImage } : undefined };
-  const images = share.image ? [share.image] : undefined;
+    : {
+        // "Nilgiri Furniture · Solid Wood Furniture Store"
+        title: [store.name, store.category].filter(Boolean).join(" · "),
+        // "Solid Wood. Sofas, Beds, Dining and more · 48 products. Browse the catalog and enquire on WhatsApp."
+        description: [store.tagline && `${store.tagline}.`, selling, "Browse the catalog and enquire on WhatsApp."]
+          .filter(Boolean)
+          .join(" "),
+        image: store.coverImage || firstPhoto(products) || store.logo || undefined,
+      };
 
   return {
     // Tab pages set just their own name: "Cart | Demo Store".
     title: { default: store.name, template: `%s | ${store.name}` },
     description,
     icons: CATALOG_ICONS,
-    openGraph: { type: "website", siteName: store.name, title: share.title, description: share.description, images },
-    twitter: { card: images ? "summary_large_image" : "summary", title: share.title, description: share.description, images },
+    ...shareTags({ siteName: store.name, ...share }),
   };
 }
 

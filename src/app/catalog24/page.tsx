@@ -34,9 +34,13 @@ import { CATALOG_DEMO_BASE, CATALOG_ICONS } from "@/lib/catalogDomain";
 const TITLE = "Catalog24 — Your product catalog in one link";
 const DESCRIPTION =
   "Create your store in minutes: add products with a photo, AI fills in the details, and customers browse your link and enquire on WhatsApp.";
+// JPG with its size declared, so WhatsApp shows the large preview card on the first share.
 const SHARE_IMAGE = {
-  url: "https://aawsite.s3.ap-south-1.amazonaws.com/website/landing/sharing/diwali-e-catalog.jpg",
-  alt: "Catalog24 e-catalog",
+  url: "https://aawsite.s3.ap-south-1.amazonaws.com/website/landing/sharing/catalog24share.jpg",
+  width: 1724,
+  height: 912,
+  type: "image/jpeg",
+  alt: "Catalog24: get your catalog and showcase your products",
 };
 
 export const metadata: Metadata = {

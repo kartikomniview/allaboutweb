@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { findBySlug } from "@/components/furniture-catalog/categoryPath";
 import { getStoreCatalog, isInactive } from "@/lib/catalogProducts";
+import { firstPhoto, nameList, productCount, shareTags } from "@/lib/shareMeta";
 import { categoryLabel } from "@/lib/taxonomy";
 
 // "Sofas" or "L-Shape · Sofas" in the tab title (the layout adds the store name),
@@ -28,7 +29,27 @@ export async function generateMetadata({ params }: PageProps<"/store/[store]/cat
     : undefined;
 
   const label = categoryLabel(category);
-  return { title: subCategory ? `${subCategory} · ${label}` : label };
+  const name = subCategory ? `${subCategory} · ${label}` : label;
+  // A shared category link previews that category: its name, a few of its products
+  // and the first one's photo (not the store's cover from the layout).
+  const items = catalog.products.filter(
+    (p) => p.categoryName === category && (!subCategory || p.subcategoryName === subCategory),
+  );
+  const storeName = catalog.store.name;
+  const description = items.length
+    ? `${productCount(items.length)} at ${storeName}: ${nameList(items)}. Enquire on WhatsApp.`
+    : `${name} at ${storeName}. Enquire on WhatsApp.`;
+
+  return {
+    title: name,
+    description,
+    ...shareTags({
+      siteName: storeName,
+      title: `${name} · ${storeName}`,
+      description,
+      image: firstPhoto(items) || catalog.store.coverImage || undefined,
+    }),
+  };
 }
 
 // A category, or one of its product types, on the Catalog tab. The catalog app (in the

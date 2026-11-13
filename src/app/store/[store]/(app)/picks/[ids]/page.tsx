@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { parsePicksIds } from "@/components/furniture-catalog/shareLinks";
 import { getStoreCatalog, isInactive } from "@/lib/catalogProducts";
+import { firstPhoto, nameList, shareTags } from "@/lib/shareMeta";
 
 // Hand-picked products shared from the catalog or the admin panel: /picks/<id>,<id>,…
 // The title and preview image say what the link opens (the layout adds the store name).
@@ -12,20 +13,15 @@ export async function generateMetadata({ params }: PageProps<"/store/[store]/pic
   const picked = wanted.flatMap((id) => catalog.products.find((p) => p.id === id) ?? []);
   if (!picked.length) return { title: "Selected products" };
 
+  const storeName = catalog.store.name;
   const title =
     picked.length === 1 ? picked[0].productName : `${picked.length} products picked for you`;
-  const description = picked
-    .slice(0, 4)
-    .map((p) => p.productName)
-    .join(" · ");
-  const image = picked.find((p) => p.mainImageUrl)?.mainImageUrl;
-  const images = image ? [{ url: image }] : undefined;
+  const description = `${nameList(picked)}. From ${storeName}, enquire on WhatsApp.`;
 
   return {
     title,
     description,
-    openGraph: { type: "website", title, description, images },
-    twitter: { card: images ? "summary_large_image" : "summary", title, description, images },
+    ...shareTags({ siteName: storeName, title: `${title} · ${storeName}`, description, image: firstPhoto(picked) }),
   };
 }
 
