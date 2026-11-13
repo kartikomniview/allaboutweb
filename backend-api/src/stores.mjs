@@ -21,7 +21,21 @@ const NAME_RE = /^[\p{L}\p{N}][\p{L}\p{N} &'.-]*$/u;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // What a store sells. Mirrors BUSINESS_TYPES in the website's src/lib/taxonomy.ts.
-export const BUSINESS_TYPE_IDS = ["furniture", "decor", "lighting", "flooring", "curtains", "fabrics", "clothing", "electronics"];
+export const BUSINESS_TYPE_IDS = [
+  "furniture",
+  "decor",
+  "lighting",
+  "flooring",
+  "curtains",
+  "fabrics",
+  "bath",
+  "clothing",
+  "footwear",
+  "jewellery",
+  "optical",
+  "electronics",
+  "mobiles",
+];
 // Stores created before business types existed (the Demo store) sell furniture.
 const DEFAULT_BUSINESS_TYPES = ["furniture"];
 
@@ -123,6 +137,50 @@ export function publicStore(data) {
   };
 }
 
+/* ---------- WhatsApp number: requested by the owner, approved by a super admin ---------- */
+// stores/{slug}.whatsapp is the live number (the only one the catalog uses). The owner
+// can't set it: they request one, stored in whatsappRequest
+// { number, status: "pending" | "rejected", requestedAt, reason?, decidedAt? },
+// and a super admin approves it (it becomes whatsapp) or rejects it with a reason.
+
+const iso = (value) => (typeof value?.toDate === "function" ? value.toDate().toISOString() : null);
+
+/** The store's WhatsApp request as the API returns it, or null. */
+export function whatsappRequestOf(data) {
+  const request = data?.whatsappRequest;
+  if (!request || typeof request.number !== "string" || !["pending", "rejected"].includes(request.status)) return null;
+  return {
+    number: request.number,
+    status: request.status,
+    requestedAt: iso(request.requestedAt),
+    reason: typeof request.reason === "string" ? request.reason : "",
+    decidedAt: iso(request.decidedAt),
+  };
+}
+
+// The store as its owner sees it: the public fields plus their WhatsApp request.
+export const ownStore = (data) => ({ ...publicStore(data), whatsappRequest: whatsappRequestOf(data) });
+
+// POST /store/whatsapp-request  { whatsapp }: the owner asks for this number.
+// { whatsapp: "" } withdraws a pending (or clears a rejected) request.
+export async function requestWhatsapp(slug, body) {
+  const ref = db().collection(STORES).doc(slug);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpError(404, "NOT_FOUND", "Store not found");
+
+  const number = normalizeWhatsapp(body?.whatsapp, { required: false });
+  if (!number) {
+    await ref.update({ whatsappRequest: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() });
+  } else {
+    if (number === snap.get("whatsapp")) throw bad("This is already your WhatsApp number");
+    await ref.update({
+      whatsappRequest: { number, status: "pending", requestedAt: FieldValue.serverTimestamp() },
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  }
+  return ownStore((await ref.get()).data());
+}
+
 export async function getStore(slug) {
   if (!STORE_SLUG_RE.test(slug ?? "")) return null;
   const snap = await db().collection(STORES).doc(slug).get();
@@ -152,7 +210,8 @@ export async function checkAvailability(rawName) {
 // the same name at once; if the account can't be created it's removed again.
 export async function registerStoreOwner(body) {
   const { name, slug } = checkStoreName(body?.storeName);
-  // Optional at sign-up: the owner adds it in Store settings.
+  // Optional at sign-up, and never live straight away: a number sent here is a request
+  // for a super admin to approve, like one made in Store settings.
   const whatsapp = normalizeWhatsapp(body?.whatsapp, { required: false });
   const businessTypes = checkBusinessTypes(body?.businessTypes);
   const { email, password } = checkLogin(body);
@@ -164,7 +223,10 @@ export async function registerStoreOwner(body) {
       slug,
       ownerUid: "",
       email,
-      whatsapp,
+      whatsapp: "",
+      ...(whatsapp && {
+        whatsappRequest: { number: whatsapp, status: "pending", requestedAt: FieldValue.serverTimestamp() },
+      }),
       businessTypes,
       productLimit: DEFAULT_PRODUCT_LIMIT,
       active: true,
@@ -201,7 +263,9 @@ const text = (body, field, max) => {
   return trimmed;
 };
 
-// PUT /store: the owner's store details. The slug (subdomain) never changes.
+// PUT /store: the owner's store details. The slug (subdomain) never changes, and the
+// WhatsApp number isn't set here: a `whatsapp` field (older admin builds) is ignored;
+// owners request a number with POST /store/whatsapp-request.
 export async function updateStore(slug, body) {
   if (!body || typeof body !== "object") throw bad("Body must be an object");
   const ref = db().collection(STORES).doc(slug);
@@ -227,7 +291,6 @@ export async function updateStore(slug, body) {
 
   await ref.update({
     name,
-    whatsapp: normalizeWhatsapp(body.whatsapp),
     phone: text(body, "phone", 30),
     publicEmail,
     address: text(body, "address", 300),
@@ -243,7 +306,7 @@ export async function updateStore(slug, body) {
   });
   // A replaced or removed logo file is deleted (best effort).
   if (previousLogo && previousLogo !== logo) await deleteImages([previousLogo], slug);
-  return publicStore((await ref.get()).data());
+  return ownStore((await ref.get()).data());
 }
 
 /* ---------- Super admin: every store ---------- */
@@ -265,6 +328,8 @@ async function managedStore(slug, data) {
     productLimit: productLimitOf(data),
     productCount,
     userCount,
+    whatsapp: data.whatsapp ?? "",
+    whatsappRequest: whatsappRequestOf(data),
     createdAt: typeof data.createdAt?.toDate === "function" ? data.createdAt.toDate().toISOString() : null,
   };
 }
@@ -276,7 +341,10 @@ export async function listAllStores() {
   return stores.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? "") || a.slug.localeCompare(b.slug));
 }
 
-// PUT /admin/stores/{slug}  { active?: boolean, productLimit?: number | null (unlimited) }
+// PUT /admin/stores/{slug}
+//   { active?: boolean, productLimit?: number | null (unlimited),
+//     whatsapp?: string ("" removes it; also clears any request),
+//     whatsappDecision?: "approve" | "reject", rejectReason?: string }
 export async function updateStoreAccess(slug, body) {
   if (!STORE_SLUG_RE.test(slug ?? "")) throw bad("Invalid store");
   if (!body || typeof body !== "object") throw bad("Body must be an object");
@@ -292,11 +360,37 @@ export async function updateStoreAccess(slug, body) {
     }
     change.productLimit = limit;
   }
-  if (!Object.keys(change).length) throw bad("Nothing to change");
 
   const ref = db().collection(STORES).doc(slug);
   const snap = await ref.get();
   if (!snap.exists) throw new HttpError(404, "STORE_NOT_FOUND", "Store not found");
+
+  // The WhatsApp number: set directly (a correction), or the owner's request decided.
+  if (body.whatsapp !== undefined && body.whatsappDecision !== undefined) {
+    throw bad("Send either whatsapp or whatsappDecision, not both");
+  }
+  if (body.whatsapp !== undefined) {
+    change.whatsapp = normalizeWhatsapp(body.whatsapp, { required: false });
+    change.whatsappRequest = FieldValue.delete();
+  }
+  if (body.whatsappDecision !== undefined) {
+    const request = whatsappRequestOf(snap.data());
+    if (request?.status !== "pending") throw bad("This store has no WhatsApp number waiting for approval");
+    if (body.whatsappDecision === "approve") {
+      change.whatsapp = request.number;
+      change.whatsappRequest = FieldValue.delete();
+    } else if (body.whatsappDecision === "reject") {
+      const reason = body.rejectReason === undefined ? "" : body.rejectReason;
+      if (typeof reason !== "string" || reason.trim().length > 200) throw bad("rejectReason must be text of at most 200 characters");
+      change["whatsappRequest.status"] = "rejected";
+      change["whatsappRequest.reason"] = reason.trim();
+      change["whatsappRequest.decidedAt"] = FieldValue.serverTimestamp();
+    } else {
+      throw bad('whatsappDecision must be "approve" or "reject"');
+    }
+  }
+  if (!Object.keys(change).length) throw bad("Nothing to change");
+
   await ref.update({ ...change, updatedAt: FieldValue.serverTimestamp() });
 
   return managedStore(slug, (await ref.get()).data());

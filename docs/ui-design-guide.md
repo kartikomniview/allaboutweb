@@ -178,7 +178,7 @@ Import the shared classes from `@/components/admin/AuthLayout`. Don't restyle ea
 
 Follow `BusinessTypePicker`:
 - A grid of cards, 3 per row on phones.
-- The icon sits in a 44px `rounded-md` tile above a 12.5px semibold label.
+- The icon sits in a 44px `rounded-md` tile above a 12.5px semibold label. `BusinessTypePicker` shows a 4:3 photo instead (edge to edge at the top of the card; see `src/lib/businessImages.ts`).
 - **Selected:** `border-primary bg-tint/60 ring-1 ring-inset ring-primary`, the icon turns primary, and a check badge pops in (`admin-pop-check`).
 - **Tap:** a ripple and `hapticTick()`.
 

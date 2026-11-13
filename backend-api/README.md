@@ -6,14 +6,15 @@ This is the backend for Catalog24: store registration, the store owners' admin p
 
 | Route | Purpose |
 | --- | --- |
-| `POST /auth/register` | **Public.** Body `{ storeName, businessTypes, email, password, deviceId, whatsapp? }`. `whatsapp` is optional (added later in Store settings). `businessTypes` is what the store sells: one or more of `furniture`, `decor`, `lighting`, `flooring`, `curtains`, `fabrics`, `clothing`, `electronics`. Creates the store and the owner's Firebase account, binds this device (the one-device rule) and logs them in: returns `{ token, expiresAt, user }`. 409 `STORE_TAKEN` if the store name (its slug) exists, 409 `EMAIL_TAKEN` if the email has an account |
+| `POST /auth/register` | **Public.** Body `{ storeName, businessTypes, email, password, deviceId, whatsapp? }`. `whatsapp` is optional (added later in Store settings). `businessTypes` is what the store sells: one or more of `furniture`, `decor`, `lighting`, `flooring`, `curtains`, `fabrics`, `bath`, `clothing`, `footwear`, `jewellery`, `optical`, `electronics`, `mobiles`. Creates the store and the owner's Firebase account, binds this device (the one-device rule) and logs them in: returns `{ token, expiresAt, user }`. 409 `STORE_TAKEN` if the store name (its slug) exists, 409 `EMAIL_TAKEN` if the email has an account |
 | `GET /stores/check?name=…` | **Public.** Whether a store name is free: `{ slug, available, message }`. The registration form's live check |
 | `POST /auth/login` | Body `{ email, password, deviceId }`. Checks the credentials with Firebase Auth, applies the one-device rule, and returns `{ token, expiresAt, user }`. `user.store` is `{ slug, name }` |
 | `GET /auth/session` | Headers `Authorization: Bearer <token>` and `X-Device-Id`. Returns `{ user, expiresAt }`, or 401 |
 | `POST /auth/logout` | Header `Authorization: Bearer <token>`. Deletes the session |
 | `GET /catalog/{store}/products` | **Public, no login.** A store's public details and its published products (`isActive: true`): `{ store, products }`, or 404 `STORE_NOT_FOUND`. Each store's catalog page reads this |
 | `GET /catalog/products` | **Public.** The demo store's products, as `{ products }`. Kept for older website builds |
-| `GET /store` / `PUT /store` | The logged-in owner's store details (name, WhatsApp, business types, phone, email, address, hours, tagline, category, year started, logo). The slug can't be changed. `PUT` keeps the business types when `businessTypes` isn't sent, and the logo when `logo` isn't sent (an empty `logo` removes it). The logo is uploaded with `POST /products/uploads` like a product photo, and a replaced logo file is deleted. Stores from before business types (the Demo store) count as `["furniture"]` |
+| `POST /store/whatsapp-request` | Body `{ whatsapp }`. The owner asks for this WhatsApp number; it goes live only when a super admin approves it. Returns `{ store }` with `whatsappRequest: { number, status: "pending", requestedAt, reason, decidedAt }`. `{ whatsapp: "" }` withdraws the request. 400 if the number is already the live one |
+| `GET /store` / `PUT /store` | The logged-in owner's store details (name, WhatsApp, business types, phone, email, address, hours, tagline, category, year started, logo), plus `whatsappRequest` (see below). The slug can't be changed, and `PUT` never changes the WhatsApp number (a `whatsapp` field is ignored). `PUT` keeps the business types when `businessTypes` isn't sent, and the logo when `logo` isn't sent (an empty `logo` removes it). The logo is uploaded with `POST /products/uploads` like a product photo, and a replaced logo file is deleted. Stores from before business types (the Demo store) count as `["furniture"]` |
 | `GET /products` | Lists the store's products as `{ products }` |
 | `POST /products` | Body is one product. Creates it with an auto id and returns `{ product }` |
 | `POST /products/import` | Body `{ products: [{ id, ...product }] }`. Creates products with fixed ids and skips ids that already exist. Returns `{ created, skipped }` |
@@ -24,10 +25,11 @@ This is the backend for Catalog24: store registration, the store owners' admin p
 | `POST /admin/stores/{slug}/users` | **Super admins only.** Body `{ email, password }`. Creates another login for the store, with the same access as the owner. Returns `{ user }` (201), or 409 `EMAIL_TAKEN` |
 | `POST /admin/stores/{slug}/users/{uid}/reset-device` | **Super admins only.** Clears the user's device lock and ends their sessions; their next login binds the new device. Returns `{ user }` |
 | `DELETE /admin/stores/{slug}/users/{uid}` | **Super admins only.** Deletes an extra login: its sessions, `users/{uid}` and the Firebase account. The store owner and your own account can't be removed |
-| `PUT /admin/stores/{slug}` | **Super admins only.** Body `{ active?, productLimit? }`. `productLimit` is a whole number from 0 to 10000, or `null` for unlimited. Returns `{ store }` |
+| `PUT /admin/stores/{slug}` | **Super admins only.** Body `{ active?, productLimit?, whatsapp?, whatsappDecision?, rejectReason? }`. `productLimit` is a whole number from 0 to 10000, or `null` for unlimited. `whatsapp` sets the live number directly (`""` removes it) and clears any request. `whatsappDecision` is `"approve"` (the requested number goes live) or `"reject"` (with an optional `rejectReason`, at most 200 characters, shown to the owner); 400 when nothing is waiting. Returns `{ store }`, which also has `whatsapp` and `whatsappRequest` |
+| `DELETE /admin/stores/{slug}` | **Super admins only.** Body `{ confirm: "<slug>" }`. Permanently deletes the store: its products and their images (plus anything else in its S3 folder), every login (sessions, `users/{uid}` and the Firebase account, the owner's too) and `stores/{slug}`. The slug can then be registered again. Returns `{ deleted: { slug, products, users } }`. 400 for the Demo store or your own store. The store is switched off first and deleted last, so if it fails partway, calling it again finishes the job |
 | `POST /products/uploads` | Body `{ categoryName, subcategoryName, productName, files: [{ contentType, size }] }`. Returns `{ uploads: [{ uploadUrl, fields, publicUrl }] }`, one signed S3 upload form per file. The browser then uploads each file straight to S3 |
 | `POST /products/uploads/discard` | Body `{ urls }`. Deletes images that were uploaded but never saved to a product (for example when the editor is cancelled) |
-| `POST /products/detect` | Body `{ businessTypes, categories: [{ name, subcategories }], image: { data, mediaType } }` (a base64 photo) or `{ businessTypes, categories, imageUrl }` (an uploaded image). `businessTypes` are labels for the prompt ("Furniture", "Lighting"); `categories` (at most 80) are the predefined categories of the store's business types. Asks Claude to identify any kind of product and returns `{ detected: { productName, productType, categoryFit, categoryName, subcategoryName, description, dimensions, specs, tags, highlights, keywords } }`. `productType` is what the product is ("ceramic jug"). `categoryFit` is `exact`, `close` (the closest subcategory was chosen) or `none`: the product is a different kind of thing from what the `categories` cover (a jug in a furniture store), and the category and subcategory are then empty, so the admin form asks the owner to choose one. Otherwise the category and subcategory are always one of the `categories` sent (with its spelling); the model never suggests a new category |
+| `POST /products/detect` | Body `{ businessTypes, categories: [{ name, subcategories }], image: { data, mediaType } }` (a base64 photo) or `{ businessTypes, categories, imageUrl }` (an uploaded image). `businessTypes` are labels for the prompt ("Furniture", "Lighting"; at most 20); `categories` (at most 120) are the predefined categories of the store's business types. Asks Claude to identify any kind of product and returns `{ detected: { productName, productType, categoryFit, categoryName, subcategoryName, description, dimensions, specs, tags, highlights, keywords } }`. `productType` is what the product is ("ceramic jug"). `categoryFit` is `exact`, `close` (the closest subcategory was chosen) or `none`: the product is a different kind of thing from what the `categories` cover (a jug in a furniture store), and the category and subcategory are then empty, so the admin form asks the owner to choose one. Otherwise the category and subcategory are always one of the `categories` sent (with its spelling); the model never suggests a new category |
 
 Every `/products` and `/store` route needs a logged-in store owner: the same `Authorization: Bearer <token>` and `X-Device-Id` headers as `GET /auth/session`. They only ever see and change that owner's own store: another store's product id returns 404. Each store's images are stored under `ecatalog/stores/{slug}/` in S3 (the demo store's older images stay under `ecatalog/`).
 
@@ -43,7 +45,10 @@ Firestore layout:
 
 ```
 stores/{slug}      { name, slug, ownerUid, email, whatsapp, businessTypes[], phone, publicEmail,
-                     address, hours, tagline, category, since, coverImage, logo, createdAt, updatedAt }
+                     address, hours, tagline, category, since, coverImage, logo, createdAt, updatedAt,
+                     whatsappRequest?: { number, status: "pending" | "rejected", requestedAt, reason?, decidedAt? } }
+                     // whatsapp is the live number; only a super admin sets it
+                     // (approving the owner's whatsappRequest, or directly)
 users/{uid}        { email, storeSlug, deviceId, deviceBoundAt, lastLoginAt }
 sessions/{sha256}  { uid, email, deviceId, createdAt, expiresAt }   // doc id = SHA-256 of the token
 products/{id}      { storeSlug, productName, categoryName, subcategoryName, price, originalPrice,
@@ -324,6 +329,30 @@ On **All stores → Manage users**, super admins see each store's logins, reset 
    - `DELETE /admin/stores/{slug}/users/{uid}`
 
    CORS already allows `POST` and `DELETE`.
+
+### Adding WhatsApp number approval to an existing deployment
+
+Store owners no longer set their WhatsApp number themselves, so nobody can put a number that isn't theirs on a catalog. They request one in **Store settings** (`POST /store/whatsapp-request`); super admins approve or reject it on **All stores → Requests**, or set a number directly. Numbers that were already live stay as they are. A number sent at registration is a request too.
+
+1. Run `npm run package` and upload `lambda.zip`.
+2. In API Gateway, add the route `POST /store/whatsapp-request` with the `aaw-admin-auth` integration.
+
+### Adding store deletion (super admin) to an existing deployment
+
+On **All stores**, each store's **Delete** button permanently deletes it (see `DELETE /admin/stores/{slug}` above). The Demo store and your own store can't be deleted.
+
+1. Run `npm run package` and upload `lambda.zip`.
+2. In API Gateway, add the route `DELETE /admin/stores/{slug}` with the `aaw-admin-auth` integration.
+3. Optional: to also delete files in the store's folder that never made it into a product (abandoned uploads), let the Lambda role list that folder. Add this statement to the `aaw-ecatalog-images` policy. Without it, product images, the logo and the cover image are still deleted; only the leftovers stay.
+
+   ```json
+   {
+     "Effect": "Allow",
+     "Action": "s3:ListBucket",
+     "Resource": "arn:aws:s3:::aawsite",
+     "Condition": { "StringLike": { "s3:prefix": "ecatalog/stores/*" } }
+   }
+   ```
 
 ### Adding photo detection to an existing deployment
 

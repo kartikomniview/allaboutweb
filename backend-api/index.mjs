@@ -24,13 +24,15 @@ import {
   getStore,
   isStoreActive,
   listAllStores,
+  ownStore,
   publicStore,
   registerStoreOwner,
+  requestWhatsapp,
   storeInactive,
   updateStore,
   updateStoreAccess,
 } from "./src/stores.mjs";
-import { addStoreUser, listStoreUsers, removeStoreUser, resetUserDevice } from "./src/storeUsers.mjs";
+import { addStoreUser, deleteStore, listStoreUsers, removeStoreUser, resetUserDevice } from "./src/storeUsers.mjs";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DEVICE_ID_RE = /^[A-Za-z0-9-]{8,128}$/;
@@ -204,13 +206,21 @@ async function getOwnStore(event) {
   const { storeSlug } = await requireSession(event);
   const store = await getStore(storeSlug);
   if (!store) throw new HttpError(404, "STORE_NOT_FOUND", "Store not found");
-  return json(200, { store: publicStore(store) });
+  return json(200, { store: ownStore(store) });
 }
 
-// PUT /store  { name, whatsapp, phone, email, address, hours, tagline, category, since, coverImage, logo }
+// PUT /store  { name, phone, email, address, hours, tagline, category, since, coverImage, logo, businessTypes }
+// (not the WhatsApp number: see POST /store/whatsapp-request)
 async function putOwnStore(event) {
   const { storeSlug } = await requireSession(event);
   return json(200, { store: await updateStore(storeSlug, parseBody(event)) });
+}
+
+// POST /store/whatsapp-request  { whatsapp }: asks a super admin to set this number
+// ("" withdraws the request).
+async function postWhatsappRequest(event) {
+  const { storeSlug } = await requireSession(event);
+  return json(200, { store: await requestWhatsapp(storeSlug, parseBody(event)) });
 }
 
 // The super-admin routes: a valid session whose email is in SUPER_ADMIN_EMAILS.
@@ -235,6 +245,13 @@ async function putStoreAccess(event) {
 
 const slugParam = (event) => String(event.pathParameters?.slug ?? "").toLowerCase();
 const uidParam = (event) => String(event.pathParameters?.uid ?? "");
+
+// DELETE /admin/stores/{slug}  { confirm: "<slug>" }: deletes the store, its products,
+// images and logins for good.
+async function removeStore(event) {
+  const session = await requireSuperAdmin(event);
+  return json(200, { deleted: await deleteStore(slugParam(event), parseBody(event), session) });
+}
 
 // GET /admin/stores/{slug}/users: the store's logins and their device locks.
 async function getStoreUsers(event) {
@@ -271,6 +288,7 @@ const routes = {
   "GET /catalog/{store}/products": getStoreCatalog,
   "GET /store": getOwnStore,
   "PUT /store": putOwnStore,
+  "POST /store/whatsapp-request": postWhatsappRequest,
   "GET /products": getProducts,
   "POST /products": postProduct,
   "POST /products/import": postImport,
@@ -281,6 +299,7 @@ const routes = {
   "DELETE /products/{id}": removeProduct,
   "GET /admin/stores": getAllStores,
   "PUT /admin/stores/{slug}": putStoreAccess,
+  "DELETE /admin/stores/{slug}": removeStore,
   "GET /admin/stores/{slug}/users": getStoreUsers,
   "POST /admin/stores/{slug}/users": postStoreUser,
   "POST /admin/stores/{slug}/users/{uid}/reset-device": postResetDevice,

@@ -1,23 +1,17 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
-  Blinds,
   Camera,
   Check,
   ChevronDown,
-  Frame,
-  Grid2x2,
-  Lamp,
   Link2,
   MessageCircle,
   RefreshCw,
   Search,
-  Shirt,
-  Sofa,
   Sparkles,
   Store,
-  Tv,
   WandSparkles,
   type LucideIcon,
 } from "lucide-react";
@@ -25,6 +19,7 @@ import Catalog24Footer from "@/components/catalog24/Catalog24Footer";
 import Catalog24Header from "@/components/catalog24/Catalog24Header";
 import DemoLauncher from "@/components/catalog24/DemoLauncher";
 import RevealObserver from "@/components/landing/RevealObserver";
+import { businessImage } from "@/lib/businessImages";
 import { CATALOG_DEMO_BASE, CATALOG_ICONS } from "@/lib/catalogDomain";
 
 // The catalog24.in home page, served at "/" on that domain by src/proxy.ts
@@ -81,14 +76,21 @@ const FEATURES: { icon: LucideIcon; title: string; text: string; tone: Tone }[] 
   { icon: Sparkles, title: "Looks great on phones", text: "A fast, clean catalog made for how your customers shop.", tone: "indigo" },
 ];
 
-const BUSINESSES: { icon: LucideIcon; label: string; tone: Tone }[] = [
-  { icon: Sofa, label: "Furniture", tone: "amber" },
-  { icon: Frame, label: "Home decor", tone: "rose" },
-  { icon: Lamp, label: "Lighting", tone: "orange" },
-  { icon: Grid2x2, label: "Flooring", tone: "teal" },
-  { icon: Blinds, label: "Curtains & blinds", tone: "violet" },
-  { icon: Shirt, label: "Clothing & fabrics", tone: "sky" },
-  { icon: Tv, label: "Electronics", tone: "indigo" },
+// "Made for every kind of shop". Each card's photo is on S3, named after its label
+// (see businessImage in src/lib/businessImages.ts).
+const BUSINESSES = [
+  "Furniture",
+  "Home decor",
+  "Lighting",
+  "Flooring",
+  "Curtains & blinds",
+  "Bath & sanitaryware",
+  "Clothing & fabrics",
+  "Footwear",
+  "Jewellery & accessories",
+  "Optical & eyewear",
+  "Electronics",
+  "Mobiles & accessories",
 ];
 
 const FAQS = [
@@ -194,20 +196,37 @@ export default function Catalog24HomePage() {
           </div>
         </section>
 
-        {/* Made for: small colour-coded cards on phones, chips on larger screens */}
+        {/* Made for: 4:3 photo cards, 2 across on phones, 3 on tablets, 4 on desktops (3 rows) */}
         <section className="border-y border-line bg-paper">
-          <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 header:px-8">
-            <p className="text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-slate sm:text-xs">Made for every kind of shop</p>
-            <ul className="mt-4 grid grid-cols-4 gap-2 sm:flex sm:flex-wrap sm:justify-center">
-              {BUSINESSES.map(({ icon: Icon, label, tone }) => (
+          <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-14 header:px-8">
+            <div className="mx-auto max-w-2xl text-center">
+              <p data-reveal="up" className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary sm:text-xs">
+                Made for every kind of shop
+              </p>
+              <h2 data-reveal="up" className="mt-1.5 text-xl font-bold tracking-[-0.02em] text-ink [--reveal-delay:80ms] sm:mt-2 sm:text-3xl">
+                Whatever you sell, show it well
+              </h2>
+            </div>
+            <ul className="mt-5 grid grid-cols-2 gap-2 sm:mt-8 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 lg:gap-4">
+              {BUSINESSES.map((label, i) => (
                 <li
                   key={label}
-                  className="flex flex-col items-center gap-1.5 rounded-lg border border-line bg-white px-1 py-2.5 text-center text-[11px] font-medium leading-tight text-ink sm:flex-row sm:gap-2 sm:rounded-md sm:px-3 sm:py-1.5 sm:text-[13px]"
+                  data-reveal="up"
+                  style={{ "--reveal-delay": `${(i % 4) * 60}ms` } as React.CSSProperties}
+                  className="relative aspect-[4/3] overflow-hidden rounded-lg bg-line/60"
                 >
-                  <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-md ring-1 ring-inset sm:h-6 sm:w-6 ${TONES[tone]}`}>
-                    <Icon className="h-[18px] w-[18px] sm:h-3.5 sm:w-3.5" strokeWidth={1.75} aria-hidden />
+                  <Image
+                    src={businessImage(label)}
+                    alt=""
+                    fill
+                    sizes="(min-width: 1152px) 270px, (min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+                    className="object-cover"
+                  />
+                  {/* Keeps the label readable on any photo */}
+                  <span aria-hidden className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
+                  <span className="absolute inset-x-0 bottom-0 px-2.5 py-2 text-xs font-semibold leading-tight text-white sm:px-3 sm:py-2.5 sm:text-sm lg:text-[15px]">
+                    {label}
                   </span>
-                  {label}
                 </li>
               ))}
             </ul>

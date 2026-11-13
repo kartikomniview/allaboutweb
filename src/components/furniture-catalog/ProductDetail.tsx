@@ -119,7 +119,8 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
             the left column while the details scroll on the right. */}
         <div className="flex-1 overflow-y-auto overscroll-contain md:contents">
           {/* Photo gallery — swipe when there is more than one image; tap to open full screen.
-              Capped at ~55% of the screen height so the name and price show without scrolling. */}
+              Capped at ~55% of the screen height so the name and price show without scrolling.
+              Photos are contained (never cropped) on the light grey background. */}
           <div ref={heroRef} className="relative aspect-square max-h-[55svh] w-full bg-neutral-100 md:row-span-2 md:aspect-auto md:h-full md:max-h-none">
             {images.length > 0 ? (
               <div
@@ -143,7 +144,7 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
                       preload={idx === 0}
                       draggable={false}
                       onLoad={(e) => rememberImageSize(src, e.currentTarget)}
-                      className="object-cover md:object-contain"
+                      className="object-contain"
                     />
                   </button>
                 ))}

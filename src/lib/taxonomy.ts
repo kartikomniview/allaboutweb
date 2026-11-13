@@ -18,17 +18,28 @@ import {
   Archive,
   Armchair,
   Bath,
+  BatteryCharging,
   BedDouble,
   Blinds,
   BrickWall,
+  Cable,
+  Camera,
   Coffee,
   CookingPot,
+  Crown,
+  Diamond,
   DoorClosed,
+  Droplets,
+  Dumbbell,
+  Eye,
   Fan,
   Flame,
   Flower2,
   Footprints,
+  Gamepad2,
   Gem,
+  Glasses,
+  HardDrive,
   Headphones,
   Lamp,
   LampCeiling,
@@ -38,20 +49,29 @@ import {
   Lightbulb,
   Package,
   Refrigerator,
+  ScanEye,
   Scissors,
+  Shield,
   Shirt,
+  ShoppingBag,
+  ShowerHead,
   Snowflake,
   Baby,
   Venus,
   Moon,
   Smartphone,
+  SmartphoneCharging,
   Sofa,
   Sparkles,
   Sun,
   Table2,
+  Toilet,
   Tv,
   UtensilsCrossed,
+  Wallet,
   Wallpaper,
+  Watch,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 import FabricRollIcon from "@/components/icons/FabricRollIcon";
@@ -64,8 +84,13 @@ export const BUSINESS_TYPES = [
   { id: "flooring", label: "Flooring" },
   { id: "curtains", label: "Curtains & blinds" },
   { id: "fabrics", label: "Fabrics" },
+  { id: "bath", label: "Bath & sanitaryware" },
   { id: "clothing", label: "Clothing" },
+  { id: "footwear", label: "Footwear" },
+  { id: "jewellery", label: "Jewellery & accessories" },
+  { id: "optical", label: "Optical & eyewear" },
   { id: "electronics", label: "Electronics" },
+  { id: "mobiles", label: "Mobiles & accessories" },
 ] as const;
 
 export type BusinessTypeId = (typeof BUSINESS_TYPES)[number]["id"];
@@ -148,6 +173,52 @@ const KEYWORDS: Record<string, string> = {
   "Mobiles & Accessories": "mobile phone smartphone charger cable power bank cover",
   Computers: "laptop desktop monitor printer keyboard mouse computer",
   "Air Purifiers": "air purifier heater dehumidifier",
+  "Cameras & CCTV": "camera cctv security dslr webcam doorbell",
+  Gaming: "gaming console playstation xbox controller joystick",
+  Sportswear: "sportswear activewear gym track suit lower jersey",
+  // Bath & sanitaryware
+  "Faucets & Taps": "tap nal tonti faucet mixer bib cock",
+  Showers: "shower hand shower health faucet jet spray",
+  "Wash Basins": "wash basin washbasin sink",
+  Toilets: "toilet commode wc western indian flush cistern seat cover",
+  "Bath Accessories": "towel rod soap dish hook shelf corner tumbler holder",
+  "Bathroom Cabinets & Mirrors": "bathroom cabinet bathroom mirror vanity",
+  "Kitchen Sinks": "kitchen sink steel sink quartz",
+  "Bathtubs & Enclosures": "bathtub tub shower enclosure glass partition",
+  "Plumbing Fittings": "angle valve drain jali connection pipe fitting",
+  // Footwear
+  "Men's Footwear": "shoes joota chappal sandal floater slipper loafer mojari men",
+  "Women's Footwear": "heels sandal bellies jutti kolhapuri chappal sneakers women",
+  "Kids' Footwear": "kids shoes school shoes booties",
+  "Sports Shoes": "sports shoes running sneakers studs",
+  "Footwear Care": "socks insole polish shoe care",
+  // Jewellery & accessories ("neckless" and "breslet" are common spellings)
+  "Necklaces & Chains": "necklace neckless haar chain pendant locket mangalsutra choker",
+  Earrings: "earring jhumka jhumki bali tops stud hoop",
+  Rings: "ring angoothi bichiya toe ring band",
+  "Bangles & Bracelets": "bangle kada kangan chudi bracelet breslet",
+  "Jewellery Sets": "bridal set kundan polki temple jewellery",
+  "Anklets & Body Jewellery": "anklet payal pajeb nose pin nath maang tikka kamarbandh",
+  Watches: "watch ghadi wrist watch analog digital",
+  "Bags & Wallets": "bag purse handbag clutch sling backpack wallet",
+  "Belts & Accessories": "belt hair clip hairband cufflink keychain brooch",
+  // Optical & eyewear
+  Eyeglasses: "specs spectacles chashma frame eyeglasses",
+  Sunglasses: "sunglasses goggles shades chashma",
+  "Computer & Reading Glasses": "blue cut computer glasses reading readers",
+  "Contact Lenses": "contact lens coloured lens",
+  "Spectacle Lenses": "lens lenses power glass photochromic",
+  "Eyewear Accessories": "case cover cleaner cord solution",
+  // Mobiles & accessories
+  "Mobile Phones": "mobile phone smartphone android iphone keypad",
+  "Cases & Covers": "cover case back cover flip pouch",
+  "Screen Guards": "screen guard tempered glass protector",
+  "Chargers & Cables": "charger adapter cable data cable type c usb",
+  "Power Banks": "power bank portable charger battery",
+  "Earphones & Headsets": "earphones earbuds tws neckband headphones headset",
+  "Smartwatches & Bands": "smartwatch smart watch fitness band strap",
+  "Holders & Stands": "holder stand car mount selfie stick tripod ring light",
+  "Memory & Storage": "memory card sd card pendrive otg",
 };
 
 // Thumbnail for a furniture subcategory: public/e-catalog/subcategories/<slug>.webp,
@@ -254,16 +325,36 @@ const FABRICS: Def[] = [
 
 // Ready-made garments (raw cloth is under FABRICS).
 const CLOTHING: Def[] = [
-  ["Men's Wear", "Men's Wear", Shirt, ["Shirts", "T-Shirts", "Trousers & Jeans", "Kurtas & Ethnic Wear", "Suits & Blazers"]],
+  [
+    "Men's Wear",
+    "Men's Wear",
+    Shirt,
+    ["Shirts", "T-Shirts", "Trousers & Jeans", "Kurtas & Ethnic Wear", "Suits & Blazers", "Shorts & Track Pants"],
+  ],
   [
     "Women's Wear",
     "Women's Wear",
     Venus,
-    ["Sarees", "Kurtis & Kurtas", "Salwar Suits", "Lehengas", "Tops & Dresses", "Jeans & Trousers"],
+    [
+      "Sarees",
+      "Kurtis & Kurtas",
+      "Salwar Suits",
+      "Lehengas",
+      "Tops & Dresses",
+      "Jeans & Trousers",
+      "Co-ord Sets",
+      "Leggings & Palazzos",
+    ],
   ],
-  ["Kids' Wear", "Kids' Wear", Baby, ["Boys' Clothing", "Girls' Clothing", "Infant Wear", "Kids' Ethnic Wear"]],
+  [
+    "Kids' Wear",
+    "Kids' Wear",
+    Baby,
+    ["Boys' Clothing", "Girls' Clothing", "Infant Wear", "Kids' Ethnic Wear", "School Uniforms"],
+  ],
   ["Winter Wear", "Winter Wear", Snowflake, ["Jackets", "Sweaters", "Shawls & Stoles", "Thermals"]],
   ["Innerwear & Nightwear", "Innerwear & Nightwear", Moon, ["Innerwear", "Nightwear", "Loungewear"]],
+  ["Sportswear", "Sportswear", Dumbbell, ["Track Suits", "Sports T-Shirts", "Track Pants", "Gym Wear"]],
 ];
 
 const ELECTRONICS: Def[] = [
@@ -272,9 +363,80 @@ const ELECTRONICS: Def[] = [
   ["Kitchen Appliances", "Kitchen Appliances", CookingPot, ["Mixer Grinders", "Microwave Ovens", "Induction Cooktops", "Chimneys", "Kettles & Toasters"]],
   ["Fans & Coolers", "Fans & Coolers", Fan, ["Ceiling Fans", "Table & Pedestal Fans", "Air Coolers", "Exhaust Fans"]],
   ["Audio", "Audio", Headphones, ["Speakers", "Soundbars & Home Theatre", "Headphones & Earbuds"]],
+  // A mobile shop gets the detailed MOBILES categories; this one stays for electronics stores.
   ["Mobiles & Accessories", "Mobiles & Accessories", Smartphone, ["Smartphones", "Chargers & Cables", "Power Banks", "Covers & Screen Guards"]],
-  ["Computers", "Computers", Laptop, ["Laptops", "Desktops", "Monitors", "Printers", "Accessories"]],
+  ["Computers", "Computers", Laptop, ["Laptops", "Desktops", "Monitors", "Printers", "Tablets", "Accessories"]],
   ["Air Purifiers", "Air Purifiers & Heaters", AirVent, ["Air Purifiers", "Room Heaters", "Dehumidifiers"]],
+  ["Cameras & CCTV", "Cameras & CCTV", Camera, ["Digital Cameras", "CCTV Cameras", "Action Cameras", "Video Doorbells"]],
+  ["Gaming", "Gaming", Gamepad2, ["Consoles", "Controllers", "Gaming Accessories"]],
+];
+
+const BATH: Def[] = [
+  ["Faucets & Taps", "Faucets & Taps", Droplets, ["Basin Taps", "Sink Taps", "Wall Mixers", "Bib Cocks", "Sensor Taps"]],
+  ["Showers", "Showers", ShowerHead, ["Overhead Showers", "Hand Showers", "Health Faucets", "Rain Showers", "Shower Panels"]],
+  ["Wash Basins", "Wash Basins", Bath, ["Table-Top Basins", "Wall-Hung Basins", "Pedestal Basins", "Counter Basins"]],
+  ["Toilets", "Toilets", Toilet, ["Wall-Hung WC", "Floor-Mounted WC", "Indian Toilets", "Toilet Seat Covers", "Flush Tanks"]],
+  [
+    "Bath Accessories",
+    "Bath Accessories",
+    Sparkles,
+    ["Towel Rods & Rings", "Soap Dishes", "Robe Hooks", "Corner Shelves", "Tumbler Holders", "Paper Holders"],
+  ],
+  ["Bathroom Cabinets & Mirrors", "Bathroom Cabinets & Mirrors", Archive, ["Mirror Cabinets", "Bathroom Mirrors", "Vanity Units"]],
+  ["Kitchen Sinks", "Kitchen Sinks", CookingPot, ["Single Bowl Sinks", "Double Bowl Sinks", "Sinks with Drainboard", "Quartz Sinks"]],
+  ["Bathtubs & Enclosures", "Bathtubs & Enclosures", Bath, ["Bathtubs", "Shower Enclosures", "Shower Partitions"]],
+  ["Plumbing Fittings", "Plumbing Fittings", Wrench, ["Angle Valves", "Floor Drains", "Connection Pipes", "Waste Couplings"]],
+];
+
+const FOOTWEAR: Def[] = [
+  [
+    "Men's Footwear",
+    "Men's Footwear",
+    Footprints,
+    ["Formal Shoes", "Casual Shoes", "Sports Shoes", "Sandals & Floaters", "Slippers & Flip-Flops", "Mojaris"],
+  ],
+  [
+    "Women's Footwear",
+    "Women's Footwear",
+    Footprints,
+    ["Heels", "Flats & Bellies", "Sandals", "Juttis & Kolhapuris", "Sneakers", "Slippers"],
+  ],
+  ["Kids' Footwear", "Kids' Footwear", Baby, ["School Shoes", "Sports Shoes", "Sandals", "Baby Booties"]],
+  ["Sports Shoes", "Sports Shoes", Dumbbell, ["Running Shoes", "Walking Shoes", "Training Shoes", "Sports Studs"]],
+  ["Footwear Care", "Footwear Care", Sparkles, ["Socks", "Insoles", "Shoe Polish & Care"]],
+];
+
+const JEWELLERY: Def[] = [
+  ["Necklaces & Chains", "Necklaces & Chains", Gem, ["Chains", "Necklaces", "Pendants", "Mangalsutra", "Chokers"]],
+  ["Earrings", "Earrings", Diamond, ["Studs", "Jhumkas", "Hoops", "Drops & Danglers", "Ear Cuffs"]],
+  ["Rings", "Rings", Diamond, ["Couple & Engagement Rings", "Cocktail Rings", "Men's Rings", "Toe Rings"]],
+  ["Bangles & Bracelets", "Bangles & Bracelets", Gem, ["Bangles", "Kadas", "Bracelets", "Charm Bracelets"]],
+  ["Jewellery Sets", "Jewellery Sets", Crown, ["Bridal Sets", "Necklace Sets", "Kundan & Polki", "Temple Jewellery"]],
+  ["Anklets & Body Jewellery", "Anklets & Body Jewellery", Sparkles, ["Anklets", "Nose Pins & Nath", "Maang Tikka", "Kamarbandh"]],
+  ["Watches", "Watches", Watch, ["Men's Watches", "Women's Watches", "Kids' Watches", "Couple Watches", "Smartwatches"]],
+  ["Bags & Wallets", "Bags & Wallets", ShoppingBag, ["Handbags", "Sling Bags", "Clutches", "Backpacks", "Wallets"]],
+  ["Belts & Accessories", "Belts & Accessories", Wallet, ["Belts", "Hair Accessories", "Cufflinks & Tie Pins", "Keychains"]],
+];
+
+const OPTICAL: Def[] = [
+  ["Eyeglasses", "Eyeglasses", Glasses, ["Full Rim Frames", "Half Rim Frames", "Rimless Frames", "Kids' Frames"]],
+  ["Sunglasses", "Sunglasses", Sun, ["Aviator", "Wayfarer", "Round", "Polarised", "Sports Sunglasses"]],
+  ["Computer & Reading Glasses", "Computer & Reading Glasses", Laptop, ["Blue-Cut Glasses", "Reading Glasses", "Progressive Glasses"]],
+  ["Contact Lenses", "Contact Lenses", Eye, ["Daily Disposable", "Monthly Lenses", "Coloured Lenses", "Toric Lenses"]],
+  ["Spectacle Lenses", "Spectacle Lenses", ScanEye, ["Single Vision", "Bifocal", "Progressive", "Photochromic"]],
+  ["Eyewear Accessories", "Eyewear Accessories", Package, ["Cases", "Lens Cleaners", "Chains & Cords", "Lens Solution"]],
+];
+
+const MOBILES: Def[] = [
+  ["Mobile Phones", "Mobile Phones", Smartphone, ["Smartphones", "Feature Phones", "Refurbished Phones"]],
+  ["Cases & Covers", "Cases & Covers", Shield, ["Back Covers", "Flip Covers", "Silicone Cases", "Rugged Cases", "Pouches"]],
+  ["Screen Guards", "Screen Guards", Layers, ["Tempered Glass", "Privacy Glass", "Camera Lens Protectors", "Hydrogel Film"]],
+  ["Chargers & Cables", "Chargers & Cables", Cable, ["Wall Chargers", "Fast Chargers", "Wireless Chargers", "Car Chargers", "USB Cables"]],
+  ["Power Banks", "Power Banks", BatteryCharging, ["10000 mAh", "20000 mAh", "Wireless Power Banks", "Magnetic Power Banks"]],
+  ["Earphones & Headsets", "Earphones & Headsets", Headphones, ["Wireless Earbuds", "Neckbands", "Wired Earphones", "Bluetooth Headphones"]],
+  ["Smartwatches & Bands", "Smartwatches & Bands", Watch, ["Smartwatches", "Fitness Bands", "Watch Straps"]],
+  ["Holders & Stands", "Holders & Stands", SmartphoneCharging, ["Car Mounts", "Desk Stands", "Selfie Sticks & Tripods", "Ring Lights"]],
+  ["Memory & Storage", "Memory & Storage", HardDrive, ["Memory Cards", "Pen Drives", "OTG Adapters"]],
 ];
 
 const DEFS: Record<BusinessTypeId, Def[]> = {
@@ -284,8 +446,13 @@ const DEFS: Record<BusinessTypeId, Def[]> = {
   flooring: FLOORING,
   curtains: CURTAINS,
   fabrics: FABRICS,
+  bath: BATH,
   clothing: CLOTHING,
+  footwear: FOOTWEAR,
+  jewellery: JEWELLERY,
+  optical: OPTICAL,
   electronics: ELECTRONICS,
+  mobiles: MOBILES,
 };
 
 /** Every predefined category, in display order (business type, then category). */

@@ -32,9 +32,9 @@ export type DetectedProduct = {
 /** What the store sells, and the categories the AI may choose from (its business types' ones). */
 export type DetectContext = { businessTypes: readonly string[]; categories: readonly PickerCategory[] };
 
-// The API takes at most 80 categories with 40 subcategories each.
+// The API takes at most 120 categories with 40 subcategories each.
 const categoryPayload = (categories: readonly PickerCategory[]) =>
-  categories.slice(0, 80).map((c) => ({ name: c.name, subcategories: c.subcategories.slice(0, 40).map((s) => s.name) }));
+  categories.slice(0, 120).map((c) => ({ name: c.name, subcategories: c.subcategories.slice(0, 40).map((s) => s.name) }));
 
 const list = <T,>(v: T[] | undefined) => (Array.isArray(v) ? v : []);
 

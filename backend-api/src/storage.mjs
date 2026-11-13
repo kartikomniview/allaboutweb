@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { DeleteObjectsCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectsCommand, ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
 import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
 import { HttpError } from "./http.mjs";
 
@@ -116,6 +116,19 @@ export async function presignImageUploads(storeSlug, body) {
   );
 }
 
+// Deletes these keys, at most 1000 per request (the S3 limit). Throws on a failed request.
+async function deleteKeys(keys) {
+  for (let i = 0; i < keys.length; i += 1000) {
+    const res = await client().send(
+      new DeleteObjectsCommand({
+        Bucket: BUCKET,
+        Delete: { Objects: keys.slice(i, i + 1000).map((Key) => ({ Key })), Quiet: true },
+      }),
+    );
+    if (res.Errors?.length) console.error("Some images could not be deleted", res.Errors);
+  }
+}
+
 // Best-effort cleanup: only touches the given store's images and never
 // throws, so a failed delete can't fail the save that triggered it.
 export async function deleteImages(urls, storeSlug) {
@@ -123,14 +136,29 @@ export async function deleteImages(urls, storeSlug) {
   const keys = [...new Set(owned.map(keyFromUrl).filter(Boolean))];
   if (!keys.length) return;
   try {
-    const res = await client().send(
-      new DeleteObjectsCommand({
-        Bucket: BUCKET,
-        Delete: { Objects: keys.map((Key) => ({ Key })), Quiet: true },
-      }),
-    );
-    if (res.Errors?.length) console.error("Some images could not be deleted", res.Errors);
+    await deleteKeys(keys);
   } catch (err) {
     console.error("Image cleanup failed", err);
+  }
+}
+
+// Best effort, when a store is deleted: every file left in ecatalog/stores/{store}/,
+// including uploads that never made it into a product. Listing the folder needs
+// s3:ListBucket on the bucket; without it this logs the error and does nothing (the
+// product images and logo are deleted by URL beforehand). Never touches the demo
+// store, whose older images sit directly under ecatalog/.
+export async function deleteStoreFolder(storeSlug) {
+  if (!/^[a-z0-9]{3,30}$/.test(storeSlug ?? "") || storeSlug === LEGACY_IMAGE_STORE) return;
+  const Prefix = `${PREFIX}/${STORE_DIR}/${storeSlug}/`;
+  try {
+    let ContinuationToken;
+    do {
+      const res = await client().send(new ListObjectsV2Command({ Bucket: BUCKET, Prefix, ContinuationToken }));
+      const keys = (res.Contents ?? []).map((o) => o.Key).filter((key) => key?.startsWith(Prefix));
+      if (keys.length) await deleteKeys(keys);
+      ContinuationToken = res.IsTruncated ? res.NextContinuationToken : undefined;
+    } while (ContinuationToken);
+  } catch (err) {
+    console.error("Store folder cleanup failed", err);
   }
 }

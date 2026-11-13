@@ -18,7 +18,7 @@ const MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-5-5";
 
 const MEDIA_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_IMAGE_BASE64 = 4 * 1024 * 1024; // the browser sends a ~1024px JPEG, far smaller
-const MAX_CATEGORIES = 80;
+const MAX_CATEGORIES = 120;
 const MAX_SUBCATEGORIES = 40;
 // Caps on the answer (products accept more; see validateProduct).
 const MAX_KEYWORDS = 15;
@@ -62,10 +62,10 @@ function businessList(value) {
   if (value === undefined) return [];
   if (
     !Array.isArray(value) ||
-    value.length > 10 ||
+    value.length > 20 ||
     !value.every((v) => typeof v === "string" && v.trim() && v.length <= 40)
   ) {
-    throw bad("businessTypes must be a list of at most 10 names");
+    throw bad("businessTypes must be a list of at most 20 names");
   }
   return value.map((v) => v.trim());
 }
@@ -83,16 +83,16 @@ function imageBlock(body, storeSlug) {
   return { type: "image", source: { type: "base64", media_type: mediaType, data } };
 }
 
-const SYSTEM = `You catalogue products for an Indian retail store's online catalog. The store may sell furniture, home decor, lighting, flooring, curtains and blinds, fabrics, clothing, electronics or anything else.
+const SYSTEM = `You catalogue products for an Indian retail store's online catalog. The store may sell furniture, home decor, lighting, flooring, curtains and blinds, fabrics, bath and sanitaryware, clothing, footwear, jewellery and accessories, optical and eyewear, electronics, mobiles and mobile accessories or anything else.
 Look at the product photo and describe the main product in it.
 
-- productName: 3 to 6 words, a short appealing name followed by the product type, e.g. "Nilgiri L-Shape Corner Sofa", "Jaipur Brass Pendant Light", "Ivory Sheer Window Curtain", "Kashmiri Wool Area Rug", "Velvet Upholstery Fabric", "Banarasi Silk Saree", "55-inch 4K Smart LED TV".
-- productType: what the product is, in 1 to 3 plain lowercase words, e.g. "ceramic jug", "corner sofa", "pendant light", "sheer curtain".
+- productName: 3 to 6 words, a short appealing name followed by the product type, e.g. "Nilgiri L-Shape Corner Sofa", "Jaipur Brass Pendant Light", "Ivory Sheer Window Curtain", "Kashmiri Wool Area Rug", "Velvet Upholstery Fabric", "Banarasi Silk Saree", "55-inch 4K Smart LED TV", "22K Gold Temple Necklace", "Men's Leather Formal Shoes", "Polarised Aviator Sunglasses", "Chrome Wall Mixer Tap".
+- productType: what the product is, in 1 to 3 plain lowercase words, e.g. "ceramic jug", "corner sofa", "pendant light", "sheer curtain", "gold necklace", "running shoes", "wall mixer".
 - categoryFit: decide this from the productType alone, before choosing a category. "exact" when one of the store's categories is this kind of product and one of its subcategories fits; "close" when a category is this kind of product but no subcategory fits exactly; "none" when none of the categories is this kind of product. Something used on, in or near furniture is not furniture: a jug, vase, bottle, bowl, lamp, cushion or clock in a store that only lists furniture categories is "none". Never choose a category only because it is the least bad option.
 - categoryName and subcategoryName: always use the exact names from the store's list; the subcategory must belong to the chosen category. When categoryFit is "close", choose the closest subcategory. When categoryFit is "none", set both to an empty string. Never make up a new name.
 - description: 1 to 2 plain, friendly sentences for shoppers, at most 300 characters. Describe only what is visible: no prices, warranty or delivery claims.
 - dimensions: only if a size is printed on the product or its packaging; otherwise an empty string. Never guess a size.
-- specs: 2 to 6 short label/value pairs that matter for this kind of product and are visible or clearly implied, e.g. Wood: Sheesham, Seating: 3 Seater, Bulb: LED, Mount: Ceiling, Pattern: Floral, Opacity: Sheer, Screen: 55 inch. Labels are 1 or 2 words. No Colour or Material labels. No prices, warranty or delivery.
+- specs: 2 to 6 short label/value pairs that matter for this kind of product and are visible or clearly implied, e.g. Wood: Sheesham, Seating: 3 Seater, Bulb: LED, Mount: Ceiling, Pattern: Floral, Opacity: Sheer, Screen: 55 inch, Metal: 22K Gold, Size: UK 8, Frame: Rimless, Finish: Chrome. Labels are 1 or 2 words. No Colour or Material labels. No prices, warranty or delivery.
 - tags: 1 to 3 short descriptive labels for the product card, e.g. "Handcrafted", "Modern", "Space Saver", "Festive". No price or offer claims like "Hot Deal" or "Best Price".
 - highlights: 2 to 4 short selling points, each at most 60 characters, based only on what is visible.
 - keywords: 8 to 15 lowercase search terms a shopper might type to find this product, each 1 to 3 words. Cover the product type and its synonyms, including common Indian names (e.g. "almirah", "diwan", "jhoomar", "parda", "dari"), the room it suits, style, visible colours, material and visible features. Only what the photo supports; no brand names unless visible on the product.`;

@@ -10,6 +10,7 @@ import {
   LayoutGrid,
   Mail,
   MapPin,
+  MessageCircle,
   Phone,
   Quote,
   Store,
@@ -22,18 +23,17 @@ import { authFieldErrorClass, authInputClass, authInputIconClass, authLabelClass
 import { Breadcrumbs, Button, Card, Skeleton, buttonClass } from "@/components/admin/ui";
 import BusinessTypePicker from "@/components/admin/BusinessTypePicker";
 import StoreLogoPicker from "@/components/admin/StoreLogoPicker";
-import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
+import WhatsappNumberPanel, { WhatsappStatusBadge } from "@/components/admin/WhatsappNumberPanel";
 import { flagField } from "@/components/admin/ripple";
 import { discardUploads } from "@/lib/adminProducts";
 import { AuthError } from "@/lib/adminAuth";
 import { getOwnStore, updateOwnStore, type StoreDetails, type StoreDetailsInput } from "@/lib/adminStore";
 
 type Form = Omit<StoreDetailsInput, "since"> & { since: string };
-type FieldErrors = Partial<Record<"name" | "whatsapp" | "businessTypes", string>>;
+type FieldErrors = Partial<Record<"name" | "businessTypes", string>>;
 
 const toForm = (s: StoreDetails): Form => ({
   name: s.name,
-  whatsapp: s.whatsapp,
   phone: s.phone,
   email: s.email,
   address: s.address,
@@ -76,7 +76,7 @@ function Field({
 }: {
   id: string;
   label: string;
-  icon: LucideIcon | typeof WhatsAppIcon;
+  icon: LucideIcon;
   required?: boolean;
   hint?: ReactNode;
   error?: string;
@@ -172,11 +172,9 @@ export default function StoreSettingsPage() {
 
     const next: FieldErrors = {};
     if (form.name.trim().length < 3) next.name = "Use at least 3 characters.";
-    if (form.whatsapp.replace(/\D/g, "").length < 10) next.whatsapp = "Enter your WhatsApp number.";
     if (!form.businessTypes.length) next.businessTypes = "Choose at least one.";
     setErrors(next);
     if (next.name) return flagField(document.getElementById("store-name"));
-    if (next.whatsapp) return flagField(document.getElementById("store-whatsapp"));
     if (next.businessTypes) return flagField(document.querySelector<HTMLElement>("#business-types button"));
 
     setSaving(true);
@@ -272,21 +270,6 @@ export default function StoreSettingsPage() {
                 enterKeyHint="next"
               />
               <Field
-                id="store-whatsapp"
-                label="WhatsApp number"
-                icon={WhatsAppIcon}
-                required
-                error={errors.whatsapp}
-                type="tel"
-                inputMode="tel"
-                value={form.whatsapp}
-                onChange={(e) => set("whatsapp", e.target.value)}
-                maxLength={20}
-                placeholder="98765 XXXX"
-                autoComplete="tel"
-                enterKeyHint="next"
-              />
-              <Field
                 id="store-tagline"
                 label="Tagline"
                 icon={Quote}
@@ -319,6 +302,17 @@ export default function StoreSettingsPage() {
                 enterKeyHint="next"
               />
             </div>
+          </Section>
+
+          {/* Requested and approved on its own, not saved with the form */}
+          <Section icon={MessageCircle} title="WhatsApp number" aside={<WhatsappStatusBadge store={store} />}>
+            <WhatsappNumberPanel
+              store={store}
+              onUpdated={(saved) =>
+                // Keep the form's unsaved edits; only the WhatsApp fields change.
+                setStore((s) => (s ? { ...s, whatsapp: saved.whatsapp, whatsappRequest: saved.whatsappRequest } : saved))
+              }
+            />
           </Section>
 
           <Section icon={LayoutGrid} title="What you sell">

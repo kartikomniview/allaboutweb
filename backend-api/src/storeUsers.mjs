@@ -1,6 +1,7 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { auth, db } from "./firebase.mjs";
 import { HttpError } from "./http.mjs";
+import { deleteImages, deleteStoreFolder } from "./storage.mjs";
 import { STORE_SLUG_RE, accountError, checkLogin } from "./stores.mjs";
 
 // Super admin: the logins of one store. Every users/{uid} with the store's slug
@@ -100,6 +101,11 @@ export async function removeStoreUser(slug, uid, actingUid) {
   if (uid === ownerUid) throw bad("The store owner can't be removed");
   if (uid === actingUid) throw bad("You can't remove your own account");
 
+  await deleteLogin(uid);
+}
+
+// Ends the login's sessions and deletes users/{uid} and its Firebase account.
+async function deleteLogin(uid) {
   await endSessions(uid);
   await db().collection(USERS).doc(uid).delete();
   try {
@@ -108,4 +114,57 @@ export async function removeStoreUser(slug, uid, actingUid) {
     // Already gone from Firebase Authentication: the login is removed either way.
     if (err?.code !== "auth/user-not-found") throw err;
   }
+}
+
+/* ---------- Deleting a whole store ---------- */
+
+// Products from before stores existed belong to it, and the landing page links to it.
+const DEMO_STORE = "demo";
+
+const strings = (value) => (Array.isArray(value) ? value.filter((v) => typeof v === "string" && v) : []);
+
+// DELETE /admin/stores/{slug}  { confirm: "<slug>" }
+// Permanently deletes the store: its products and their images, every login (sessions,
+// users/{uid} and the Firebase account) and stores/{slug}. The slug is then free to
+// register again. Never the demo store or the caller's own store.
+// The store is switched off first and its document deleted last, so if a step fails
+// the store stays locked and calling this again finishes the job.
+export async function deleteStore(slug, body, acting) {
+  if (!STORE_SLUG_RE.test(slug ?? "")) throw bad("Invalid store");
+  if (body?.confirm !== slug) throw bad("Type the store's link name to confirm");
+  if (slug === DEMO_STORE) throw bad("The demo store can't be deleted");
+  if (slug === acting.storeSlug) throw bad("You can't delete your own store");
+
+  const ref = db().collection("stores").doc(slug);
+  const store = await ref.get();
+  if (!store.exists) throw storeNotFound();
+
+  // 1. Lock everyone out at once (the owner's next request fails with STORE_INACTIVE).
+  await ref.update({ active: false, updatedAt: FieldValue.serverTimestamp() });
+
+  // 2. Products and their images, the logo and the cover image.
+  const products = await db().collection("products").where("storeSlug", "==", slug).get();
+  const images = [
+    ...products.docs.flatMap((doc) => strings(doc.get("images"))),
+    ...strings([store.get("logo"), store.get("coverImage")]),
+  ];
+  await deleteImages(images, slug);
+  await deleteStoreFolder(slug);
+  for (let i = 0; i < products.docs.length; i += 400) {
+    const batch = db().batch();
+    for (const doc of products.docs.slice(i, i + 400)) batch.delete(doc.ref);
+    await batch.commit();
+  }
+
+  // 3. Every login of the store, including the owner's account.
+  const users = await db().collection(USERS).where("storeSlug", "==", slug).get();
+  const uids = new Set(users.docs.map((doc) => doc.id));
+  const ownerUid = store.get("ownerUid");
+  if (typeof ownerUid === "string" && UID_RE.test(ownerUid)) uids.add(ownerUid);
+  uids.delete(acting.uid); // never the caller (their store is another one, checked above)
+  for (const uid of uids) await deleteLogin(uid);
+
+  // 4. The store itself.
+  await ref.delete();
+  return { slug, products: products.size, users: uids.size };
 }

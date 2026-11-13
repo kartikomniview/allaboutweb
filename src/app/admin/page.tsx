@@ -105,7 +105,12 @@ export default function AdminLoginPage() {
   if (checking) return <AuthLoading label="Checking session…" />;
 
   return (
-    <AuthLayout title="Log in" subtitle="Manage your store's products and details." contentClassName="admin-fade-in">
+    <AuthLayout
+      title="Log in"
+      subtitle="Manage your store's products and details."
+      homeHref="/"
+      contentClassName="admin-fade-in"
+    >
       <form onSubmit={handleSubmit} noValidate className={authFormClass}>
         <div className="flex flex-col gap-5">
           <div data-field>

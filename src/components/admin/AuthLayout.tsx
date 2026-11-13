@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 import { AppIcon, Wordmark } from "@/components/catalog24/Logo";
@@ -36,8 +37,14 @@ export const authSecondaryButtonClass =
 /** The page's <form>: grows to fill the screen so <AuthActions> can sit at the bottom. */
 export const authFormClass = "flex flex-1 flex-col";
 
-function Logo() {
-  return <Wordmark className="h-6" eager />;
+function Logo({ href }: { href?: string }) {
+  const mark = <Wordmark className="h-6" eager />;
+  if (!href) return mark;
+  return (
+    <Link href={href} aria-label="Catalog24 home" className="rounded-sm focus-visible:outline-none! focus-visible:ring-[3px] focus-visible:ring-primary/20">
+      {mark}
+    </Link>
+  );
 }
 
 /** "Step 2 of 3" with a segmented bar. */
@@ -106,6 +113,7 @@ export default function AuthLayout({
   subtitle,
   progress,
   onBack,
+  homeHref,
   contentKey,
   contentClassName = "",
   children,
@@ -116,6 +124,11 @@ export default function AuthLayout({
   progress?: ReactNode;
   /** Phones: a back arrow in the top bar (registration steps). */
   onBack?: () => void;
+  /**
+   * The Catalog24 home page (login): the logo links there, phones get a back arrow
+   * to it in the top bar (unless onBack is set), and larger screens a link under the card.
+   */
+  homeHref?: string;
   /** Changing it replays contentClassName's animation (e.g. a new registration step). */
   contentKey?: string | number;
   contentClassName?: string;
@@ -133,7 +146,7 @@ export default function AuthLayout({
     <div className="flex min-h-dvh flex-1 flex-col bg-white sm:items-center sm:justify-center sm:bg-paper sm:px-6 sm:py-12">
       {/* Larger screens: logo above the card */}
       <div className="mb-6 hidden sm:flex">
-        <Logo />
+        <Logo href={homeHref} />
       </div>
 
       <div className="flex w-full flex-1 flex-col sm:max-w-[420px] sm:flex-none sm:rounded-lg sm:border sm:border-line sm:bg-white sm:shadow-[0_1px_2px_rgba(1,18,60,0.04),0_16px_40px_-20px_rgba(1,18,60,0.18)]">
@@ -141,7 +154,7 @@ export default function AuthLayout({
         <header className="sticky top-0 z-20 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur sm:hidden">
           <div className="flex h-14 items-center px-1.5">
             <div className="w-11">
-              {onBack && (
+              {onBack ? (
                 <button
                   type="button"
                   onClick={onBack}
@@ -151,10 +164,21 @@ export default function AuthLayout({
                 >
                   <ArrowLeft className="h-5 w-5" aria-hidden />
                 </button>
+              ) : (
+                homeHref && (
+                  <Link
+                    href={homeHref}
+                    onPointerDown={ripple}
+                    aria-label="Back to home"
+                    className="relative grid h-11 w-11 place-items-center overflow-hidden rounded-full text-ink transition-colors active:bg-ink/[0.06]"
+                  >
+                    <ArrowLeft className="h-5 w-5" aria-hidden />
+                  </Link>
+                )
               )}
             </div>
             <div className="flex flex-1 justify-center">
-              <Logo />
+              <Logo href={homeHref} />
             </div>
             <div className="w-11" aria-hidden />
           </div>
@@ -171,6 +195,17 @@ export default function AuthLayout({
           </div>
         </div>
       </div>
+
+      {/* Larger screens: a way back to the home page, under the card */}
+      {homeHref && (
+        <Link
+          href={homeHref}
+          className="mt-5 hidden items-center gap-1.5 rounded-sm text-sm font-medium text-slate transition-colors hover:text-ink focus-visible:outline-none! focus-visible:ring-[3px] focus-visible:ring-primary/20 sm:inline-flex"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden />
+          Back to home
+        </Link>
+      )}
     </div>
   );
 }

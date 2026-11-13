@@ -211,15 +211,21 @@ export default function AdminDashboardPage() {
       href: "/admin/ecatalog/new",
       cta: "Add",
     },
+    // Owners request the number; a Catalog24 admin approves it before it goes live.
     {
       id: "whatsapp",
-      title: "Add your WhatsApp number",
-      text: "Customer enquiries from your catalog go there.",
+      title: "Request your WhatsApp number",
+      text:
+        details?.whatsappRequest?.status === "pending"
+          ? "Waiting for approval by Catalog24."
+          : details?.whatsappRequest?.status === "rejected"
+            ? "Your request wasn't approved. Check the number and try again."
+            : "Customer enquiries from your catalog go there.",
       icon: MessageCircle,
       short: "WhatsApp",
       done: !!whatsapp,
       href: "/admin/settings",
-      cta: "Add",
+      cta: details?.whatsappRequest?.status === "pending" ? "View" : "Request",
     },
     {
       id: "publish",
