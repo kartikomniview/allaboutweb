@@ -28,6 +28,7 @@ import { flagField } from "@/components/admin/ripple";
 import { discardUploads } from "@/lib/adminProducts";
 import { AuthError } from "@/lib/adminAuth";
 import { getOwnStore, updateOwnStore, type StoreDetails, type StoreDetailsInput } from "@/lib/adminStore";
+import { storeTypeLabel } from "@/lib/taxonomy";
 
 type Form = Omit<StoreDetailsInput, "since"> & { since: string };
 type FieldErrors = Partial<Record<"name" | "businessTypes", string>>;
@@ -287,7 +288,13 @@ export default function StoreSettingsPage() {
                 value={form.category}
                 onChange={(e) => set("category", e.target.value)}
                 maxLength={60}
-                placeholder="Home Decor Store"
+                // Empty: customers see one made from "What you sell" (shown here as it updates).
+                placeholder={storeTypeLabel("", form.businessTypes) || "Home Decor Store"}
+                hint={
+                  form.category.trim()
+                    ? "Shown on your store page and in link previews."
+                    : "Optional. Leave it empty to use what you sell, as shown."
+                }
                 autoCapitalize="words"
                 enterKeyHint="next"
               />

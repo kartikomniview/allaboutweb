@@ -101,6 +101,20 @@ export const isBusinessType = (v: unknown): v is BusinessTypeId =>
 
 export const businessTypeLabel = (id: string) => BUSINESS_TYPES.find((t) => t.id === id)?.label ?? id;
 
+/**
+ * The store's "Type of store" as customers see it (store page, link previews): what the
+ * owner typed in Store settings, or else one made from what it sells, e.g.
+ * "Furniture store", "Furniture and lighting store", "Clothing, footwear, optical & eyewear and more".
+ */
+export function storeTypeLabel(category: string, types: readonly string[]): string {
+  if (category.trim()) return category.trim();
+  const labels = types.map(businessTypeLabel).map((label, i) => (i === 0 ? label : label.toLowerCase()));
+  if (!labels.length) return "";
+  if (labels.length > 3) return `${labels.slice(0, 3).join(", ")} and more`;
+  const list = labels.length === 1 ? labels[0] : `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
+  return `${list} store`;
+}
+
 // Stores created before business types existed (the Demo store) sell furniture.
 export const DEFAULT_BUSINESS_TYPES: BusinessTypeId[] = ["furniture"];
 

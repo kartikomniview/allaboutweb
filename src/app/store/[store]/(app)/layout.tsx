@@ -6,7 +6,7 @@ import StoreUnavailable from "@/components/furniture-catalog/StoreUnavailable";
 import { getStoreCatalog, isInactive } from "@/lib/catalogProducts";
 import { CATALOG_ICONS } from "@/lib/catalogDomain";
 import { firstPhoto, productCount, shareTags } from "@/lib/shareMeta";
-import { categoryLabel, sortCategoryNames } from "@/lib/taxonomy";
+import { categoryLabel, sortCategoryNames, storeTypeLabel } from "@/lib/taxonomy";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -45,8 +45,10 @@ export async function generateMetadata({ params }: LayoutProps<"/store/[store]">
   if (isInactive(catalog)) return { title: `${catalog.name} · Store unavailable`, robots: { index: false }, icons: CATALOG_ICONS };
   const { store, products } = catalog;
 
+  // What the owner typed as "Type of store", or one made from what it sells ("Furniture store").
+  const storeType = storeTypeLabel(store.category, store.businessTypes);
   const description =
-    [store.tagline, store.category].filter(Boolean).join(" · ") || `Browse ${store.name}'s catalog and enquire on WhatsApp.`;
+    [store.tagline, storeType].filter(Boolean).join(" · ") || `Browse ${store.name}'s catalog and enquire on WhatsApp.`;
 
   // A shared store link: the store's name and what it sells ("Sofas, Beds, Dining and
   // more · 48 products"), with its cover photo, else a product photo, else its logo.
@@ -58,7 +60,7 @@ export async function generateMetadata({ params }: LayoutProps<"/store/[store]">
     ? DEMO_SHARE
     : {
         // "Nilgiri Furniture · Solid Wood Furniture Store"
-        title: [store.name, store.category].filter(Boolean).join(" · "),
+        title: [store.name, storeType].filter(Boolean).join(" · "),
         // "Solid Wood. Sofas, Beds, Dining and more · 48 products. Browse the catalog and enquire on WhatsApp."
         description: [store.tagline && `${store.tagline}.`, selling, "Browse the catalog and enquire on WhatsApp."]
           .filter(Boolean)

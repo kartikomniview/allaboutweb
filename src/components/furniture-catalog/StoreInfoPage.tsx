@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { ChevronDown, ChevronRight, Clock, Mail, MapPin, Navigation, Phone, Share2, Star } from "lucide-react";
 import { telHref } from "@/lib/catalogStore";
+import { storeTypeLabel } from "@/lib/taxonomy";
 import { FAQS, TRUST_POINTS } from "./data";
 import { StoreMark, WhatsAppIcon, useCatalog } from "./shared";
 
@@ -46,7 +47,10 @@ export default function StoreInfoPage() {
     store.phone && { label: "Phone", icon: Phone, value: store.phone, href: telHref(store.phone) },
     store.email && { label: "Email", icon: Mail, value: store.email, href: `mailto:${store.email}` },
   ].filter((d) => !!d);
-  const subtitle = [store.category, store.since && `Since ${store.since}`].filter(Boolean).join(" · ");
+  // "Furniture store · Since 2012": the type the owner typed, or one made from what it sells.
+  const subtitle = [storeTypeLabel(store.category, store.businessTypes), store.since && `Since ${store.since}`]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     // Phones: one column. Desktop: the store card on the left (pinned), details and FAQs on the right.

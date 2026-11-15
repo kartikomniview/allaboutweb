@@ -1150,25 +1150,46 @@ const DETECTED_LISTS = ["keywords", "specs", "tags", "highlights"] as const;
 
 // "fill-empty" (automatic, on the first photo) only fills what the admin left
 // empty; "replace" (the Auto-fill button) overwrites with everything detected.
-function mergeDetected(f: FormState, d: DetectedProduct, mode: "fill-empty" | "replace"): FormState {
+//
+// `prev` is the previous detection in this form. A value that's still what it put in
+// (the owner didn't change it) counts as empty, so a new photo replaces it. Otherwise
+// details from an earlier photo would stay: a trousers photo removed and a sofa photo
+// added gave a sofa named "Black Formal Trousers" (only the empty category got filled).
+// Whatever the owner typed or picked is always kept.
+function mergeDetected(
+  f: FormState,
+  d: DetectedProduct,
+  mode: "fill-empty" | "replace",
+  prev: DetectedProduct | null,
+): FormState {
   const next = { ...f };
+  const sameList = (a: unknown[], b: unknown[]) => JSON.stringify(a) === JSON.stringify(b);
   for (const key of DETECTED_FIELDS) {
-    if (d[key] && (mode === "replace" || !f[key].trim())) next[key] = d[key];
+    const fromPrev = !!prev?.[key] && f[key] === prev[key];
+    if (d[key] && (mode === "replace" || !f[key].trim() || fromPrev)) next[key] = d[key];
   }
   for (const key of DETECTED_LISTS) {
     const value = d[key];
-    if (value.length && (mode === "replace" || f[key].filter(Boolean).length === 0)) {
+    const fromPrev = !!prev?.[key].length && sameList(f[key], prev[key]);
+    if (value.length && (mode === "replace" || f[key].filter(Boolean).length === 0 || fromPrev)) {
       (next[key] as typeof value) = value;
     }
   }
+  const categoryFromPrev =
+    !!prev?.categoryName && f.categoryName === prev.categoryName && f.subcategoryName === prev.subcategoryName;
   // Only a full pair is applied, so a re-detect never clears a chosen subcategory.
   if (
     d.categoryName &&
     d.subcategoryName &&
-    (mode === "replace" || !f.categoryName.trim() || !f.subcategoryName.trim())
+    (mode === "replace" || !f.categoryName.trim() || !f.subcategoryName.trim() || categoryFromPrev)
   ) {
     next.categoryName = d.categoryName;
     next.subcategoryName = d.subcategoryName;
+  } else if (!d.categoryName && categoryFromPrev) {
+    // The new photo fits none of the store's categories: drop the earlier photo's
+    // category, so the owner is asked to pick one (instead of e.g. trousers under Sofa).
+    next.categoryName = "";
+    next.subcategoryName = "";
   }
   return next;
 }
@@ -1347,6 +1368,9 @@ export default function ProductFormDrawer({
   // The first photo's upload waits for that popup (it goes into the chosen category's
   // folder); this resumes it with the form as the owner left it.
   const mismatchDone = useRef<((folder: ImageFolder) => void) | null>(null);
+  // The last details AI detected in this form: a new photo's detection replaces those
+  // that are still unchanged (see mergeDetected).
+  const lastDetected = useRef<DetectedProduct | null>(null);
   const dirty = JSON.stringify(form) !== JSON.stringify(initial);
 
   // New products are added step by step (photos, details, price, extras, review);
@@ -1397,9 +1421,11 @@ export default function ProductFormDrawer({
   const storeLabel = joinLabels(store.businessTypes.map(businessTypeLabel));
 
   function applyDetected(d: DetectedProduct, mode: "fill-empty" | "replace"): FormState {
-    const next = mergeDetected(formRef.current, d, mode);
+    const prev = lastDetected.current;
+    lastDetected.current = d;
+    const next = mergeDetected(formRef.current, d, mode, prev);
     formRef.current = next;
-    setForm((f) => mergeDetected(f, d, mode));
+    setForm((f) => mergeDetected(f, d, mode, prev));
     const filled = (key: "productName" | "categoryName" | "subcategoryName") =>
       d[key] && next[key] === d[key] ? d[key] : undefined;
     setAutoFilled({
