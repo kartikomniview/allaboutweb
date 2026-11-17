@@ -27,7 +27,7 @@ export const useAdminUser = (): AdminUser => useAdminContext().user;
 /** Updates the store name shown in the panel after it's changed in Store settings. */
 export const useSetAdminStore = () => useAdminContext().setStore;
 
-/** The store's public catalog: https://demostore.catalog24.in (dev: http://demostore.localhost:3000). */
+/** The store's public catalog: https://demostore.catalog24.in (dev: http://demostore.catalog24.localhost:3000). */
 export function useLiveCatalogUrl(): string {
   const { store } = useAdminUser();
   return storeUrlFor(store.slug, typeof window === "undefined" ? undefined : window.location);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import {
   ArrowUpRight,
   ChevronDown,
@@ -81,6 +81,13 @@ function Switch({
   );
 }
 
+// The settings panel of an open row: white blocks, each with a small heading.
+const sectionClass = "rounded-md border border-line bg-white p-3.5";
+const sectionTitleClass = "block text-[11px] font-semibold uppercase tracking-[0.08em] text-slate";
+const sectionHelpClass = "mt-0.5 text-xs text-slate";
+const panelInputClass =
+  "h-10 rounded-md border border-line bg-white px-3 text-base text-ink placeholder:text-slate/55 transition-[border-color,box-shadow] hover:border-slate/35 focus:border-primary focus:outline-none focus-visible:outline-none! focus:ring-[3px] focus:ring-primary/15 sm:text-sm";
+
 // "12 of 20" with a thin usage bar (none when unlimited).
 function ProductUsage({ store, className = "" }: { store: ManagedStore; className?: string }) {
   const used = store.productLimit ? Math.min(store.productCount / store.productLimit, 1) : 0;
@@ -105,7 +112,8 @@ function ProductUsage({ store, className = "" }: { store: ManagedStore; classNam
   );
 }
 
-// One store in the list. The arrow opens its settings: product limit, users, delete.
+// One store in the list. Clicking the row (or its arrow) opens its settings: WhatsApp
+// number, product limit, users, delete.
 function StoreRow({
   store,
   open,
@@ -201,9 +209,27 @@ function StoreRow({
     }
   }
 
+  // A click anywhere on the row opens it, except on its own controls (the link, the
+  // switch, the arrow) or while selecting text to copy.
+  function onRowClick(e: MouseEvent<HTMLDivElement>) {
+    if ((e.target as HTMLElement).closest("a, button, input, label")) return;
+    if (window.getSelection()?.toString()) return;
+    onToggle();
+  }
+
   return (
-    <li className={store.active ? "bg-white" : "bg-paper/70"}>
-      <div className="flex items-center gap-3 py-2.5 pl-3 pr-1.5 sm:pl-4 sm:pr-2">
+    <li className={`relative transition-colors ${open ? "bg-paper/60" : store.active ? "bg-white" : "bg-paper/70"}`}>
+      {/* The open row's accent bar */}
+      <span
+        aria-hidden
+        className={`absolute inset-y-0 left-0 w-[3px] bg-primary transition-opacity duration-200 ${open ? "opacity-100" : "opacity-0"}`}
+      />
+      <div
+        onClick={onRowClick}
+        className={`flex cursor-pointer items-center gap-3 py-2.5 pl-3 pr-1.5 transition-colors sm:pl-4 sm:pr-2 ${
+          open ? "" : "hover:bg-ink/[0.025]"
+        }`}
+      >
         <span
           className={`grid h-10 w-10 shrink-0 place-items-center rounded-md text-sm font-bold uppercase ${
             store.active ? "bg-tint text-primary" : "bg-ink/[0.06] text-slate"
@@ -254,7 +280,9 @@ function StoreRow({
           aria-expanded={open}
           aria-controls={panelId}
           aria-label={`${open ? "Hide" : "Show"} settings for ${store.name}`}
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-slate transition-colors hover:bg-ink/[0.05] hover:text-ink"
+          className={`grid h-11 w-11 shrink-0 place-items-center rounded-full transition-colors hover:bg-ink/[0.05] hover:text-ink ${
+            open ? "text-ink" : "text-slate"
+          }`}
         >
           <ChevronDown
             className={`h-5 w-5 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
@@ -264,159 +292,184 @@ function StoreRow({
       </div>
 
       {open && (
-        <div
-          id={panelId}
-          className="admin-fade-in flex flex-col gap-3 border-t border-line bg-paper/60 px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6 sm:px-4 sm:pl-[4.25rem]"
-        >
-          {/* WhatsApp number (owners request it; it goes live once approved here). Older API builds don't send it. */}
-          {store.whatsapp !== undefined &&
-            (pendingRequest ? (
-              <div className="rounded-md border border-amber-200 bg-amber-50 p-3 sm:basis-full">
-                <p className="flex items-center gap-1.5 text-[13px] font-semibold text-amber-900">
-                  <Clock className="h-4 w-4 shrink-0 text-amber-600" aria-hidden />
-                  WhatsApp number requested:{" "}
-                  <span className="tabular-nums">{formatWhatsapp(pendingRequest.number)}</span>
-                </p>
-                <p className="mt-0.5 text-xs text-amber-800/90">
-                  Requested {formatRelative(pendingRequest.requestedAt).toLowerCase()}.{" "}
-                  {liveWhatsapp ? `It would replace ${liveWhatsapp}.` : "The store has no number yet."} Check it&apos;s
-                  the owner&apos;s before approving.
-                </p>
-                {/* Phones: the reason on its own line, the three buttons in a row under it. Larger screens: one row. */}
-                <div className="mt-2.5 flex flex-col gap-2 sm:flex-row sm:items-center">
-                  <input
-                    value={rejectReason}
-                    onChange={(e) => setRejectReason(e.target.value)}
-                    maxLength={200}
-                    placeholder="Reason, if rejecting (optional)"
-                    aria-label="Reason for rejecting (shown to the owner)"
-                    className="h-10 w-full min-w-0 rounded-md border border-line bg-white px-3 text-base text-ink placeholder:text-slate/55 focus:border-primary focus:outline-none focus-visible:outline-none! focus:ring-[3px] focus:ring-primary/15 sm:order-2 sm:flex-1 sm:text-sm"
-                  />
-                  <div className="flex gap-2 sm:contents">
-                    <a
-                      href={`https://wa.me/${pendingRequest.number}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={buttonClass(
-                        "secondary",
-                        "sm",
-                        "h-10 flex-1 px-3.5 text-whatsapp sm:order-1 sm:flex-none",
-                      )}
-                    >
-                      <WhatsAppIcon className="h-4 w-4" />
-                      Chat to check
-                    </a>
+        <div id={panelId} className="admin-fade-in px-3 pb-4 sm:pl-[4.25rem] sm:pr-4">
+          <div className="grid gap-3 md:grid-cols-2">
+            {/* WhatsApp number (owners request it; it goes live once approved here). Older API builds don't send it. */}
+            {store.whatsapp !== undefined &&
+              (pendingRequest ? (
+                <section className="rounded-md border border-amber-200 bg-amber-50 p-3.5 md:col-span-2">
+                  <h3 className={`${sectionTitleClass} text-amber-800`}>WhatsApp request</h3>
+                  <p className="mt-1.5 flex items-center gap-1.5 text-sm font-semibold text-amber-950">
+                    <Clock className="h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+                    <span className="tabular-nums">{formatWhatsapp(pendingRequest.number)}</span>
+                  </p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-amber-900/90">
+                    Requested {formatRelative(pendingRequest.requestedAt).toLowerCase()}.{" "}
+                    {liveWhatsapp ? `It would replace ${liveWhatsapp}.` : "The store has no number yet."} Check
+                    it&apos;s the owner&apos;s before approving.
+                  </p>
+                  {/* Phones: the reason on its own line, the three buttons in a row under it. Larger screens: one row. */}
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <input
+                      value={rejectReason}
+                      onChange={(e) => setRejectReason(e.target.value)}
+                      maxLength={200}
+                      placeholder="Reason, if rejecting (optional)"
+                      aria-label="Reason for rejecting (shown to the owner)"
+                      className={`${panelInputClass} w-full min-w-0 sm:order-2 sm:flex-1`}
+                    />
+                    <div className="flex gap-2 sm:contents">
+                      <a
+                        href={`https://wa.me/${pendingRequest.number}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={buttonClass(
+                          "secondary",
+                          "sm",
+                          "h-10 flex-1 px-3.5 text-whatsapp sm:order-1 sm:flex-none",
+                        )}
+                      >
+                        <WhatsAppIcon className="h-4 w-4" />
+                        Chat to check
+                      </a>
+                      <Button
+                        variant="danger-soft"
+                        size="sm"
+                        className="h-10 flex-1 px-3.5 sm:order-3 sm:flex-none"
+                        disabled={saving !== null}
+                        loading={saving === "reject"}
+                        onClick={() => saveWhatsapp("reject")}
+                      >
+                        Reject
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        className="h-10 flex-1 px-4 sm:order-4 sm:flex-none"
+                        disabled={saving !== null}
+                        loading={saving === "approve"}
+                        onClick={() => saveWhatsapp("approve")}
+                      >
+                        Approve
+                      </Button>
+                    </div>
+                  </div>
+                </section>
+              ) : (
+                <section className={sectionClass}>
+                  <label htmlFor={`${panelId}-whatsapp`} className={sectionTitleClass}>
+                    WhatsApp number
+                  </label>
+                  <p className={sectionHelpClass}>Customers&apos; enquiries go to this number.</p>
+                  <div className="mt-2.5 flex items-center gap-2">
+                    <input
+                      id={`${panelId}-whatsapp`}
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="off"
+                      value={whatsappText}
+                      onChange={(e) => setWhatsappText(e.target.value)}
+                      maxLength={20}
+                      placeholder="Not added"
+                      className={`${panelInputClass} min-w-0 flex-1 tabular-nums`}
+                    />
                     <Button
-                      variant="danger-soft"
                       size="sm"
-                      className="h-10 flex-1 px-3.5 sm:order-3 sm:flex-none"
-                      disabled={saving !== null}
-                      loading={saving === "reject"}
-                      onClick={() => saveWhatsapp("reject")}
+                      className="h-10 px-3.5"
+                      disabled={!whatsappChanged || saving !== null}
+                      loading={saving === "whatsapp"}
+                      onClick={() => saveWhatsapp("whatsapp")}
                     >
-                      Reject
-                    </Button>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      className="h-10 flex-1 px-4 sm:order-4 sm:flex-none"
-                      disabled={saving !== null}
-                      loading={saving === "approve"}
-                      onClick={() => saveWhatsapp("approve")}
-                    >
-                      Approve
+                      {whatsappText.trim() || !store.whatsapp ? "Save" : "Remove"}
                     </Button>
                   </div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-wrap items-center gap-2.5 sm:basis-full">
-                <label className="flex items-center gap-2 text-[13px] font-medium text-ink">
-                  WhatsApp
+                  {request?.status === "rejected" && (
+                    <p className="mt-2 text-xs text-slate">
+                      Rejected request: <span className="tabular-nums">{formatWhatsapp(request.number)}</span>
+                      {request.reason ? ` (${request.reason})` : ""}
+                    </p>
+                  )}
+                </section>
+              ))}
+
+            {/* Product limit */}
+            <section className={sectionClass}>
+              <label htmlFor={`${panelId}-limit`} className={sectionTitleClass}>
+                Product limit
+              </label>
+              <p className={sectionHelpClass}>
+                {plural(store.productCount, "product")} in the store now.
+              </p>
+              <div className="mt-2.5 flex items-center gap-2">
+                <input
+                  id={`${panelId}-limit`}
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  max={10000}
+                  value={unlimited ? "" : limitText}
+                  disabled={unlimited}
+                  onChange={(e) => setLimitText(e.target.value)}
+                  placeholder={unlimited ? "∞" : "20"}
+                  aria-invalid={!limitValid}
+                  className={`${panelInputClass} w-24 tabular-nums disabled:bg-paper aria-[invalid=true]:border-red-500`}
+                />
+                <label className="flex min-h-10 flex-1 cursor-pointer select-none items-center gap-2 text-[13px] text-ink/80">
                   <input
-                    type="tel"
-                    inputMode="tel"
-                    value={whatsappText}
-                    onChange={(e) => setWhatsappText(e.target.value)}
-                    maxLength={20}
-                    placeholder="Not added"
-                    className="h-10 w-44 rounded-md border border-line bg-white px-2.5 text-base tabular-nums text-ink placeholder:text-slate/55 focus:border-primary focus:outline-none focus-visible:outline-none! focus:ring-[3px] focus:ring-primary/15 sm:text-sm"
+                    type="checkbox"
+                    checked={unlimited}
+                    onChange={(e) => setUnlimited(e.target.checked)}
+                    className="h-4 w-4 cursor-pointer rounded-sm accent-primary"
                   />
+                  Unlimited
                 </label>
                 <Button
+                  variant="primary"
                   size="sm"
-                  className="h-10 px-3.5"
-                  disabled={!whatsappChanged || saving !== null}
-                  loading={saving === "whatsapp"}
-                  onClick={() => saveWhatsapp("whatsapp")}
+                  className="h-10 px-4"
+                  disabled={!limitChanged || saving !== null}
+                  loading={saving === "limit"}
+                  onClick={saveLimit}
                 >
-                  {whatsappText.trim() ? "Save number" : "Remove number"}
+                  Save
                 </Button>
-                {request?.status === "rejected" && (
-                  <span className="text-xs text-slate">
-                    Rejected request: {formatWhatsapp(request.number)}
-                    {request.reason ? ` (${request.reason})` : ""}
-                  </span>
-                )}
               </div>
-            ))}
-
-          {/* Product limit */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            <label className="flex items-center gap-2 text-[13px] font-medium text-ink">
-              Product limit
-              <input
-                type="number"
-                inputMode="numeric"
-                min={0}
-                max={10000}
-                value={unlimited ? "" : limitText}
-                disabled={unlimited}
-                onChange={(e) => setLimitText(e.target.value)}
-                placeholder={unlimited ? "∞" : "20"}
-                aria-invalid={!limitValid}
-                className="h-10 w-20 rounded-md border border-line bg-white px-2.5 text-base tabular-nums text-ink focus:border-primary focus:outline-none focus-visible:outline-none! focus:ring-[3px] focus:ring-primary/15 disabled:bg-paper aria-[invalid=true]:border-red-500 sm:text-sm"
-              />
-            </label>
-            <label className="flex min-h-10 cursor-pointer select-none items-center gap-2 text-[13px] text-ink/80">
-              <input
-                type="checkbox"
-                checked={unlimited}
-                onChange={(e) => setUnlimited(e.target.checked)}
-                className="h-4 w-4 cursor-pointer rounded-sm accent-primary"
-              />
-              Unlimited
-            </label>
-            <Button
-              variant="primary"
-              size="sm"
-              className="h-10 px-4"
-              disabled={!limitChanged || saving !== null}
-              loading={saving === "limit"}
-              onClick={saveLimit}
-            >
-              Save
-            </Button>
+            </section>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-            <Button size="sm" className="h-10 px-3.5" onClick={() => onManageUsers(store)}>
-              <UsersRound className="h-4 w-4" aria-hidden />
-              Manage users
-            </Button>
-            <Button
-              variant="danger-soft"
-              size="sm"
-              className="h-10 px-3.5"
-              disabled={deleteBlocked !== null}
-              title={deleteBlocked ?? undefined}
-              onClick={() => onAskDelete(store)}
-            >
-              <Trash2 className="h-4 w-4" aria-hidden />
-              Delete store
-            </Button>
+          {/* Store details and the account actions */}
+          <div className="mt-3 flex flex-col gap-3 border-t border-line pt-3 sm:flex-row sm:items-center sm:justify-between">
+            <dl className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate">
+              <div className="flex gap-1">
+                <dt>Link name</dt>
+                <dd className="font-semibold text-ink">{store.slug}</dd>
+              </div>
+              {store.createdAt && (
+                <div className="flex gap-1">
+                  <dt>Created</dt>
+                  <dd className="font-semibold text-ink">{formatRelative(store.createdAt)}</dd>
+                </div>
+              )}
+            </dl>
+            <div className="flex gap-2">
+              <Button size="sm" className="h-10 flex-1 px-3.5 sm:flex-none" onClick={() => onManageUsers(store)}>
+                <UsersRound className="h-4 w-4" aria-hidden />
+                Manage users
+              </Button>
+              <Button
+                variant="danger-soft"
+                size="sm"
+                className="h-10 flex-1 px-3.5 sm:flex-none"
+                disabled={deleteBlocked !== null}
+                title={deleteBlocked ?? undefined}
+                onClick={() => onAskDelete(store)}
+              >
+                <Trash2 className="h-4 w-4" aria-hidden />
+                Delete store
+              </Button>
+            </div>
           </div>
-          {deleteBlocked && <p className="text-xs text-slate sm:basis-full">{deleteBlocked}</p>}
+          {deleteBlocked && <p className="mt-2 text-xs text-slate sm:text-right">{deleteBlocked}</p>}
         </div>
       )}
     </li>

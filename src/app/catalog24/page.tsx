@@ -6,6 +6,7 @@ import {
   Camera,
   Check,
   ChevronDown,
+  Layers,
   Link2,
   MessageCircle,
   RefreshCw,
@@ -18,6 +19,7 @@ import {
 import Catalog24Footer from "@/components/catalog24/Catalog24Footer";
 import Catalog24Header from "@/components/catalog24/Catalog24Header";
 import DemoLauncher from "@/components/catalog24/DemoLauncher";
+import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 import RevealObserver from "@/components/landing/RevealObserver";
 import { businessImage } from "@/lib/businessImages";
 import { CATALOG_DEMO_BASE, CATALOG_ICONS } from "@/lib/catalogDomain";
@@ -92,6 +94,22 @@ const BUSINESSES = [
   "Electronics",
   "Mobiles & accessories",
 ];
+
+// Monthly plans, cheapest first. `featured` is the highlighted one.
+const PLANS = [
+  { price: 200, products: 100, featured: true },
+  { price: 500, products: 300, featured: false },
+  { price: 1000, products: 1000, featured: false },
+];
+
+// What every plan includes.
+const PLAN_FEATURES: { icon: ({ className }: { className?: string }) => React.ReactNode; label: string }[] = [
+  { icon: Link2, label: "Your own link" },
+  { icon: WhatsAppIcon, label: "Enquiries on WhatsApp" },
+  { icon: RefreshCw, label: "Always up to date" },
+];
+
+const inr = (n: number) => n.toLocaleString("en-IN");
 
 const FAQS = [
   {
@@ -297,6 +315,84 @@ export default function Catalog24HomePage() {
                     <h3 className="text-[13px] font-semibold leading-snug text-ink sm:text-[15px]">{title}</h3>
                     <p className="mt-1 text-xs leading-[1.45] text-slate sm:text-sm sm:leading-6">{text}</p>
                   </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* Pricing: three monthly plans, stacked on phones (the featured one first) */}
+        <section id="pricing" className="scroll-mt-16 bg-white">
+          <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-20 header:px-8">
+            <div className="mx-auto max-w-2xl text-center">
+              <p data-reveal="up" className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary sm:text-xs">
+                Pricing
+              </p>
+              <h2 data-reveal="up" className="mt-1.5 text-xl font-bold tracking-[-0.02em] text-ink [--reveal-delay:80ms] sm:mt-2 sm:text-4xl">
+                Simple, affordable plans
+              </h2>
+              <p data-reveal="up" className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate [--reveal-delay:160ms] sm:mt-3 sm:text-base sm:leading-7">
+                Choose the plan that fits your business. Every plan has the same features; only the number of products
+                changes.
+              </p>
+            </div>
+            <ul className="mx-auto mt-7 grid max-w-sm gap-3 sm:mt-12 sm:max-w-none sm:grid-cols-3 sm:items-center sm:gap-4 lg:gap-6">
+              {PLANS.map(({ price, products, featured }, i) => (
+                <li
+                  key={price}
+                  data-reveal="up"
+                  style={{ ["--reveal-delay" as string]: `${i * 100}ms` }}
+                  className={`relative flex flex-col rounded-lg bg-white p-5 lg:p-6 ${
+                    featured
+                      ? "border-2 border-primary shadow-[0_20px_44px_-24px_rgba(252,108,38,0.55)] sm:py-7 lg:py-8"
+                      : "border border-line shadow-[0_1px_2px_rgba(1,18,60,0.04)]"
+                  }`}
+                >
+                  {featured && (
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-primary px-3 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-white">
+                      Most popular
+                    </span>
+                  )}
+                  <p className="flex items-baseline gap-1 text-ink">
+                    <span className={`font-bold tracking-[-0.03em] tabular-nums ${featured ? "text-4xl lg:text-5xl" : "text-3xl lg:text-4xl"}`}>
+                      ₹{inr(price)}
+                    </span>
+                    <span className="text-sm font-medium text-slate">/month</span>
+                  </p>
+                  <div
+                    className={`mt-4 flex items-center gap-3 rounded-md px-4 py-3 ring-1 ring-inset ${
+                      featured ? "bg-tint text-primary ring-primary/15" : "bg-paper text-sky-600 ring-line"
+                    }`}
+                  >
+                    <Layers className="h-6 w-6 shrink-0" strokeWidth={1.75} aria-hidden />
+                    <p className="text-ink">
+                      <span className="text-xl font-bold tabular-nums">{inr(products)}</span>{" "}
+                      <span className="text-sm font-medium text-slate">products</span>
+                    </p>
+                  </div>
+                  <ul className="mt-4 divide-y divide-line">
+                    {PLAN_FEATURES.map(({ icon: Icon, label }) => (
+                      <li key={label} className="flex items-center gap-3 py-2.5 text-sm text-ink">
+                        <Icon
+                          className={`h-[18px] w-[18px] shrink-0 ${
+                            Icon === WhatsAppIcon ? "text-whatsapp" : featured ? "text-primary" : "text-sky-600"
+                          }`}
+                        />
+                        {label}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href={REGISTER}
+                    className={`mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-md px-5 text-[15px] font-semibold transition-colors ${
+                      featured
+                        ? "bg-button text-white hover:bg-button-hover"
+                        : "border border-line bg-white text-ink hover:border-slate/35 hover:bg-paper"
+                    }`}
+                  >
+                    Get started
+                    <ArrowRight className="h-4 w-4" aria-hidden />
+                  </Link>
                 </li>
               ))}
             </ul>

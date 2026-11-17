@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 import { AppIcon, Wordmark } from "@/components/catalog24/Logo";
+import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
+import { whatsappUrl } from "@/lib/contact";
 import { ripple } from "./ripple";
 import { Spinner } from "./ui";
 
@@ -44,6 +46,27 @@ function Logo({ href }: { href?: string }) {
     <Link href={href} aria-label="Catalog24 home" className="rounded-sm focus-visible:outline-none! focus-visible:ring-[3px] focus-visible:ring-primary/20">
       {mark}
     </Link>
+  );
+}
+
+/**
+ * "Trouble logging in? Contact support": opens a WhatsApp chat with Catalog24 support,
+ * with `message` already typed. A small centred line for the end of <AuthActions>.
+ */
+export function AuthSupportLink({ prompt, message }: { prompt: string; message: string }) {
+  return (
+    <p className="mt-2 text-center text-[13px] text-slate">
+      {prompt}{" "}
+      <a
+        href={whatsappUrl(message)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1 rounded-sm font-semibold text-ink hover:text-primary hover:underline focus-visible:outline-none! focus-visible:ring-[3px] focus-visible:ring-primary/20"
+      >
+        <WhatsAppIcon className="h-3.5 w-3.5 text-whatsapp" />
+        Contact support
+      </a>
+    </p>
   );
 }
 

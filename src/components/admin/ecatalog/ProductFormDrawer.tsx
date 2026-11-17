@@ -863,9 +863,9 @@ function ImageManager({
             <p className="text-[15px] font-semibold text-ink">Add product photos</p>
             <p className="mt-1 text-[13px] leading-relaxed text-slate">The first photo is used to fill in the details.</p>
           </div>
-          {/* Main action: choose existing photos. The camera is a quieter second option,
+          {/* Main action: choose existing photos. The camera is the outlined second option,
               and only on touch devices (with a mouse it would just open the same file picker). */}
-          <div className="flex w-full max-w-xs flex-col items-center gap-1">
+          <div className="flex w-full max-w-xs flex-col items-center">
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
@@ -876,15 +876,20 @@ function ImageManager({
               <span className="sm:hidden">Select from gallery</span>
               <span className="hidden sm:inline">Upload photos</span>
             </button>
-            <button
-              type="button"
-              onClick={() => cameraRef.current?.click()}
-              onPointerDown={ripple}
-              className="relative inline-flex h-11 items-center gap-1.5 overflow-hidden rounded-md px-3 text-[13px] font-semibold text-slate transition-colors hover:text-ink focus-visible:outline-none! focus-visible:ring-[3px] focus-visible:ring-primary/15 [@media(pointer:fine)]:hidden"
-            >
-              <Camera className="h-4 w-4 shrink-0" aria-hidden />
-              or take a photo
-            </button>
+            <div className="flex w-full flex-col items-center [@media(pointer:fine)]:hidden">
+              <p className="my-2 flex w-full items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate before:h-px before:flex-1 before:bg-line after:h-px after:flex-1 after:bg-line">
+                or
+              </p>
+              <button
+                type="button"
+                onClick={() => cameraRef.current?.click()}
+                onPointerDown={ripple}
+                className={`${authSecondaryButtonClass} w-full whitespace-nowrap`}
+              >
+                <Camera className="h-[18px] w-[18px] shrink-0 text-primary" aria-hidden />
+                Take a photo
+              </button>
+            </div>
           </div>
           <p className="hidden text-[11px] text-slate sm:block">or drag and drop, or paste with Ctrl+V</p>
           {picker}

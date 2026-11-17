@@ -63,8 +63,11 @@ export function catalogSiteOriginFor(location: { protocol: string; port: string 
   return `${location.protocol}//catalog24.localhost${location.port ? `:${location.port}` : ""}`;
 }
 
-/** A store's public catalog URL: https://demostore.catalog24.in (dev: http://demostore.localhost:3000). */
+/**
+ * A store's public catalog URL: https://demostore.catalog24.in (dev: http://demostore.catalog24.localhost:3000,
+ * under catalog24.localhost so it can read the admin's owner cookie: see ownerHint.ts).
+ */
 export function storeUrlFor(slug: string, location?: { protocol: string; port: string }) {
   if (process.env.NODE_ENV !== "development" || !location) return `https://${slug}.${CATALOG_ROOT_DOMAIN}`;
-  return `${location.protocol}//${slug}.localhost${location.port ? `:${location.port}` : ""}`;
+  return `${location.protocol}//${slug}.catalog24.localhost${location.port ? `:${location.port}` : ""}`;
 }

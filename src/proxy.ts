@@ -14,7 +14,7 @@ import {
 
 // Serves three kinds of site from this app, picked by hostname:
 //
-// <store>.catalog24.in — a registered store's own catalog (dev: <store>.localhost:3000)
+// <store>.catalog24.in — a registered store's own catalog (dev: <store>.catalog24.localhost:3000)
 //   /, /cart, /saved, /help, /product/... → the store route (app/store/[store]/...)
 //   anything else                         → the same path on catalog24.in
 //   yourstore.catalog24.in (the old demo address) → demo.catalog24.in
@@ -55,10 +55,10 @@ function siteOrigin(request: NextRequest, site: "main" | "catalog") {
   return site === "main" ? `http://localhost${devPort(request)}` : `http://catalog24.localhost${devPort(request)}`;
 }
 
-/** A store's origin: https://demostore.catalog24.in (dev: http://demostore.localhost:3000). */
+/** A store's origin: https://demostore.catalog24.in (dev: http://demostore.catalog24.localhost:3000). */
 function storeOrigin(request: NextRequest, slug: string) {
   if (process.env.NODE_ENV !== "development") return `https://${slug}.catalog24.in`;
-  return `http://${slug}.localhost${devPort(request)}`;
+  return `http://${slug}.catalog24.localhost${devPort(request)}`;
 }
 
 const redirectTo = (url: string | URL) => NextResponse.redirect(url, 308);

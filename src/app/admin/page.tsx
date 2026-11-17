@@ -21,6 +21,7 @@ import { Spinner } from "@/components/admin/ui";
 import AuthLayout, {
   AuthActions,
   AuthLoading,
+  AuthSupportLink,
   authButtonClass,
   authFieldErrorClass as fieldErrorClass,
   authFormClass,
@@ -248,6 +249,10 @@ export default function AdminLoginPage() {
               Create your store
             </Link>
           </p>
+          <AuthSupportLink
+            prompt="Trouble logging in?"
+            message="Hi Catalog24 support, I need help logging in to my store."
+          />
           <p className="mt-2 flex items-center justify-center gap-1.5 text-center text-[11px] text-slate/80">
             <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden />
             Secure sign-in · Sessions are bound to this device

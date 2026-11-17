@@ -1,6 +1,7 @@
 // Client-side helpers for the admin auth API (backend-api/ → API Gateway + Lambda).
 // Browser-only: everything here touches localStorage.
 
+import { setOwnerHint } from "./ownerHint";
 import { toBusinessTypes, type BusinessTypeId } from "./taxonomy";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/+$/, "");
@@ -100,7 +101,10 @@ export async function saveBrowserCredential(email: string, password: string): Pr
 }
 
 const getToken = () => localStorage.getItem(TOKEN_KEY);
-const clearToken = () => localStorage.removeItem(TOKEN_KEY);
+const clearToken = () => {
+  localStorage.removeItem(TOKEN_KEY);
+  setOwnerHint(null);
+};
 
 // For server actions that check the admin session with the API themselves.
 export const sessionCredentials = () => ({ token: getToken() ?? "", deviceId: getDeviceId() });
@@ -149,6 +153,7 @@ export async function login(email: string, password: string): Promise<AdminUser>
     );
   }
   localStorage.setItem(TOKEN_KEY, data.token);
+  setOwnerHint(data.user.store.slug);
   return withStore(data.user);
 }
 
@@ -168,6 +173,7 @@ export async function register(details: Registration): Promise<AdminUser> {
     body: JSON.stringify({ ...details, deviceId: getDeviceId() }),
   });
   localStorage.setItem(TOKEN_KEY, data.token);
+  setOwnerHint(data.user.store.slug);
   return withStore(data.user);
 }
 
@@ -187,6 +193,8 @@ export async function checkSession(): Promise<AdminUser | null> {
       clearToken();
       return null;
     }
+    // Also renews the catalogs' hint (and sets it for sessions from before it existed).
+    setOwnerHint(data.user.store.slug);
     return withStore(data.user);
   } catch (err) {
     // 401: no valid session. 403 NO_STORE: an account without a store.

@@ -34,13 +34,6 @@ export const STORE = {
   email: 'hello@mystore.example',
 };
 
-// Strip at the very top linking back to the AllAboutWeb site.
-export const AAW_PROMO = {
-  text: 'Get an E-Catalog for your Business',
-  whatsappMessage:
-    'Hi AllAboutWeb! I saw your furniture e-catalog demo and would like an e-catalog for my business. Please share the details.',
-};
-
 export const formatINR = (amount: number): string => {
   return '₹' + amount.toLocaleString('en-IN');
 };

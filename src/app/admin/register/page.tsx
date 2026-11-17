@@ -18,6 +18,7 @@ import AuthLayout, {
   AuthActions,
   AuthLoading,
   AuthProgress,
+  AuthSupportLink,
   authButtonClass,
   authFieldErrorClass as fieldErrorClass,
   authFormClass,
@@ -526,6 +527,10 @@ export default function RegisterStorePage() {
               </p>
             )
           )}
+          <AuthSupportLink
+            prompt="Need help?"
+            message="Hi Catalog24 support, I need help creating my store."
+          />
         </AuthActions>
       </form>
     </AuthLayout>

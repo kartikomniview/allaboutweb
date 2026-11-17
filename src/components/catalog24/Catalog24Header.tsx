@@ -2,18 +2,30 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, LayoutDashboard } from "lucide-react";
+import { checkSession, type AdminUser } from "@/lib/adminAuth";
 import Logo from "./Logo";
 
 const NAV_LINKS = [
   { href: "/#demo", label: "Live demo" },
   { href: "/#how-it-works", label: "How it works" },
+  { href: "/#pricing", label: "Pricing" },
   { href: "/#faq", label: "FAQ" },
 ];
 
-/** Site header for catalog24.in: logo, a few links, Log in and the main "Create your store" button. */
+/**
+ * Site header for catalog24.in: logo, a few links, Log in and the main "Create your store" button.
+ * A store owner already logged in on this device also gets a strip above it with a
+ * link to their dashboard.
+ */
 export default function Catalog24Header() {
   const [scrolled, setScrolled] = useState(false);
+  const [user, setUser] = useState<AdminUser | null>(null);
+
+  // checkSession() returns null straight away (no API call) when this device has no token.
+  useEffect(() => {
+    checkSession().then(setUser).catch(() => setUser(null));
+  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -28,6 +40,24 @@ export default function Catalog24Header() {
         scrolled ? "border-b border-line bg-white/90 backdrop-blur-xl" : "border-b border-transparent bg-white"
       }`}
     >
+      {user && (
+        <div className="bg-ink text-white">
+          <div className="mx-auto flex h-10 max-w-6xl items-center justify-between gap-3 px-4 text-[13px] sm:px-6 header:px-8">
+            <p className="min-w-0 truncate text-white/75">
+              <span className="hidden sm:inline">You&apos;re logged in as </span>
+              <span className="font-semibold text-white">{user.store.name}</span>
+            </p>
+            <Link
+              href="/admin/dashboard"
+              className="group inline-flex shrink-0 items-center gap-1.5 rounded-sm font-semibold text-white transition-colors hover:text-white/80 focus-visible:outline-none! focus-visible:ring-[3px] focus-visible:ring-white/30"
+            >
+              <LayoutDashboard className="h-4 w-4" aria-hidden />
+              Go to dashboard
+              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
+            </Link>
+          </div>
+        </div>
+      )}
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6 header:px-8">
         <Link href="/" className="flex shrink-0 items-center" aria-label="Catalog24 home">
           <Logo size="sm" eager />
