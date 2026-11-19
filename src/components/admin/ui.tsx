@@ -93,10 +93,23 @@ const TONES: Record<Tone, { badge: string; dot: string }> = {
   danger: { badge: "bg-red-50 text-red-700 ring-red-600/15", dot: "bg-red-500" },
 };
 
-export function Badge({ tone = "neutral", dot = false, children }: { tone?: Tone; dot?: boolean; children: ReactNode }) {
+export function Badge({
+  tone = "neutral",
+  dot = false,
+  size = "md",
+  children,
+}: {
+  tone?: Tone;
+  dot?: boolean;
+  /** "sm": 11px, for dense lists and tables. */
+  size?: "sm" | "md";
+  children: ReactNode;
+}) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-semibold whitespace-nowrap ring-1 ring-inset ${TONES[tone].badge}`}
+      className={`inline-flex items-center rounded-md font-semibold whitespace-nowrap ring-1 ring-inset ${
+        size === "sm" ? "gap-1 px-1.5 py-px text-[11px]" : "gap-1.5 px-2 py-0.5 text-xs"
+      } ${TONES[tone].badge}`}
     >
       {dot && <span className={`h-1.5 w-1.5 rounded-full ${TONES[tone].dot}`} aria-hidden />}
       {children}
@@ -153,6 +166,21 @@ export function PageHeader({
     </header>
   );
 }
+
+// Panel form fields (e.g. Store settings), built like the auth ones but compact from sm up.
+// Phones keep a 44px field and 16px text, so iOS doesn't zoom in on focus.
+// The input leaves room on the left for an icon with `panelInputIconClass`.
+const panelFieldBase =
+  "w-full rounded-md border border-line bg-white pl-10 pr-3 text-base text-ink transition-[border-color,box-shadow] placeholder:text-slate/55 hover:border-slate/35 focus:border-primary focus:outline-none focus-visible:outline-none! focus:ring-[3px] focus:ring-primary/15 aria-[invalid=true]:border-red-500 aria-[invalid=true]:focus:ring-red-500/15 sm:pl-9 sm:text-[13px]";
+export const panelInputClass = `h-11 sm:h-9 ${panelFieldBase}`;
+export const panelTextareaClass = `resize-y py-2.5 leading-snug sm:py-2 ${panelFieldBase}`;
+/** Icon inside a panel input or textarea, without the vertical position. */
+export const panelIconBaseClass = "pointer-events-none absolute left-3.5 h-4 w-4 text-slate/55 sm:left-3";
+/** Icon inside a panel input, centred. */
+export const panelInputIconClass = `${panelIconBaseClass} top-1/2 -translate-y-1/2`;
+export const panelLabelClass = "mb-1 block text-xs font-medium text-ink/75";
+export const panelHintClass = "mt-1 text-[11px] leading-snug text-slate";
+export const panelFieldErrorClass = "admin-fade-in mt-1 text-xs font-medium text-red-600";
 
 export function Card({ className = "", children }: { className?: string; children: ReactNode }) {
   return (

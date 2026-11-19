@@ -11,11 +11,13 @@ import {
   checkSession,
   checkStoreName,
   register,
+  type Registration,
   type StoreNameCheck,
 } from "@/lib/adminAuth";
 import { Spinner } from "@/components/admin/ui";
 import AuthLayout, {
   AuthActions,
+  AuthDivider,
   AuthLoading,
   AuthProgress,
   AuthSupportLink,
@@ -28,6 +30,7 @@ import AuthLayout, {
   authSecondaryButtonClass,
 } from "@/components/admin/AuthLayout";
 import BusinessTypePicker from "@/components/admin/BusinessTypePicker";
+import GoogleSignInButton, { googleSignInEnabled } from "@/components/admin/GoogleSignInButton";
 import PasswordStrength from "@/components/admin/PasswordStrength";
 import { flagField, ripple } from "@/components/admin/ripple";
 import type { BusinessTypeId } from "@/lib/taxonomy";
@@ -74,6 +77,7 @@ export default function RegisterStorePage() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
   const [created, setCreated] = useState(false);
   const [checking, setChecking] = useState(true);
 
@@ -202,10 +206,24 @@ export default function RegisterStorePage() {
     setError(null);
     if (Object.keys(errors).length) return flagFirst(errors);
     if (step < STEPS.length - 1) return goForward();
+    await createStore({ email: `${username}@${LOGIN_DOMAIN}`, password });
+  }
 
+  // Last step, "Continue with Google": the store is created with this Google account as
+  // its login (the store name and business types were checked in the earlier steps).
+  async function handleGoogle(credential: string) {
+    setFieldErrors({});
+    setError(null);
+    setGoogleBusy(true);
+    await createStore({ googleIdToken: credential });
+    setGoogleBusy(false);
+  }
+
+  async function createStore(login: { email: string; password: string } | { googleIdToken: string }) {
+    const google = "googleIdToken" in login;
     setSubmitting(true);
     try {
-      await register({ storeName: storeName.trim(), businessTypes, email: `${username}@${LOGIN_DOMAIN}`, password });
+      await register({ storeName: storeName.trim(), businessTypes, ...login } as Registration);
       setCreated(true);
       // A moment to see the confirmation, then into the dashboard.
       setTimeout(() => router.replace("/admin/dashboard"), 700);
@@ -219,7 +237,7 @@ export default function RegisterStorePage() {
         window.history.go(-step);
         return;
       }
-      if (err instanceof AuthError && err.code === "EMAIL_TAKEN") {
+      if (err instanceof AuthError && err.code === "EMAIL_TAKEN" && !google) {
         setFieldErrors({ email: "This username is taken. Try another one." });
         return flagField(emailRef.current);
       }
@@ -336,6 +354,13 @@ export default function RegisterStorePage() {
             />
             {fieldErrors.businessTypes && <p className={fieldErrorClass}>{fieldErrors.businessTypes}</p>}
           </div>
+        )}
+
+        {step === 2 && googleSignInEnabled && (
+          <>
+            <GoogleSignInButton text="signup_with" onCredential={handleGoogle} busy={googleBusy} />
+            <AuthDivider label="or choose a username and password" />
+          </>
         )}
 
         {step === 2 && (

@@ -3,7 +3,7 @@
 // Building blocks shared by the catalog app, the Catalog tab and the product pages:
 // routes, the catalog context, WhatsApp links, icons, product and category cards.
 
-import React, { createContext, useContext } from "react";
+import React, { createContext, useContext, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Heart } from "lucide-react";
@@ -641,6 +641,68 @@ export const SECTION_LABEL = 'text-[11px] font-semibold uppercase tracking-[0.08
 export const PRODUCT_GRID =
   'grid grid-cols-2 gap-x-2.5 gap-y-4 md:grid-cols-3 md:gap-x-5 md:gap-y-7 lg:grid-cols-4 xl:grid-cols-5';
 
+const CARD_SIZES = '(min-width: 1280px) 240px, (min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw';
+// Photos on a card (and dots under them); the product page shows them all.
+const MAX_CARD_PHOTOS = 5;
+
+// A card with several photos. Phones (touch, no hover): swipe through them; there's no
+// hover effect. Desktop: the second photo fades in while the pointer is on the card.
+// Small dots at the bottom middle show which photo is in view.
+const CardPhotos: React.FC<{ product: CatalogProduct; images: string[] }> = ({ product, images }) => {
+  const [active, setActive] = useState(0);
+  const onScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const track = e.currentTarget;
+    if (track.clientWidth) setActive(Math.round(track.scrollLeft / track.clientWidth));
+  };
+  const dot = (i: number) => {
+    // Hovering (desktop) shows the second photo, so its dot is the lit one then.
+    const onHover = i === 0 ? 'group-hover:w-[5px] group-hover:bg-neutral-900/30' : i === 1 ? 'group-hover:w-3 group-hover:bg-neutral-900' : '';
+    return `${i === active ? 'w-3 bg-neutral-900' : 'w-[5px] bg-neutral-900/30'} ${onHover}`;
+  };
+
+  return (
+    <>
+      {/* Swipeable on touch screens; fixed on the first photo on screens with a mouse
+          or trackpad ([@media(hover:hover)], the same condition Tailwind's hover: uses). */}
+      <div
+        onScroll={onScroll}
+        className="flex h-full overflow-x-auto snap-x snap-mandatory overscroll-x-contain no-scrollbar [@media(hover:hover)]:overflow-x-hidden"
+      >
+        {images.map((src, i) => (
+          <div key={src} className="relative h-full w-full shrink-0 snap-center">
+            <Image
+              src={src}
+              alt={i === 0 ? product.productName : ''}
+              fill
+              sizes={CARD_SIZES}
+              draggable={false}
+              className="object-contain"
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop: the second photo, faded in on hover. Not rendered on touch screens
+          (display: none), so phones never download it twice. Its own background hides
+          the first photo where the second one doesn't fill the square. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 hidden bg-neutral-100 opacity-0 transition-opacity duration-300 group-hover:opacity-100 [@media(hover:hover)]:block"
+      >
+        <Image src={images[1]} alt="" fill sizes={CARD_SIZES} draggable={false} className="object-contain" />
+      </div>
+
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-2 flex justify-center">
+        <span className="flex items-center gap-1 rounded-full bg-white/70 px-1.5 py-1 backdrop-blur-sm">
+          {images.map((src, i) => (
+            <span key={src} className={`h-[5px] rounded-full transition-all duration-300 ${dot(i)}`} />
+          ))}
+        </span>
+      </div>
+    </>
+  );
+};
+
 // Image-first product card: a square photo with a small badge, then just name + price.
 // The card links to the product's own page (where it can be added to the cart or saved).
 export const ProductCard: React.FC<{ product: CatalogProduct }> = ({ product }) => {
@@ -648,6 +710,8 @@ export const ProductCard: React.FC<{ product: CatalogProduct }> = ({ product }) 
   // The first tag is the card badge.
   const badge = product.tags[0];
   const hasDiscount = hasPrice(product) && product.originalPrice > product.price;
+  // The cover first, then the others (the cover may also be in `images`).
+  const photos = [...new Set([product.mainImageUrl, ...product.images].filter(Boolean))].slice(0, MAX_CARD_PHOTOS);
 
   return (
     <article className="relative group">
@@ -659,11 +723,11 @@ export const ProductCard: React.FC<{ product: CatalogProduct }> = ({ product }) 
         className="flex flex-col active:scale-[0.99] transition-transform duration-300"
       >
         <div className="relative aspect-square overflow-hidden rounded-md bg-neutral-100 shadow-[0_2px_12px_rgba(0,0,0,0.05)] group-hover:shadow-[0_10px_24px_rgba(0,0,0,0.10)] transition-shadow duration-300">
-          <ProductVisual
-            product={product}
-            sizes="(min-width: 1280px) 240px, (min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
-            fit="contain"
-          />
+          {photos.length > 1 ? (
+            <CardPhotos product={product} images={photos} />
+          ) : (
+            <ProductVisual product={product} sizes={CARD_SIZES} fit="contain" />
+          )}
 
           {badge && (
             <span className="absolute top-2 left-2 max-w-[70%] truncate rounded-full bg-black/45 backdrop-blur-sm px-2 py-0.5 text-[9px] md:text-[10px] font-semibold text-white">

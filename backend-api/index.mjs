@@ -1,4 +1,5 @@
 import { signInWithPassword } from "./src/auth.mjs";
+import { findGoogleAccount, verifyGoogleIdToken } from "./src/google.mjs";
 import { bearerToken, header, HttpError, json, parseBody } from "./src/http.mjs";
 import {
   bindDeviceOrReject,
@@ -60,23 +61,45 @@ async function login(event) {
   deviceIdOf(deviceId);
 
   const user = await signInWithPassword(email.trim(), password);
+  return json(200, await startSession(user, deviceId));
+}
+
+// After the account is verified (password or Google): the store checks, the one-device
+// rule, and a new session.
+async function startSession(user, deviceId) {
   const store = await storeOfUser(user.uid);
   const superAdmin = isSuperAdmin(user.email);
   // A deactivated store can't log in (checked before the device is bound).
   if (!store.active && !superAdmin) throw storeInactive();
   await bindDeviceOrReject(user.uid, user.email, deviceId);
   const session = await createSession(user.uid, user.email, deviceId);
-
-  return json(200, { ...session, user: { ...user, store, isSuperAdmin: superAdmin } });
+  return { ...session, user: { ...user, store, isSuperAdmin: superAdmin } };
 }
 
-// POST /auth/register  { storeName, whatsapp, email, password, deviceId }
+// POST /auth/google  { idToken, deviceId }
+// "Continue with Google" on the login page. A Google account without a store gets
+// 404 GOOGLE_NO_ACCOUNT (the website then offers to create one).
+async function loginWithGoogle(event) {
+  const { idToken, deviceId } = parseBody(event);
+  deviceIdOf(deviceId);
+
+  const google = await verifyGoogleIdToken(idToken);
+  const account = await findGoogleAccount(google);
+  if (!account) {
+    throw new HttpError(404, "GOOGLE_NO_ACCOUNT", `No store uses ${google.email} yet. Create your store first.`);
+  }
+  return json(200, await startSession({ uid: account.uid, email: account.email }, deviceId));
+}
+
+// POST /auth/register  { storeName, whatsapp, businessTypes, deviceId } plus either
+// { email, password } or { googleIdToken }.
 // Public. Creates the store and the owner's account, then logs them in.
 async function register(event) {
   const body = parseBody(event);
   const deviceId = deviceIdOf(body.deviceId);
 
-  const owner = await registerStoreOwner(body);
+  const google = body.googleIdToken === undefined ? null : await verifyGoogleIdToken(body.googleIdToken);
+  const owner = await registerStoreOwner(body, google);
   // The one-device rule applies from the start: this device is bound.
   await bindDeviceOrReject(owner.uid, owner.email, deviceId);
   const session = await createSession(owner.uid, owner.email, deviceId);
@@ -181,7 +204,7 @@ async function postDiscardUploads(event) {
   return json(200, { ok: true });
 }
 
-// POST /products/detect  { categories, image: { data, mediaType } } or { categories, imageUrl }
+// POST /products/detect  { categories, hint?, image: { data, mediaType } } or { categories, hint?, imageUrl }
 // Detects the name, category, subcategory and details from a product photo.
 async function postDetect(event) {
   const { storeSlug } = await requireSession(event);
@@ -281,6 +304,7 @@ async function deleteStoreUser(event) {
 const routes = {
   "POST /auth/login": login,
   "POST /auth/register": register,
+  "POST /auth/google": loginWithGoogle,
   "GET /auth/session": session,
   "POST /auth/logout": logout,
   "GET /stores/check": getStoreCheck,

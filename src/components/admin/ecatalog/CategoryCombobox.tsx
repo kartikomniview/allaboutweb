@@ -20,9 +20,9 @@ export type ComboOption = {
 
 // Small square photo for an option; falls back to its icon when there's no image
 // (or the file is missing from public/).
-function Thumb({ src, icon: Icon = Package, size }: { src?: string; icon?: LucideIcon; size: "sm" | "md" }) {
+function Thumb({ src, icon: Icon = Package, size }: { src?: string; icon?: LucideIcon; size: "xs" | "sm" | "md" }) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
-  const box = size === "md" ? "h-8 w-8" : "h-7 w-7";
+  const box = size === "md" ? "h-8 w-8" : size === "sm" ? "h-7 w-7" : "h-7 w-7 sm:h-6 sm:w-6";
   return (
     <span className={`grid shrink-0 place-items-center overflow-hidden rounded-[5px] bg-white ring-1 ring-line ${box}`}>
       {src && failedSrc !== src ? (
@@ -71,6 +71,7 @@ export default function CategoryCombobox({
   disabled = false,
   labelledBy,
   allowCreate = true,
+  compact = false,
 }: {
   value: string;
   options: ComboOption[];
@@ -83,6 +84,8 @@ export default function CategoryCombobox({
   disabled?: boolean;
   labelledBy?: string;
   allowCreate?: boolean;
+  /** Matches the edit form's smaller fields: 44px on phones, 36px with 13px text from sm up. */
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -215,11 +218,13 @@ export default function CategoryCombobox({
         disabled={disabled}
         onClick={() => (open ? close() : openPanel())}
         onKeyDown={onButtonKeyDown}
-        className={`flex h-12 w-full items-center gap-2 rounded-md border bg-white pl-2 pr-2.5 text-left text-base transition hover:border-slate/35 focus:outline-none focus-visible:outline-none! focus:ring-[3px] focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-60 sm:h-10 sm:pl-1.5 sm:pr-2 sm:text-sm ${
+        className={`flex w-full items-center gap-2 rounded-md border bg-white pl-2 pr-2.5 text-left text-base transition hover:border-slate/35 focus:outline-none focus-visible:outline-none! focus:ring-[3px] focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-60 sm:pl-1.5 sm:pr-2 ${
+          compact ? "h-11 sm:h-9 sm:text-[13px]" : "h-12 sm:h-10 sm:text-sm"
+        } ${
           open ? "border-primary ring-[3px] ring-primary/15" : "border-line focus:border-primary"
         }`}
       >
-        <Thumb src={selected?.image} icon={selected?.icon} size="sm" />
+        <Thumb src={selected?.image} icon={selected?.icon} size={compact ? "xs" : "sm"} />
         <span className={`min-w-0 flex-1 truncate ${value ? "text-ink" : "text-slate/55"}`}>
           {selected?.label ?? (value || placeholder)}
         </span>

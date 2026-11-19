@@ -57,13 +57,13 @@ export function ProductThumb({
   );
 }
 
-export function StatusBadge({ active }: { active: boolean }) {
+export function StatusBadge({ active, size = "sm" }: { active: boolean; size?: "sm" | "md" }) {
   return active ? (
-    <Badge tone="success" dot>
+    <Badge tone="success" dot size={size}>
       Published
     </Badge>
   ) : (
-    <Badge tone="neutral" dot>
+    <Badge tone="neutral" dot size={size}>
       Hidden
     </Badge>
   );
@@ -73,9 +73,9 @@ function Price({ product, align = "right" }: { product: Product; align?: "left" 
   const off = discountPercent(product.price, product.originalPrice);
   return (
     <div className={`tabular-nums ${align === "right" ? "text-right" : ""}`}>
-      <p className="text-sm font-semibold text-ink">{formatPrice(product.price)}</p>
+      <p className="text-[13px] font-semibold text-ink">{formatPrice(product.price)}</p>
       {off > 0 && (
-        <p className="text-xs text-slate">
+        <p className="text-[11px] text-slate">
           <span className="line-through">{formatINR(product.originalPrice)}</span>
           <span className="ml-1 font-medium text-emerald-700">−{off}%</span>
         </p>
@@ -85,7 +85,7 @@ function Price({ product, align = "right" }: { product: Product; align?: "left" 
 }
 
 const iconBtn =
-  "grid h-8 w-8 place-items-center rounded-md text-slate transition-colors hover:bg-ink/[0.06] hover:text-ink disabled:opacity-50";
+  "grid h-7 w-7 place-items-center rounded-md text-slate transition-colors hover:bg-ink/[0.06] hover:text-ink disabled:opacity-50";
 
 export default function ProductTable({ products, onEdit, onDelete, onToggleActive, togglingId }: Props) {
   const stop = (fn: () => void) => (e: MouseEvent) => {
@@ -97,15 +97,15 @@ export default function ProductTable({ products, onEdit, onDelete, onToggleActiv
     <>
       {/* Desktop: table */}
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full text-left text-sm">
+        <table className="w-full text-left text-[13px]">
           <thead>
-            <tr className="border-b border-line bg-paper/70 text-xs font-semibold text-slate">
-              <th scope="col" className="py-2.5 pl-5 pr-3 font-semibold">Product</th>
-              <th scope="col" className="px-3 py-2.5 font-semibold">Category</th>
-              <th scope="col" className="px-3 py-2.5 text-right font-semibold">Price</th>
-              <th scope="col" className="px-3 py-2.5 font-semibold">Status</th>
-              <th scope="col" className="px-3 py-2.5 font-semibold">Updated</th>
-              <th scope="col" className="py-2.5 pl-3 pr-5">
+            <tr className="border-b border-line bg-paper/70 text-[11px] font-semibold uppercase tracking-[0.04em] text-slate">
+              <th scope="col" className="py-2 pl-4 pr-3 font-semibold">Product</th>
+              <th scope="col" className="px-3 py-2 font-semibold">Category</th>
+              <th scope="col" className="px-3 py-2 text-right font-semibold">Price</th>
+              <th scope="col" className="px-3 py-2 font-semibold">Status</th>
+              <th scope="col" className="px-3 py-2 font-semibold">Updated</th>
+              <th scope="col" className="py-2 pl-3 pr-4">
                 <span className="sr-only">Actions</span>
               </th>
             </tr>
@@ -119,35 +119,39 @@ export default function ProductTable({ products, onEdit, onDelete, onToggleActiv
                   onClick={() => onEdit(p)}
                   className="group cursor-pointer transition-colors hover:bg-paper/70"
                 >
-                  <td className="py-3 pl-5 pr-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <ProductThumb product={p} />
+                  <td className="py-2 pl-4 pr-3">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <ProductThumb product={p} className="h-9 w-9" rounded="rounded-md" />
                       <div className="min-w-0 max-w-[20rem]">
                         <p className="truncate font-semibold text-ink group-hover:text-primary">
                           {p.productName || <span className="italic text-slate">Untitled product</span>}
                         </p>
-                        <div className="mt-0.5 flex items-center gap-1.5 text-xs text-slate">
-                          {p.tags[0] && <Badge tone="brand">{p.tags[0]}</Badge>}
+                        <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate">
+                          {p.tags[0] && (
+                            <Badge tone="brand" size="sm">
+                              {p.tags[0]}
+                            </Badge>
+                          )}
                           {p.tags.length > 1 && <span>+{p.tags.length - 1}</span>}
                           {!p.tags.length && <span className="font-mono text-[11px] text-slate/80">{p.id}</span>}
                         </div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-2">
                     <p className="font-medium text-ink">{p.categoryName ? categoryLabel(p.categoryName) : "—"}</p>
-                    <p className="text-xs text-slate">{p.subcategoryName}</p>
+                    <p className="text-[11px] text-slate">{p.subcategoryName}</p>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3">
+                  <td className="whitespace-nowrap px-3 py-2">
                     <Price product={p} />
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-2">
                     <StatusBadge active={p.isActive} />
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3 text-[13px] text-slate" title={p.updatedAt ?? undefined}>
+                  <td className="whitespace-nowrap px-3 py-2 text-xs text-slate" title={p.updatedAt ?? undefined}>
                     {formatRelative(p.updatedAt)}
                   </td>
-                  <td className="py-3 pl-3 pr-5">
+                  <td className="py-2 pl-3 pr-4">
                     <div className="flex items-center justify-end gap-0.5 opacity-70 transition-opacity group-hover:opacity-100">
                       <button
                         type="button"
@@ -194,17 +198,17 @@ export default function ProductTable({ products, onEdit, onDelete, onToggleActiv
               type="button"
               onClick={() => onEdit(p)}
               onPointerDown={ripple}
-              className="relative flex min-h-[76px] w-full items-center gap-3 overflow-hidden px-3 py-2.5 text-left transition-colors active:bg-paper sm:px-4 sm:py-3"
+              className="relative flex min-h-16 w-full items-center gap-3 overflow-hidden px-3 py-2 text-left transition-colors active:bg-paper sm:px-4"
             >
-              <ProductThumb product={p} className="h-14 w-14" rounded="rounded-md" />
+              <ProductThumb product={p} className="h-12 w-12" rounded="rounded-md" />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-ink">{p.productName || "Untitled product"}</p>
-                <p className="truncate text-xs text-slate">
+                <p className="truncate text-[13px] font-semibold text-ink">{p.productName || "Untitled product"}</p>
+                <p className="truncate text-[11px] text-slate">
                   {categoryLabel(p.categoryName)}
                   {p.subcategoryName && ` · ${p.subcategoryName}`}
                 </p>
-                <div className="mt-1.5 flex items-center gap-2">
-                  <span className="text-[13px] font-semibold tabular-nums text-ink">{formatPrice(p.price)}</span>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="text-xs font-semibold tabular-nums text-ink">{formatPrice(p.price)}</span>
                   <StatusBadge active={p.isActive} />
                 </div>
               </div>
@@ -218,7 +222,7 @@ export default function ProductTable({ products, onEdit, onDelete, onToggleActiv
 }
 
 const floatingBtn =
-  "grid h-9 w-9 place-items-center rounded-full bg-white/95 text-slate shadow-[0_1px_3px_rgba(1,18,60,0.18)] transition-colors hover:text-ink disabled:opacity-50";
+  "grid h-8 w-8 place-items-center rounded-full bg-white/95 text-slate shadow-[0_1px_3px_rgba(1,18,60,0.18)] transition-colors hover:text-ink disabled:opacity-50";
 
 const menuItem =
   "relative flex h-11 w-full items-center gap-2.5 overflow-hidden rounded-[4px] px-3 text-left text-[13px] font-semibold transition-colors disabled:opacity-50";
@@ -309,7 +313,7 @@ function CardActionsMenu({
 // with a mouse).
 export function ProductGrid({ products, onEdit, onDelete, onToggleActive, togglingId }: Props) {
   return (
-    <ul className="grid grid-cols-2 gap-1.5 p-0 sm:grid-cols-3 sm:gap-3 sm:p-4 lg:grid-cols-4 xl:grid-cols-5">
+    <ul className="grid grid-cols-2 gap-1.5 p-0 sm:grid-cols-3 sm:gap-2.5 sm:p-3 lg:grid-cols-4 xl:grid-cols-5">
       {products.map((p) => {
         const toggling = togglingId === p.id;
         return (
@@ -327,19 +331,19 @@ export function ProductGrid({ products, onEdit, onDelete, onToggleActive, toggli
                   </span>
                 )}
               </div>
-              <div className="flex flex-1 flex-col gap-0.5 p-2.5 sm:p-3">
-                <p className="truncate text-[13px] font-semibold leading-snug text-ink group-hover:text-primary" title={p.productName}>
+              <div className="flex flex-1 flex-col p-2 sm:px-2.5">
+                <p className="truncate text-xs font-semibold leading-snug text-ink group-hover:text-primary sm:text-[13px]" title={p.productName}>
                   {p.productName || <span className="italic text-slate">Untitled product</span>}
                 </p>
                 {/* Category · subcategory: not on phones, where the cards are small. */}
                 <p
-                  className="hidden truncate text-xs text-slate sm:block"
+                  className="hidden truncate text-[11px] text-slate sm:block"
                   title={[p.categoryName, p.subcategoryName].filter(Boolean).join(" · ")}
                 >
                   {categoryLabel(p.categoryName)}
                   {p.subcategoryName && ` · ${p.subcategoryName}`}
                 </p>
-                <p className="mt-auto pt-1 text-sm font-semibold tabular-nums text-ink">{formatPrice(p.price)}</p>
+                <p className="mt-auto pt-1 text-[13px] font-semibold tabular-nums text-ink">{formatPrice(p.price)}</p>
               </div>
             </button>
 
@@ -378,12 +382,12 @@ export function ProductGridSkeleton({ cards = 10 }: { cards?: number }) {
     <ul
       aria-busy="true"
       aria-label="Loading products"
-      className="grid grid-cols-2 gap-1.5 p-0 sm:grid-cols-3 sm:gap-3 sm:p-4 lg:grid-cols-4 xl:grid-cols-5"
+      className="grid grid-cols-2 gap-1.5 p-0 sm:grid-cols-3 sm:gap-2.5 sm:p-3 lg:grid-cols-4 xl:grid-cols-5"
     >
       {Array.from({ length: cards }, (_, i) => (
         <li key={i} className="overflow-hidden rounded-lg border border-line bg-white">
           <Skeleton className="aspect-square w-full rounded-none" />
-          <div className="flex flex-col gap-2 p-3">
+          <div className="flex flex-col gap-2 p-2 sm:px-2.5">
             <Skeleton className="h-3.5 w-4/5" />
             <Skeleton className="h-3 w-3/5" />
             <Skeleton className="h-3.5 w-1/3" />
@@ -397,11 +401,11 @@ export function ProductGridSkeleton({ cards = 10 }: { cards?: number }) {
 export function ProductTableSkeleton({ rows = 6 }: { rows?: number }) {
   return (
     <div aria-busy="true" aria-label="Loading products">
-      <div className="hidden h-10 border-b border-line bg-paper/70 md:block" />
+      <div className="hidden h-8 border-b border-line bg-paper/70 md:block" />
       <ul className="divide-y divide-line">
         {Array.from({ length: rows }, (_, i) => (
-          <li key={i} className="flex items-center gap-3 px-3 py-3 sm:px-4 sm:py-3.5 md:px-5">
-            <Skeleton className="h-10 w-10 shrink-0 rounded-lg" />
+          <li key={i} className="flex items-center gap-3 px-3 py-2 sm:px-4">
+            <Skeleton className="h-12 w-12 shrink-0 rounded-md md:h-9 md:w-9" />
             <div className="flex flex-1 flex-col gap-2">
               <Skeleton className="h-3.5 w-2/5 min-w-32" />
               <Skeleton className="h-3 w-1/4 min-w-20" />

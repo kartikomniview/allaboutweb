@@ -208,13 +208,27 @@ export async function checkAvailability(rawName) {
 // Creates the store, the Firebase account and users/{uid}. The store doc is
 // created first with create() (fails if it exists), so two people can't claim
 // the same name at once; if the account can't be created it's removed again.
-export async function registerStoreOwner(body) {
+// `google`: the verified Google account ({ sub, email, name }) when the owner chose
+// "Continue with Google"; the account then has no password and logs in with Google only.
+export async function registerStoreOwner(body, google = null) {
   const { name, slug } = checkStoreName(body?.storeName);
   // Optional at sign-up, and never live straight away: a number sent here is a request
   // for a super admin to approve, like one made in Store settings.
   const whatsapp = normalizeWhatsapp(body?.whatsapp, { required: false });
   const businessTypes = checkBusinessTypes(body?.businessTypes);
-  const { email, password } = checkLogin(body);
+  const { email, password } = google ? { email: google.email, password: null } : checkLogin(body);
+
+  // One store per account: a Google account that already has one logs in instead
+  // (checked before the store is created, so its name isn't held for nothing).
+  if (google) {
+    const existing = await auth().getUserByEmail(email).catch((err) => {
+      if (err?.code === "auth/user-not-found") return null;
+      throw err;
+    });
+    if (existing) {
+      throw new HttpError(409, "EMAIL_TAKEN", "This Google account already has a store. Log in instead.");
+    }
+  }
 
   const storeRef = db().collection(STORES).doc(slug);
   try {
@@ -240,14 +254,19 @@ export async function registerStoreOwner(body) {
 
   let user;
   try {
-    user = await auth().createUser({ email, password });
+    user = await auth().createUser(
+      google ? { email, emailVerified: true, ...(google.name && { displayName: google.name }) } : { email, password },
+    );
   } catch (err) {
     await storeRef.delete().catch(() => {});
     throw accountError(err);
   }
 
   await storeRef.update({ ownerUid: user.uid });
-  await db().collection(USERS).doc(user.uid).set({ email, storeSlug: slug }, { merge: true });
+  await db()
+    .collection(USERS)
+    .doc(user.uid)
+    .set({ email, storeSlug: slug, ...(google && { googleSub: google.sub }) }, { merge: true });
   return {
     uid: user.uid,
     email,

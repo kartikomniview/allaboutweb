@@ -57,6 +57,30 @@ function categoryList(value) {
   });
 }
 
+// { categoryName, subcategoryName? }: the category the owner chose before re-detecting
+// (the first detection got the product wrong). null when there's none.
+function hintFrom(value) {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== "object" || !isName(value.categoryName)) {
+    throw bad("hint.categoryName must be a category name of at most 60 characters");
+  }
+  const sub = value.subcategoryName ?? "";
+  if (typeof sub !== "string" || (sub.trim() && !isName(sub))) {
+    throw bad("hint.subcategoryName must be a subcategory name of at most 60 characters");
+  }
+  return { categoryName: value.categoryName.trim(), subcategoryName: sub.trim() };
+}
+
+// The only category the answer may use when the owner chose one: from the list sent
+// (with its spelling), or the owner's own. Narrowed to the chosen subcategory, if any.
+function hintedCategory(hint, categories) {
+  const listed = categories.find((c) => same(c.name, hint.categoryName));
+  const name = listed?.name ?? hint.categoryName;
+  const subs = listed?.subcategories ?? [];
+  if (!hint.subcategoryName) return { name, subcategories: subs };
+  return { name, subcategories: [subs.find((s) => same(s, hint.subcategoryName)) ?? hint.subcategoryName] };
+}
+
 // ["Furniture", "Lighting"]: what the store sells (labels, for the prompt).
 function businessList(value) {
   if (value === undefined) return [];
@@ -179,9 +203,18 @@ function pickCategory(raw, categories) {
   return { categoryName: category.name, subcategoryName: inList(category) || category.subcategories[0] || "" };
 }
 
+// The owner's category, whatever the model answered, and the subcategory the
+// model chose from it ("" when it chose none of them: the owner picks one).
+function hintedPick(raw, category) {
+  const subText = clip(raw.subcategoryName, 60);
+  const sub = category.subcategories.length === 1 ? category.subcategories[0] : category.subcategories.find((s) => same(s, subText));
+  return { categoryName: category.name, subcategoryName: sub ?? "" };
+}
+
 // Maps the category onto the store's list and keeps every field inside the
-// product limits (validateProduct).
-export function clean(raw, categories) {
+// product limits (validateProduct). `hinted`: the category the owner chose
+// (hintedCategory), which the answer always keeps.
+export function clean(raw, categories, hinted = null) {
   const specs = [];
   for (const spec of list(raw.specs)) {
     const label = clip(spec?.label, 40);
@@ -192,13 +225,18 @@ export function clean(raw, categories) {
   // A product the model judged a different kind of thing gets no category, even if
   // it filled one in anyway: a wrong category is worse than asking the owner.
   const fit = FITS.includes(raw.categoryFit) ? raw.categoryFit : "";
-  const category = fit === "none" ? { categoryName: "", subcategoryName: "" } : pickCategory(raw, categories);
+  const category = hinted
+    ? hintedPick(raw, hinted)
+    : fit === "none"
+      ? { categoryName: "", subcategoryName: "" }
+      : pickCategory(raw, categories);
 
   return {
     productName: clip(raw.productName, 120),
     productType: clip(raw.productType, 40).toLowerCase(),
     // "none" also when the answer named no usable category (outside the store's list).
-    categoryFit: category.categoryName ? fit || "close" : "none",
+    // The owner's own choice is never "none".
+    categoryFit: category.categoryName ? (fit === "none" ? "close" : fit || "close") : "none",
     ...category,
     description: clip(raw.description, 2000),
     dimensions: clip(raw.dimensions, 200),
@@ -215,10 +253,32 @@ export function clean(raw, categories) {
 
 const notDetected = () => new HttpError(422, "NOT_DETECTED", "Couldn't detect this product. Fill in the details by hand.");
 
-// POST /products/detect  { businessTypes?, categories, image: { data, mediaType } } or { ..., imageUrl }
+// What the owner told us when re-detecting, after the category list. The model
+// takes the photo to be this kind of product (it got it wrong the first time).
+function hintText(hint, category) {
+  const where = hint.subcategoryName
+    ? `the category "${category.name}", subcategory "${category.subcategories[0]}"`
+    : `the category "${category.name}"`;
+  const sub = hint.subcategoryName
+    ? "that subcategory"
+    : category.subcategories.length
+      ? "the closest of its subcategories"
+      : 'an empty subcategoryName (the category has no subcategories yet)';
+  return (
+    `\n\nThe store owner says this product belongs in ${where}. Take that as correct, even if the photo could be read as something else: ` +
+    `name, describe and tag it as that kind of product. Use that category with ${sub}, and never set categoryFit to "none".`
+  );
+}
+
+// POST /products/detect  { businessTypes?, categories, hint?, image: { data, mediaType } } or { ..., imageUrl }
+// `hint`: { categoryName, subcategoryName? } the owner chose when re-detecting.
 export async function detectProduct(storeSlug, body) {
   if (!body || typeof body !== "object") throw bad("Body must be an object");
-  const categories = categoryList(body.categories);
+  const hint = hintFrom(body.hint);
+  const listed = categoryList(body.categories);
+  // With a hint, the answer may only use the owner's category.
+  const hinted = hint ? hintedCategory(hint, listed) : null;
+  const categories = hinted ? [hinted] : listed;
   const businesses = businessList(body.businessTypes);
   const image = imageBlock(body, storeSlug);
   const lists = categories.length
@@ -227,6 +287,7 @@ export async function detectProduct(storeSlug, body) {
         .join("\n")
     : "(none yet)";
   const intro = businesses.length ? `The store sells: ${businesses.join(", ")}.\n\n` : "";
+  const owner = hint ? hintText(hint, hinted) : "";
 
   const claude = client();
   let response;
@@ -239,7 +300,7 @@ export async function detectProduct(storeSlug, body) {
       messages: [
         {
           role: "user",
-          content: [image, { type: "text", text: `${intro}The store's categories and their subcategories:\n${lists}` }],
+          content: [image, { type: "text", text: `${intro}The store's categories and their subcategories:\n${lists}${owner}` }],
         },
       ],
     });
@@ -272,7 +333,8 @@ export async function detectProduct(storeSlug, body) {
   } catch {
     throw notDetected();
   }
-  const detected = clean(raw, categories);
-  if (!detected.productName && !detected.categoryName) throw notDetected();
+  const detected = clean(raw, categories, hinted);
+  // With a hint the category is always set, so the name decides.
+  if (!detected.productName && (hinted || !detected.categoryName)) throw notDetected();
   return detected;
 }

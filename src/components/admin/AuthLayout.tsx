@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
-import { AppIcon, Wordmark } from "@/components/catalog24/Logo";
+import { Wordmark } from "@/components/catalog24/Logo";
 import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 import { whatsappUrl } from "@/lib/contact";
+import LogoLoader from "./LogoLoader";
 import { ripple } from "./ripple";
-import { Spinner } from "./ui";
 
 // The frame around the store owners' login and registration pages.
 // - Phones (most owners): a full-screen app screen. A top bar with the logo (and a
@@ -66,6 +66,15 @@ export function AuthSupportLink({ prompt, message }: { prompt: string; message: 
         <WhatsAppIcon className="h-3.5 w-3.5 text-whatsapp" />
         Contact support
       </a>
+    </p>
+  );
+}
+
+/** A thin line with a word in the middle ("or"), between Google sign-in and the form. */
+export function AuthDivider({ label = "or" }: { label?: string }) {
+  return (
+    <p className="my-5 flex items-center gap-3 text-xs font-medium text-slate before:h-px before:flex-1 before:bg-line after:h-px after:flex-1 after:bg-line">
+      {label}
     </p>
   );
 }
@@ -233,15 +242,7 @@ export default function AuthLayout({
   );
 }
 
-/** The loading state shown while the session is checked. */
+/** The loading state shown while the session is checked (the same logo loader as the panel). */
 export function AuthLoading({ label }: { label: string }) {
-  return (
-    <div className="flex min-h-dvh flex-1 flex-col items-center justify-center gap-4 bg-white px-4 py-10 sm:bg-paper" role="status">
-      <AppIcon className="h-12 w-12" />
-      <span className="flex items-center gap-2 text-sm font-medium text-slate">
-        <Spinner className="h-4 w-4 text-primary" />
-        {label}
-      </span>
-    </div>
-  );
+  return <LogoLoader label={label} className="min-h-dvh bg-white sm:bg-paper" />;
 }

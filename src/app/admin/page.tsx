@@ -13,6 +13,7 @@ import {
   getRememberedEmail,
   loginNameOf,
   login,
+  loginWithGoogle,
   saveBrowserCredential,
   setRememberedEmail,
   toLoginEmail,
@@ -20,6 +21,7 @@ import {
 import { Spinner } from "@/components/admin/ui";
 import AuthLayout, {
   AuthActions,
+  AuthDivider,
   AuthLoading,
   AuthSupportLink,
   authButtonClass,
@@ -29,6 +31,7 @@ import AuthLayout, {
   authInputIconClass as iconClass,
   authLabelClass as labelClass,
 } from "@/components/admin/AuthLayout";
+import GoogleSignInButton, { googleSignInEnabled } from "@/components/admin/GoogleSignInButton";
 import { flagField, ripple } from "@/components/admin/ripple";
 import "@/components/admin/admin.css";
 
@@ -46,6 +49,7 @@ export default function AdminLoginPage() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
   const [checking, setChecking] = useState(true);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -103,6 +107,20 @@ export default function AdminLoginPage() {
     }
   }
 
+  // "Continue with Google": logs in to the store that uses this Google account.
+  async function handleGoogle(credential: string) {
+    setError(null);
+    setFieldErrors({});
+    setGoogleBusy(true);
+    try {
+      await loginWithGoogle(credential);
+      router.replace("/admin/dashboard");
+    } catch (err) {
+      setError(err instanceof AuthError ? err.message : "Something went wrong. Please try again.");
+      setGoogleBusy(false);
+    }
+  }
+
   if (checking) return <AuthLoading label="Checking session…" />;
 
   return (
@@ -113,6 +131,12 @@ export default function AdminLoginPage() {
       contentClassName="admin-fade-in"
     >
       <form onSubmit={handleSubmit} noValidate className={authFormClass}>
+        {googleSignInEnabled && (
+          <>
+            <GoogleSignInButton onCredential={handleGoogle} busy={googleBusy} />
+            <AuthDivider label="or log in with your username" />
+          </>
+        )}
         <div className="flex flex-col gap-5">
           <div data-field>
             <label htmlFor="admin-email" className={labelClass}>
@@ -233,7 +257,7 @@ export default function AdminLoginPage() {
               <span>{error}</span>
             </div>
           )}
-          <button type="submit" disabled={submitting} onPointerDown={ripple} className={authButtonClass}>
+          <button type="submit" disabled={submitting || googleBusy} onPointerDown={ripple} className={authButtonClass}>
             {submitting ? (
               <>
                 <Spinner className="h-4 w-4" />

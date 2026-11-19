@@ -105,7 +105,7 @@ function LoadMore({ shown, total, onVisible }: { shown: number; total: number; o
   }, [shown]);
 
   return (
-    <div ref={ref} className="flex justify-center border-t border-line px-4 py-3">
+    <div ref={ref} className="flex justify-center border-t border-line px-4 py-2">
       <Button size="sm" variant="ghost" onClick={onVisible}>
         Show {Math.min(PAGE_SIZE, total - shown)} more
       </Button>
@@ -125,13 +125,13 @@ function EmptyState({
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center px-6 py-16 text-center">
+    <div className="flex flex-col items-center px-6 py-12 text-center">
       <span className="grid h-12 w-12 place-items-center rounded-full bg-paper text-slate">
         <Icon className="h-5 w-5" aria-hidden />
       </span>
-      <h2 className="mt-4 text-base font-semibold text-ink">{title}</h2>
-      <p className="mt-1 max-w-sm text-sm leading-relaxed text-slate">{children}</p>
-      {actions && <div className="mt-6 flex flex-col gap-2 sm:flex-row">{actions}</div>}
+      <h2 className="mt-3 text-[15px] font-semibold text-ink">{title}</h2>
+      <p className="mt-1 max-w-sm text-[13px] leading-relaxed text-slate">{children}</p>
+      {actions && <div className="mt-5 flex flex-col gap-2 sm:flex-row">{actions}</div>}
     </div>
   );
 }
@@ -171,8 +171,8 @@ function FilterSheet({
         tabIndex={-1}
         className="admin-pop-in flex max-h-[85dvh] w-full flex-col overflow-hidden rounded-t-lg bg-white shadow-2xl focus:outline-none"
       >
-        <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-line pl-5 pr-2">
-          <h2 id="filter-sheet-title" className="text-base font-semibold text-ink">
+        <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-line pl-4 pr-1">
+          <h2 id="filter-sheet-title" className="text-[15px] font-semibold text-ink">
             Filter &amp; view
           </h2>
           <div className="flex items-center">
@@ -198,14 +198,14 @@ function FilterSheet({
             </button>
           </div>
         </div>
-        <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 py-4">{children}</div>
-        <div className="flex gap-2 border-t border-line px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+        <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-3.5">{children}</div>
+        <div className="flex gap-2 border-t border-line px-4 pt-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))]">
           {canClear && (
-            <Button onClick={onClear} className="h-12 px-4 text-[15px]">
+            <Button onClick={onClear} className="h-11 px-4">
               Clear
             </Button>
           )}
-          <Button variant="primary" onClick={onClose} className="h-12 flex-1 text-[15px]">
+          <Button variant="primary" onClick={onClose} className="h-11 flex-1">
             Show {resultCount} {resultCount === 1 ? "product" : "products"}
           </Button>
         </div>
@@ -215,7 +215,7 @@ function FilterSheet({
 }
 
 function SheetLabel({ children }: { children: ReactNode }) {
-  return <h3 className="mb-2 text-[13px] font-semibold text-ink">{children}</h3>;
+  return <h3 className="mb-1.5 text-xs font-semibold text-ink">{children}</h3>;
 }
 
 export default function ManageEcatalogPage() {
@@ -425,12 +425,12 @@ export default function ManageEcatalogPage() {
             role="tab"
             aria-selected={selected}
             onClick={() => setStatus(key)}
-            className={`flex h-9 items-center justify-center gap-1.5 rounded-[4px] px-3 text-[13px] font-semibold transition-colors ${
+            className={`flex h-10 items-center justify-center gap-1.5 rounded-[4px] px-3 text-[13px] font-semibold transition-colors sm:h-7 sm:px-2.5 sm:text-xs ${
               selected ? "bg-white text-ink shadow-[0_1px_2px_rgba(1,18,60,0.12)]" : "text-slate hover:text-ink"
             }`}
           >
             {label}
-            <span className={`text-[11px] tabular-nums ${selected ? "text-primary" : "text-slate/80"}`}>
+            <span className={`text-[11px] tabular-nums sm:text-[10px] ${selected ? "text-primary" : "text-slate/80"}`}>
               {products ? counts[key] : "–"}
             </span>
           </button>
@@ -455,7 +455,7 @@ export default function ManageEcatalogPage() {
               onClick={() => setCategory(name)}
               onPointerDown={ripple}
               aria-pressed={selected}
-              className={`relative inline-flex h-9 shrink-0 items-center gap-1.5 overflow-hidden rounded-md border px-3 text-[13px] font-semibold whitespace-nowrap transition-colors ${
+              className={`relative inline-flex h-9 shrink-0 items-center gap-1.5 overflow-hidden rounded-md border px-3 text-[13px] font-semibold whitespace-nowrap transition-colors sm:h-7 sm:gap-1 sm:px-2.5 sm:text-xs ${
                 selected
                   ? "border-ink bg-ink text-white"
                   : count === 0
@@ -464,7 +464,7 @@ export default function ManageEcatalogPage() {
               }`}
             >
               {label}
-              <span className={`text-[11px] tabular-nums ${selected ? "text-white/70" : "text-slate/80"}`}>
+              <span className={`text-[11px] tabular-nums sm:text-[10px] ${selected ? "text-white/70" : "text-slate/80"}`}>
                 {products ? count : "–"}
               </span>
             </button>
@@ -533,13 +533,13 @@ export default function ManageEcatalogPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 sm:gap-4">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 sm:gap-3">
       {/* Title and actions: from sm up. Phones have a single row instead (the sticky bar
           below), so the title is kept only for screen readers there. */}
       <header className="admin-fade-in sr-only sm:not-sr-only sm:flex sm:items-end sm:justify-between sm:gap-3">
         <div className="min-w-0">
-          <h1 className="text-[1.5rem] font-bold leading-tight tracking-[-0.025em] text-ink">Products</h1>
-          <p className="mt-0.5 text-sm text-slate">
+          <h1 className="text-xl font-bold leading-tight tracking-[-0.02em] text-ink">Products</h1>
+          <p className="mt-0.5 text-[13px] text-slate">
             {products ? (
               <>
                 {usageLabel(limit)} · {counts.published} published
@@ -550,7 +550,7 @@ export default function ManageEcatalogPage() {
           </p>
         </div>
         <div className="hidden shrink-0 items-center gap-2 sm:flex">
-          <Button variant="share" onClick={() => setSharing(true)} disabled={products === null}>
+          <Button variant="share" size="touch" onClick={() => setSharing(true)} disabled={products === null}>
             <Share2 className="h-4 w-4" aria-hidden />
             Share
           </Button>
@@ -559,12 +559,12 @@ export default function ManageEcatalogPage() {
             target="_blank"
             rel="noopener noreferrer"
             aria-label="View live catalog"
-            className={buttonClass("secondary")}
+            className={buttonClass("secondary", "touch")}
           >
             View live
             <ArrowUpRight className="h-4 w-4 text-slate" aria-hidden />
           </a>
-          <Link href={NEW_PRODUCT_ROUTE} className={buttonClass("primary")}>
+          <Link href={NEW_PRODUCT_ROUTE} className={buttonClass("primary", "touch")}>
             <Plus className="h-4 w-4" aria-hidden />
             Add product
           </Link>
@@ -576,25 +576,25 @@ export default function ManageEcatalogPage() {
       {/* Search & filters: stick under the top bar while scrolling. On phones this is the
           page's only row: search, Filters (opens the sheet), Share and View live. Add product
           is the raised button in the bottom tab bar. */}
-      <div className="sticky top-14 z-20 -mx-3 flex flex-col gap-2 bg-paper/95 px-2 py-2 backdrop-blur sm:-mx-4 sm:gap-2.5 sm:px-4 lg:top-16 lg:-mx-5 lg:px-5">
+      <div className="sticky top-14 z-20 -mx-3 flex flex-col gap-2 bg-paper/95 px-2 py-2 backdrop-blur sm:-mx-4 sm:gap-2 sm:px-4 lg:top-16 lg:-mx-5 lg:px-5">
         <div className="flex gap-1.5 sm:gap-2">
           <label className="relative min-w-0 flex-1">
             <span className="sr-only">Search products</span>
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate/60" aria-hidden />
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate/60 sm:left-3 sm:h-4 sm:w-4" aria-hidden />
             <input
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search products"
               enterKeyHint="search"
-              className={`h-11 w-full rounded-md border border-line bg-white pl-11 text-base ${query ? "pr-10" : "pr-3"} text-ink transition-[border-color,box-shadow] placeholder:text-slate/55 focus:border-primary focus:outline-none focus-visible:outline-none! focus:ring-[3px] focus:ring-primary/15 [&::-webkit-search-cancel-button]:hidden`}
+              className={`h-11 w-full rounded-md border border-line bg-white pl-11 text-base sm:h-9 sm:pl-9 sm:text-[13px] ${query ? "pr-10" : "pr-3"} text-ink transition-[border-color,box-shadow] placeholder:text-slate/55 focus:border-primary focus:outline-none focus-visible:outline-none! focus:ring-[3px] focus:ring-primary/15 [&::-webkit-search-cancel-button]:hidden`}
             />
             {query && (
               <button
                 type="button"
                 onClick={() => setQuery("")}
                 aria-label="Clear search"
-                className="absolute right-0.5 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-md text-slate hover:text-ink"
+                className="absolute right-0.5 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-md text-slate hover:text-ink sm:h-8 sm:w-8"
               >
                 <X className="h-4 w-4" aria-hidden />
               </button>
@@ -640,7 +640,7 @@ export default function ManageEcatalogPage() {
             <ArrowUpRight className="h-[18px] w-[18px]" aria-hidden />
           </a>
 
-          <div role="group" aria-label="Layout" className="hidden h-11 shrink-0 items-center gap-0.5 rounded-md border border-line bg-white p-1 sm:flex">
+          <div role="group" aria-label="Layout" className="hidden h-9 shrink-0 items-center gap-0.5 rounded-md border border-line bg-white p-0.5 sm:flex">
             {VIEW_OPTIONS.map(({ key, label, icon: Icon }) => {
               const selected = view === key;
               return (
@@ -651,7 +651,7 @@ export default function ManageEcatalogPage() {
                   aria-pressed={selected}
                   aria-label={label}
                   title={label}
-                  className={`grid h-8 w-9 place-items-center rounded-[4px] transition-colors ${
+                  className={`grid h-7 w-8 place-items-center rounded-[4px] transition-colors ${
                     selected ? "bg-ink text-white" : "text-slate hover:text-ink"
                   }`}
                 >
@@ -666,16 +666,20 @@ export default function ManageEcatalogPage() {
             size="icon"
             aria-label="Refresh"
             title="Refresh"
-            className="hidden h-11 w-11 sm:inline-flex"
+            className="max-sm:hidden! sm:h-9 sm:w-9"
           >
             <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} aria-hidden />
           </Button>
         </div>
 
-        {statusTabs("hidden grid-cols-3 gap-1 rounded-md bg-ink/[0.05] p-1 sm:inline-grid sm:self-start")}
-        {categoryChips(
-          "-mx-4 hidden gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:flex lg:mx-0 lg:flex-wrap lg:px-0 [&::-webkit-scrollbar]:hidden",
-        )}
+        {/* From sm up: status and categories share one row (the categories scroll sideways, and wrap from lg). */}
+        <div className="hidden min-w-0 items-start gap-2 sm:flex">
+          {statusTabs("inline-grid shrink-0 grid-cols-3 gap-0.5 rounded-md bg-ink/[0.05] p-0.5")}
+          {categoryNames.length > 0 && <span className="mt-1.5 h-5 w-px shrink-0 bg-line" aria-hidden />}
+          {categoryChips(
+            "-mr-4 flex min-w-0 flex-1 gap-1.5 overflow-x-auto pr-4 [scrollbar-width:none] lg:mr-0 lg:flex-wrap lg:pr-0 [&::-webkit-scrollbar]:hidden",
+          )}
+        </div>
       </div>
 
       {/* Phones: 8px from the screen edge (the shell pads 12px), no shadow, and in grid view no
@@ -688,7 +692,7 @@ export default function ManageEcatalogPage() {
         {refreshing &&<div className="admin-progress absolute inset-x-0 top-0 z-10" role="progressbar" aria-label="Loading" />}
         {content}
         {products && products.length > 0 && visible.length > 0 && (
-          <div className="flex items-center justify-between gap-3 border-t border-line px-3 py-2.5 text-[13px] text-slate sm:px-4 sm:py-3">
+          <div className="flex items-center justify-between gap-3 border-t border-line px-3 py-2 text-xs text-slate sm:px-4">
             <span>
               Showing <span className="font-semibold text-ink">{shownCount}</span> of{" "}
               <span className="font-semibold text-ink">{visible.length}</span>
@@ -749,7 +753,7 @@ export default function ManageEcatalogPage() {
                     onClick={() => changeView(key)}
                     onPointerDown={ripple}
                     aria-pressed={selected}
-                    className={`relative flex h-11 items-center justify-center gap-2 overflow-hidden rounded-md border text-[13px] font-semibold transition-colors ${
+                    className={`relative flex h-10 items-center justify-center gap-2 overflow-hidden rounded-md border text-[13px] font-semibold transition-colors ${
                       selected ? "border-ink bg-ink text-white" : "border-line bg-white text-ink"
                     }`}
                   >

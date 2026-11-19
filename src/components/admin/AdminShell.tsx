@@ -7,8 +7,9 @@ import { ArrowUpRight, BookOpen, Building2, Download, LayoutDashboard, LogOut, M
 import { checkSession, logout, type AdminStore, type AdminUser } from "@/lib/adminAuth";
 import { storeUrlFor } from "@/lib/catalogDomain";
 import { InstallAppPopup, useInstallApp } from "./InstallApp";
+import LogoLoader from "./LogoLoader";
 import { ripple } from "./ripple";
-import { Button, Spinner } from "./ui";
+import { Button } from "./ui";
 import "./admin.css";
 
 type AdminContextValue = { user: AdminUser; setStore: (change: Partial<AdminStore>) => void };
@@ -255,17 +256,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-10" role="status">
-        <BrandMark className="h-11 w-11 text-lg" />
-        <div className="flex items-center gap-2 text-sm font-medium text-slate">
-          <Spinner className="h-4 w-4 text-primary" />
-          Loading your workspace…
-        </div>
-      </div>
-    );
-  }
+  if (!user) return <LogoLoader label="Loading your workspace…" />;
 
   const sidebarProps = { user, pathname };
   const storeName = user.store.name;

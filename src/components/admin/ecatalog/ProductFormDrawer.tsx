@@ -19,27 +19,19 @@ import {
   Check,
   ChevronDown,
   CircleCheck,
-  FileText,
   GripVertical,
   ImagePlus,
   Images,
   IndianRupee,
   Info,
-  Layers,
-  ListChecks,
-  MessageSquareQuote,
-  Palette,
   Plus,
   RotateCcw,
-  Ruler,
-  SlidersHorizontal,
   Sparkles,
   Star,
   Trash2,
   TriangleAlert,
   WandSparkles,
   X,
-  type LucideIcon,
 } from "lucide-react";
 import { AuthError } from "@/lib/adminAuth";
 import {
@@ -73,6 +65,7 @@ import {
   isCategoryMismatch,
   type DetectContext,
   type DetectedProduct,
+  type DetectHint,
 } from "@/lib/productDetect";
 import { useAdminUser, useLiveCatalogUrl } from "../AdminShell";
 import { AuthProgress, authButtonClass, authSecondaryButtonClass, useTyping } from "../AuthLayout";
@@ -82,11 +75,12 @@ import ConfirmDialog from "./ConfirmDialog";
 import CategoryCombobox, { type ComboOption } from "./CategoryCombobox";
 import { useOverlay } from "./useOverlay";
 
-// Phones: 48px controls with 16px text (avoids iOS zoom). From sm up: compact, 14px.
+// The edit form's fields. Phones: 44px controls with 16px text (smaller text makes
+// iOS zoom in on focus). From sm up: compact, 36px with 13px text.
 const fieldBase =
-  "w-full rounded-md border border-line bg-white px-3.5 text-base text-ink transition placeholder:text-slate/55 hover:border-slate/35 focus:border-primary focus:outline-none focus-visible:outline-none! focus:ring-[3px] focus:ring-primary/15 sm:px-3 sm:text-sm";
-const inputClass = `h-12 sm:h-10 ${fieldBase}`;
-const textareaClass = `resize-y py-3 leading-relaxed sm:py-2 ${fieldBase}`;
+  "w-full rounded-md border border-line bg-white px-3 text-base text-ink transition placeholder:text-slate/55 hover:border-slate/35 focus:border-primary focus:outline-none focus-visible:outline-none! focus:ring-[3px] focus:ring-primary/15 sm:px-2.5 sm:text-[13px]";
+const inputClass = `h-11 sm:h-9 ${fieldBase}`;
+const textareaClass = `resize-y py-2.5 leading-relaxed sm:py-2 ${fieldBase}`;
 
 const labelClass = "mb-1.5 flex items-center gap-0.5 text-[13px] font-semibold text-ink";
 
@@ -212,11 +206,21 @@ function toInput(form: FormState): ProductInput | string {
 
 /* ---------- Layout pieces ---------- */
 
+// The edit form's text levels: section title (14px semibold, ink) > field value
+// (ink) > field label (12px medium, softer ink) > help text (11px, slate).
+const sectionTitleClass = "text-sm font-semibold leading-5 tracking-[-0.01em] text-ink";
+const fieldLabelClass = "mb-1 flex min-h-4 items-center gap-0.5 text-xs font-medium text-ink/75";
+
+/** Help text on the right of a field's label row (a counter, a short tip). */
+function LabelAside({ children }: { children: ReactNode }) {
+  return <span className="ml-auto truncate pl-3 text-[11px] font-normal text-slate">{children}</span>;
+}
+
+// A card with a compact title row. Phones: full-width blocks divided by lines.
+// From sm up: white cards on the grey page.
 function Section({
   title,
   required = false,
-  icon: Icon,
-  description,
   summary,
   action,
   collapsible = false,
@@ -225,59 +229,52 @@ function Section({
 }: {
   title: string;
   required?: boolean;
-  icon: LucideIcon;
-  description?: string;
+  /** Shown on the right of a collapsed section's title. */
   summary?: ReactNode;
-  /** Button shown on the right of the header (non-collapsible sections only). */
+  /** Shown on the right of the title (non-collapsible sections only). */
   action?: ReactNode;
   collapsible?: boolean;
   defaultOpen?: boolean;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  const heading = (
+  const titleText = (
     <>
-      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-tint text-primary" aria-hidden>
-        <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
-      </span>
-      <span className="shrink-0 text-[15px] font-semibold text-ink">
-        {title}
-        {required && <span className="text-primary" aria-hidden>*</span>}
-      </span>
-      {description && open && (
-        <span className="hidden truncate text-xs font-normal text-slate sm:inline">· {description}</span>
-      )}
-      <span className="ml-auto flex min-w-0 items-center gap-2">
-        {!collapsible && action}
-        {!open && summary && <span className="truncate text-xs text-slate">{summary}</span>}
-        {collapsible && (
-          <ChevronDown
-            className={`h-4 w-4 shrink-0 text-slate transition-transform ${open ? "" : "-rotate-90"}`}
-            aria-hidden
-          />
-        )}
-      </span>
+      {title}
+      {required && <span className="text-primary" aria-hidden>*</span>}
     </>
   );
 
   return (
-    <section className="shrink-0 overflow-hidden rounded-lg border border-line bg-white shadow-[0_1px_2px_rgba(1,18,60,0.04)]">
+    <section className="shrink-0 overflow-hidden border-b border-line bg-white sm:rounded-lg sm:border sm:shadow-[0_1px_2px_rgba(1,18,60,0.04)]">
       {collapsible ? (
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          onPointerDown={ripple}
-          aria-expanded={open}
-          className={`relative flex min-h-14 w-full items-center gap-2.5 overflow-hidden px-4 py-3 text-left transition-colors hover:bg-paper/60 ${
-            open ? "border-b border-line" : ""
-          }`}
-        >
-          {heading}
-        </button>
+        <h3>
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            onPointerDown={ripple}
+            aria-expanded={open}
+            className="relative flex min-h-11 w-full items-center gap-3 overflow-hidden px-4 py-2.5 text-left transition-colors hover:bg-paper/60 focus-visible:outline-none! focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-primary/25 sm:min-h-10 sm:py-2"
+          >
+            <span className={sectionTitleClass}>{titleText}</span>
+            <span className="ml-auto flex min-w-0 items-center gap-2.5">
+              {!open && summary && <span className="truncate text-[11px] text-slate">{summary}</span>}
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-slate transition-transform ${open ? "rotate-180" : ""}`}
+                aria-hidden
+              />
+            </span>
+          </button>
+        </h3>
       ) : (
-        <div className="flex min-h-14 items-center gap-2.5 border-b border-line px-4 py-3">{heading}</div>
+        <div className="flex min-h-5 items-center gap-3 px-4 pt-3">
+          <h3 className={sectionTitleClass}>{titleText}</h3>
+          {action && <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2">{action}</div>}
+        </div>
       )}
-      {open && <div className="flex flex-col gap-4 p-4">{children}</div>}
+      {open && (
+        <div className={`flex flex-col gap-3 px-4 pb-3.5 ${collapsible ? "pt-0.5" : "pt-2.5"}`}>{children}</div>
+      )}
     </section>
   );
 }
@@ -285,21 +282,25 @@ function Section({
 function Field({
   label,
   required,
+  aside,
   hint,
   className = "",
   children,
 }: {
   label: string;
   required?: boolean;
+  /** Shown on the right of the label row. */
+  aside?: ReactNode;
   hint?: ReactNode;
   className?: string;
   children: ReactNode;
 }) {
   return (
     <label className={`block min-w-0 ${className}`}>
-      <span className={labelClass}>
+      <span className={fieldLabelClass}>
         {label}
         {required && <span className="text-primary" aria-hidden>*</span>}
+        {aside && <LabelAside>{aside}</LabelAside>}
       </span>
       {children}
       {hint && <span className="mt-1.5 block text-xs leading-snug text-slate">{hint}</span>}
@@ -310,14 +311,14 @@ function Field({
 function MoneyInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
   return (
     <div className="relative">
-      <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-base text-slate sm:left-3 sm:text-sm">₹</span>
+      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-base text-slate sm:left-2.5 sm:text-[13px]">₹</span>
       <input
         type="number"
         inputMode="numeric"
         min={0}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`${inputClass} pl-8 tabular-nums sm:pl-7`}
+        className={`${inputClass} pl-7 tabular-nums sm:pl-6`}
         enterKeyHint="next"
         placeholder={placeholder}
       />
@@ -358,7 +359,7 @@ function TagInput({
   }
 
   return (
-    <div className="flex min-h-12 flex-wrap items-center gap-1.5 rounded-md border border-line bg-white px-2 py-1.5 transition hover:border-slate/35 focus-within:border-primary focus-within:ring-[3px] focus-within:ring-primary/15 sm:min-h-10 sm:gap-1 sm:px-1.5 sm:py-1">
+    <div className="flex min-h-11 flex-wrap items-center gap-1.5 rounded-md border border-line bg-white px-1.5 py-1 transition hover:border-slate/35 focus-within:border-primary focus-within:ring-[3px] focus-within:ring-primary/15 sm:min-h-9 sm:gap-1 sm:py-[5px]">
       {tags.map((tag, i) => (
         <span
           key={tag}
@@ -386,14 +387,14 @@ function TagInput({
         aria-labelledby={labelledBy}
         enterKeyHint="done"
         placeholder={tags.length ? (badge ? "Add tag…" : "Add keyword…") : "Type and press Enter"}
-        className="h-8 min-w-[7rem] flex-1 bg-transparent px-1.5 text-base text-ink placeholder:text-slate/55 focus:outline-none focus-visible:outline-none! sm:h-6 sm:px-1 sm:text-sm"
+        className="h-8 min-w-[7rem] flex-1 bg-transparent px-1.5 text-base text-ink placeholder:text-slate/55 focus:outline-none focus-visible:outline-none! sm:h-6 sm:px-1 sm:text-[13px]"
       />
     </div>
   );
 }
 
 const iconBtn =
-  "grid h-11 w-11 shrink-0 place-items-center rounded-md text-slate transition-colors hover:bg-red-50 hover:text-red-600 sm:h-10 sm:w-10";
+  "grid h-11 w-11 shrink-0 place-items-center rounded-md text-slate transition-colors hover:bg-red-50 hover:text-red-600 sm:h-9 sm:w-9";
 
 function AddRowButton({ children, onClick }: { children: ReactNode; onClick: () => void }) {
   return (
@@ -401,9 +402,9 @@ function AddRowButton({ children, onClick }: { children: ReactNode; onClick: () 
       type="button"
       onClick={onClick}
       onPointerDown={ripple}
-      className="relative inline-flex h-11 items-center gap-1.5 self-start overflow-hidden rounded-md border border-dashed border-line px-3.5 text-[13px] font-semibold text-slate transition-colors hover:border-primary/50 hover:text-primary sm:h-9 sm:px-3"
+      className="relative inline-flex h-11 items-center gap-1.5 self-start overflow-hidden rounded-md border border-dashed border-line px-3 text-xs font-semibold text-slate transition-colors hover:border-primary/50 hover:text-primary sm:h-8 sm:px-2.5"
     >
-      <Plus className="h-4 w-4" aria-hidden />
+      <Plus className="h-3.5 w-3.5" aria-hidden />
       {children}
     </button>
   );
@@ -930,7 +931,12 @@ function ImageManager({
           {picker}
         </div>
       ) : (
-        <div ref={gridRef} className={`relative grid grid-cols-3 gap-2.5 ${dragging ? "select-none" : ""}`} {...dropProps}>
+        // Add product: 3 big columns. The edit form: smaller tiles, so the photos don't fill the screen.
+        <div
+          ref={gridRef}
+          className={`relative grid ${hero ? "grid-cols-3 gap-2.5" : "grid-cols-4 gap-1.5 sm:grid-cols-5"} ${dragging ? "select-none" : ""}`}
+          {...dropProps}
+        >
           {shownImages.map((url, n) => {
             const isCover = n === 0;
             const isDragged = url === dragging;
@@ -1145,16 +1151,11 @@ function ImageManager({
 
 /* ---------- Details detected from a photo ---------- */
 
-// The "Auto-fill from photo" button in the Media section (re-detects the details from
-// the cover photo). Hidden for now; set to true to bring it back. Detection on the
-// first photo of a new product isn't affected.
-const SHOW_AUTOFILL_BUTTON = false;
-
 const DETECTED_FIELDS = ["productName", "description", "dimensions"] as const;
 const DETECTED_LISTS = ["keywords", "specs", "tags", "highlights"] as const;
 
 // "fill-empty" (automatic, on the first photo) only fills what the admin left
-// empty; "replace" (the Auto-fill button) overwrites with everything detected.
+// empty; "replace" (Re-detect) overwrites with everything detected.
 //
 // `prev` is the previous detection in this form. A value that's still what it put in
 // (the owner didn't change it) counts as empty, so a new photo replaces it. Otherwise
@@ -1182,8 +1183,13 @@ function mergeDetected(
   }
   const categoryFromPrev =
     !!prev?.categoryName && f.categoryName === prev.categoryName && f.subcategoryName === prev.subcategoryName;
-  // Only a full pair is applied, so a re-detect never clears a chosen subcategory.
-  if (
+  if (mode === "replace" && d.categoryName) {
+    // Re-detect: the category is the one the owner chose. When AI matched none of its
+    // subcategories, the form's one stays if it belongs to it; otherwise the owner picks.
+    next.categoryName = d.categoryName;
+    next.subcategoryName = d.subcategoryName || (f.categoryName === d.categoryName ? f.subcategoryName : "");
+  } else if (
+    // Only a full pair is applied, so a new photo never clears a chosen subcategory.
     d.categoryName &&
     d.subcategoryName &&
     (mode === "replace" || !f.categoryName.trim() || !f.subcategoryName.trim() || categoryFromPrev)
@@ -1199,11 +1205,6 @@ function mergeDetected(
   return next;
 }
 
-const hasDetectedFieldsFilled = (f: FormState) =>
-  DETECTED_FIELDS.some((key) => f[key].trim()) ||
-  DETECTED_LISTS.some((key) => f[key].filter(Boolean).length > 0) ||
-  Boolean(f.subcategoryName.trim());
-
 // "outside": AI recognised the product, but it fits none of the store's categories.
 type DetectNote = { kind: "ok" | "outside" | "error"; text: string };
 
@@ -1212,6 +1213,8 @@ function joinLabels(labels: string[]): string {
   if (labels.length <= 1) return labels[0] ?? "";
   return `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
 }
+
+const REDETECT_PROMPT = "Wrong product or category? Re-detect reads the photo again, and you can tell it the category.";
 
 const detectError = (err: unknown) =>
   err instanceof Error && err.message ? err.message : "Couldn't detect the product from the photo.";
@@ -1292,7 +1295,7 @@ function CategoryMismatchDialog({
         aria-labelledby="mismatch-title"
         aria-describedby="mismatch-text"
         tabIndex={-1}
-        className="admin-pop-in w-full rounded-t-lg bg-white shadow-2xl focus:outline-none sm:max-w-md sm:rounded-lg"
+        className="admin-pop-in w-full rounded-t-lg bg-white shadow-2xl focus:outline-none focus-visible:outline-none! sm:max-w-md sm:rounded-lg"
       >
         <div className="flex flex-col gap-4 px-5 pb-4 pt-5 sm:px-6 sm:pt-6">
           <div className="flex gap-3.5">
@@ -1324,6 +1327,158 @@ function CategoryMismatchDialog({
           </button>
           <button type="button" onClick={onUse} onPointerDown={ripple} className={`${authButtonClass} sm:w-auto sm:px-5`}>
             Use this category
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Opens RedetectDialog. An accent-tinted button (ink text keeps the contrast up),
+// 44px tall on phones and 40px from sm up.
+function RedetectButton({
+  onClick,
+  disabled,
+  title,
+  compact = false,
+  className = "",
+}: {
+  onClick: () => void;
+  disabled: boolean;
+  title: string;
+  /** Smaller, for a section title row (the edit form). */
+  compact?: boolean;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      onPointerDown={ripple}
+      disabled={disabled}
+      title={title}
+      className={`relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-md bg-tint font-semibold whitespace-nowrap text-ink shadow-[0_1px_2px_rgba(252,108,38,0.18)] ring-1 ring-inset ring-primary/45 transition-[background-color,box-shadow,transform] hover:bg-primary/15 hover:ring-primary active:scale-[0.98] focus-visible:outline-none! focus-visible:ring-[3px] focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 ${
+        compact ? "h-10 gap-1.5 px-3 text-[13px] sm:h-8 sm:px-2.5 sm:text-xs" : "h-11 gap-2 px-4 text-sm sm:h-10"
+      } ${className}`}
+    >
+      <WandSparkles className={`${compact ? "h-4 w-4 sm:h-3.5 sm:w-3.5" : "h-[18px] w-[18px]"} text-primary`} strokeWidth={2} aria-hidden />
+      Re-detect
+    </button>
+  );
+}
+
+// "Re-detect": AI reads the cover photo again (for when its first guess was wrong).
+// The owner can choose the category (optional): AI then reads the photo as that kind
+// of product and picks the closest subcategory itself. A bottom sheet on phones.
+function RedetectDialog({
+  categoryOptions,
+  categorySuggestions,
+  busy,
+  error,
+  onDetect,
+  onCancel,
+}: {
+  categoryOptions: ComboOption[];
+  categorySuggestions: ComboOption[];
+  busy: boolean;
+  /** Why the detection failed. */
+  error: string | null;
+  /** The chosen category, or "" to let AI choose it. */
+  onDetect: (categoryName: string) => void;
+  onCancel: () => void;
+}) {
+  const panelRef = useOverlay<HTMLDivElement>(onCancel, busy);
+  // Empty: the category may be the wrong guess the owner is re-detecting to fix.
+  const [category, setCategory] = useState("");
+
+  return (
+    <div
+      className="admin-fade-in fixed inset-0 z-[110] flex items-end justify-center bg-ink/40 backdrop-blur-[2px] sm:items-center sm:p-6"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !busy) onCancel();
+      }}
+    >
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="redetect-title"
+        aria-describedby="redetect-text"
+        tabIndex={-1}
+        className="admin-pop-in w-full rounded-t-lg bg-white shadow-2xl focus:outline-none focus-visible:outline-none! sm:max-w-md sm:rounded-lg"
+      >
+        <div className="flex flex-col gap-4 px-5 pb-4 pt-5 sm:px-6 sm:pt-6">
+          <div className="flex gap-3.5">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-tint text-primary">
+              <WandSparkles className="h-5 w-5" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <h2 id="redetect-title" className="text-base font-semibold text-ink">
+                Re-detect from photo
+              </h2>
+              <p id="redetect-text" className="mt-1 text-sm leading-relaxed text-slate">
+                AI reads the cover photo again and fills in the name and details. If it got the category wrong, choose the
+                right one.
+              </p>
+            </div>
+          </div>
+          {/* Not <label>: it would re-open the dropdown when an option is clicked. */}
+          <div className="min-w-0">
+            <span id="redetect-category-label" className={labelClass}>
+              Category
+              {category ? (
+                <button
+                  type="button"
+                  onClick={() => setCategory("")}
+                  disabled={busy}
+                  className="ml-auto text-xs font-semibold text-primary hover:underline disabled:opacity-50"
+                >
+                  Let AI choose
+                </button>
+              ) : (
+                <span className="ml-auto text-xs font-normal text-slate">Optional</span>
+              )}
+            </span>
+            <CategoryCombobox
+              labelledBy="redetect-category-label"
+              value={category}
+              options={categoryOptions}
+              suggestions={categorySuggestions}
+              onChange={(name) => setCategory(name)}
+              placeholder="Let AI choose"
+              searchPlaceholder="Search or type a new category"
+              disabled={busy}
+            />
+          </div>
+          <p className="text-xs leading-snug text-slate">
+            Replaces the name, description, specs, tags, highlights and search keywords. Prices and photos stay as they are.
+          </p>
+          {error && (
+            <p role="alert" className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3.5 py-3 text-[13px] font-medium text-red-700">
+              <TriangleAlert className="mt-px h-4 w-4 shrink-0" aria-hidden />
+              {error}
+            </p>
+          )}
+        </div>
+        <div className="flex flex-col-reverse gap-2 border-t border-line px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:flex-row sm:justify-end sm:px-6 sm:pb-4">
+          <button
+            type="button"
+            onClick={onCancel}
+            onPointerDown={ripple}
+            disabled={busy}
+            className={`${authSecondaryButtonClass} sm:w-auto sm:px-5`}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => onDetect(category.trim())}
+            onPointerDown={ripple}
+            disabled={busy}
+            className={`${authButtonClass} sm:w-auto sm:px-5`}
+          >
+            {busy && <Spinner className="h-4 w-4" />}
+            {busy ? "Reading photo…" : "Re-detect"}
           </button>
         </div>
       </div>
@@ -1366,7 +1521,10 @@ export default function ProductFormDrawer({
   const [imageSave, setImageSave] = useState<ImageSaveStatus>({ state: "idle", label: "", seq: 0 });
   const [detecting, setDetecting] = useState(false);
   const [detectNote, setDetectNote] = useState<DetectNote | null>(null);
-  const [confirmAutofill, setConfirmAutofill] = useState(false);
+  // "Re-detect" dialog: open, reading the photo, and why it failed.
+  const [redetectOpen, setRedetectOpen] = useState(false);
+  const [redetecting, setRedetecting] = useState(false);
+  const [redetectError, setRedetectError] = useState<string | null>(null);
   // AI recognised the product but it fits none of the store's categories: a popup asks for one.
   const [mismatch, setMismatch] = useState<{ productName: string; productType: string } | null>(null);
   const [mismatchError, setMismatchError] = useState<string | null>(null);
@@ -1501,20 +1659,61 @@ export default function ProductFormDrawer({
     finishMismatch();
   }
 
-  // "Auto-fill from photo": re-detect from the cover image, replacing the details.
-  async function autofillFromCover() {
-    setConfirmAutofill(false);
-    const cover = form.mainImageUrl || form.images[0];
-    if (!cover) return;
-    setDetecting(true);
-    setDetectNote(null);
+  // "Re-detect": reads the cover photo again and replaces the details. With a category
+  // (the owner's choice) AI reads it as that kind of product and picks the closest
+  // subcategory; without one it chooses from the store's categories, as on upload.
+  // The dialog stays open (with the error) if it fails.
+  async function redetect(categoryName: string) {
+    const cover = formRef.current.mainImageUrl || formRef.current.images[0];
+    if (!cover) return setRedetectError("Upload a photo first.");
+    setRedetecting(true);
+    setRedetectError(null);
     try {
-      applyDetected(await detectFromUrl(cover, detectContext), "replace");
+      if (!categoryName) {
+        const d = await detectFromUrl(cover, detectContext);
+        // Fits none of the store's categories: the owner chooses one in the dialog.
+        if (isCategoryMismatch(d)) {
+          setRedetectError(
+            `AI sees "${d.productName}", which doesn't match your categories. Choose a category above and re-detect.`,
+          );
+          return;
+        }
+        applyDetected(d, "replace");
+        setDetectNote({ kind: "ok", text: "Details filled in again from the photo. Review them before saving." });
+      } else {
+        const hint: DetectHint = { categoryName, subcategoryName: "" };
+        const chosen = findPickerCategory(categoryName);
+        const d = await detectFromUrl(cover, {
+          businessTypes: store.businessTypes,
+          categories: chosen ? [chosen] : [],
+          hint,
+        });
+        // The owner's choice wins, also over an API build that doesn't know hints.
+        const subcategoryName = d.categoryName === categoryName ? d.subcategoryName : "";
+        const next = applyDetected(
+          { ...d, categoryFit: d.categoryFit === "exact" ? "exact" : "close", categoryName, subcategoryName },
+          "replace",
+        );
+        // The category was picked, not detected: no "Auto-detected" badge on it.
+        setAutoFilled((a) => ({ ...a, categoryName: undefined }));
+        setDetectNote({
+          kind: "ok",
+          text: next.subcategoryName
+            ? `Details filled in again as ${categoryLabel(categoryName)}. Review them before saving.`
+            : `Details filled in again as ${categoryLabel(categoryName)}. Choose a subcategory, then review them before saving.`,
+        });
+      }
+      setRedetectOpen(false);
     } catch (err) {
-      setDetectNote({ kind: "error", text: detectError(err) });
+      setRedetectError(detectError(err));
     } finally {
-      setDetecting(false);
+      setRedetecting(false);
     }
+  }
+
+  function openRedetect() {
+    setRedetectError(null);
+    setRedetectOpen(true);
   }
 
   // Images uploaded while this drawer is open that no saved product refers to
@@ -1620,7 +1819,6 @@ export default function ProductFormDrawer({
 
   // Picker options: the store's categories (see pickerCategories), grouped by
   // business type; the store's own ones are listed under "Your categories".
-  const currentCategory = pickerCategories.find((c) => c.name === form.categoryName);
   const toOption = (c: PickerCategory, group = c.group): ComboOption => ({
     value: c.name,
     label: c.label,
@@ -1637,19 +1835,25 @@ export default function ProductFormDrawer({
   const categorySuggestions: ComboOption[] = suggestedCategories
     .filter((c) => !pickerCategories.some((p) => p.name === c.name))
     .map((c) => toOption(c, `Suggested · ${c.group}`));
-  const subcategoryOptions: ComboOption[] = (currentCategory?.subcategories ?? []).map((sub) => ({
-    value: sub.name,
-    label: sub.name,
-    image: sub.image,
-    icon: currentCategory?.icon,
-  }));
+  // A category from the pickers, or one of the suggested ones.
+  const findPickerCategory = (name: string) =>
+    pickerCategories.find((c) => c.name === name) ?? suggestedCategories.find((c) => c.name === name);
+  const subcategoryOptionsOf = (name: string): ComboOption[] => {
+    const category = findPickerCategory(name);
+    return (category?.subcategories ?? []).map((sub) => ({
+      value: sub.name,
+      label: sub.name,
+      image: sub.image,
+      icon: category?.icon,
+    }));
+  };
+  const subcategoryOptions = subcategoryOptionsOf(form.categoryName);
 
   // A new category clears a subcategory that doesn't belong to it. `pickedSub`: the
   // category was found by searching for one of its subcategories, which is set too.
   const changeCategory = (name: string, pickedSub?: string) =>
     setForm((f) => {
-      const subs =
-        (pickerCategories.find((c) => c.name === name) ?? suggestedCategories.find((c) => c.name === name))?.subcategories ?? [];
+      const subs = findPickerCategory(name)?.subcategories ?? [];
       const keep = subs.some((sub) => sub.name === f.subcategoryName) ? f.subcategoryName : "";
       return {
         ...f,
@@ -1824,6 +2028,45 @@ export default function ProductFormDrawer({
 
   /* ---------- Form pieces (shared by the full form and the steps) ---------- */
 
+  // Re-detects from the cover photo, so it needs one that's uploaded.
+  const redetectButton = (className = "", compact = false) => (
+    <RedetectButton
+      compact={compact}
+      onClick={openRedetect}
+      disabled={!form.images.length || uploading || detecting || redetecting}
+      title={
+        form.images.length
+          ? "Wrong product or category? AI reads the photo again"
+          : "Upload a photo first"
+      }
+      className={className}
+    />
+  );
+
+  // "Add product": what AI made of the photo, with Re-detect as the card's action
+  // (full width under the text on phones, on the right from sm up).
+  const redetectCard = (tone: "ok" | "outside" | "error", title: string, text: string) => {
+    const look = {
+      ok: { box: "border-emerald-600/20 bg-emerald-50/70", icon: "text-emerald-600", Icon: CircleCheck },
+      outside: { box: "border-amber-500/25 bg-amber-50", icon: "text-amber-600", Icon: Info },
+      error: { box: "border-line bg-paper", icon: "text-primary", Icon: Sparkles },
+    }[tone];
+    return (
+      <div role="status" className={`admin-fade-in flex flex-col gap-3 rounded-md border p-3.5 sm:flex-row sm:items-center ${look.box}`}>
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-md bg-white ${look.icon}`}>
+            <look.Icon className="h-[18px] w-[18px]" aria-hidden />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[13px] font-semibold text-ink">{title}</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-slate">{text}</p>
+          </div>
+        </div>
+        {redetectButton("w-full sm:w-auto")}
+      </div>
+    );
+  };
+
   const imageManager = (
               <ImageManager
                 images={form.images}
@@ -1843,7 +2086,7 @@ export default function ProductFormDrawer({
               {detectNote && (
                 <p
                   role="status"
-                  className={`flex items-start gap-1.5 rounded-[7px] px-2.5 py-2 text-[11px] leading-snug ring-1 ring-inset ${
+                  className={`admin-fade-in flex items-start gap-2 rounded-md py-1 pl-3 pr-1 text-xs leading-snug ring-1 ring-inset ${
                     detectNote.kind === "ok"
                       ? "bg-emerald-50 text-emerald-800 ring-emerald-600/15"
                       : detectNote.kind === "outside"
@@ -1852,12 +2095,17 @@ export default function ProductFormDrawer({
                   }`}
                 >
                   {detectNote.kind === "ok" ? (
-                    <WandSparkles className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <WandSparkles className="mt-2 h-3.5 w-3.5 shrink-0" aria-hidden />
                   ) : (
-                    <Info className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <Info className="mt-2 h-3.5 w-3.5 shrink-0" aria-hidden />
                   )}
-                  <span className="flex-1">{detectNote.text}</span>
-                  <button type="button" onClick={() => setDetectNote(null)} aria-label="Dismiss" className="shrink-0 opacity-70 hover:opacity-100">
+                  <span className="flex-1 py-1.5">{detectNote.text}</span>
+                  <button
+                    type="button"
+                    onClick={() => setDetectNote(null)}
+                    aria-label="Dismiss"
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded opacity-70 hover:bg-black/5 hover:opacity-100"
+                  >
                     <X className="h-3.5 w-3.5" aria-hidden />
                   </button>
                 </p>
@@ -1865,16 +2113,19 @@ export default function ProductFormDrawer({
     </>
   );
 
+  // The step-by-step flow keeps its bolder labels; the edit form uses the softer ones.
+  const pickerLabel = wizard ? labelClass : fieldLabelClass;
   const categoryPickers = (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {/* Not <Field>: its <label> would re-open the dropdown when an option is clicked. */}
                 <div className="min-w-0">
-                  <span id="category-label" className={labelClass}>
+                  <span id="category-label" className={pickerLabel}>
                     Category<span className="text-primary" aria-hidden>*</span>
                     <AutoDetectedBadge show={wizard && isAutoFilled("categoryName")} />
                   </span>
                   <CategoryCombobox
                     labelledBy="category-label"
+                    compact={!wizard}
                     value={form.categoryName}
                     options={categoryOptions}
                     suggestions={categorySuggestions}
@@ -1884,12 +2135,13 @@ export default function ProductFormDrawer({
                   />
                 </div>
                 <div className="min-w-0">
-                  <span id="subcategory-label" className={labelClass}>
+                  <span id="subcategory-label" className={pickerLabel}>
                     Subcategory<span className="text-primary" aria-hidden>*</span>
                     <AutoDetectedBadge show={wizard && isAutoFilled("subcategoryName")} />
                   </span>
                   <CategoryCombobox
                     labelledBy="subcategory-label"
+                    compact={!wizard}
                     value={form.subcategoryName}
                     options={subcategoryOptions}
                     onChange={(v) => set("subcategoryName", v)}
@@ -1903,18 +2155,22 @@ export default function ProductFormDrawer({
 
   const tagsBlock = (
               <div>
-                <span className={labelClass}>Tags</span>
+                <span className={fieldLabelClass}>
+                  Tags
+                  <LabelAside>
+                    <Star className="inline h-3 w-3 fill-current align-[-1px] text-primary" aria-hidden /> First tag is the card
+                    badge
+                  </LabelAside>
+                </span>
                 <TagInput tags={form.tags} onChange={(tags) => set("tags", tags)} />
-                <p className="mt-1.5 text-xs leading-snug text-slate">
-                  <Star className="inline h-3 w-3 fill-current align-[-1px] text-primary" aria-hidden /> First tag is the card badge.
-                </p>
               </div>
   );
 
   const keywordsBlock = (
               <div>
-                <span id="keywords-label" className={labelClass}>
+                <span id="keywords-label" className={fieldLabelClass}>
                   Search keywords
+                  <LabelAside>Helps shoppers find it, not shown</LabelAside>
                 </span>
                 <TagInput
                   tags={form.keywords}
@@ -1923,49 +2179,18 @@ export default function ProductFormDrawer({
                   maxItems={20}
                   labelledBy="keywords-label"
                 />
-                <p className="mt-1.5 text-xs leading-snug text-slate">Helps shoppers find it. Not shown on the catalog.</p>
               </div>
   );
 
   const mediaSection = (
-            <Section
-              title="Photos"
-              required
-              icon={Images}
-              action={
-                SHOW_AUTOFILL_BUTTON && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => (hasDetectedFieldsFilled(form) ? setConfirmAutofill(true) : autofillFromCover())}
-                    disabled={detecting || form.images.length === 0}
-                    title={
-                      form.images.length
-                        ? "Fill in the name, category and details from the cover photo"
-                        : "Upload a photo first"
-                    }
-                    className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[7px] bg-white px-2.5 text-xs font-semibold whitespace-nowrap text-ink ring-1 ring-inset ring-line transition-colors hover:bg-paper focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {detecting ? <Spinner className="h-3.5 w-3.5" /> : <WandSparkles className="h-3.5 w-3.5" aria-hidden />}
-                    {detecting ? (
-                      "Detecting…"
-                    ) : (
-                      <>
-                        Auto-fill<span className="hidden sm:inline"> from photo</span>
-                      </>
-                    )}
-                  </button>
-                </>
-                )
-              }
-            >
+            <Section title="Photos" required action={redetectButton("", true)}>
               {imageManager}
               {detectNoteBlock}
             </Section>
   );
 
   const basicSection = (
-            <Section title="Details" icon={FileText}>
+            <Section title="Details">
               <Field label="Product name" required>
                 <input
                   value={form.productName}
@@ -1977,10 +2202,8 @@ export default function ProductFormDrawer({
                   enterKeyHint="next"
                 />
               </Field>
-              <Field
-                label="Description"
-                hint={<span className="flex justify-end tabular-nums">{form.description.length}/2000</span>}
-              >
+              {categoryPickers}
+              <Field label="Description" aside={<span className="tabular-nums">{form.description.length}/2000</span>}>
                 <textarea
                   value={form.description}
                   onChange={(e) => set("description", e.target.value)}
@@ -1994,15 +2217,25 @@ export default function ProductFormDrawer({
   );
 
   const orgSection = (
-            <Section title="Category & tags" icon={Layers}>
-              {categoryPickers}
+            <Section title="Tags & search">
               {tagsBlock}
               {keywordsBlock}
             </Section>
   );
 
   const pricingSection = (
-            <Section title="Pricing" icon={IndianRupee}>
+            <Section
+              title="Price & stock"
+              action={
+                <span aria-live="polite" className="text-xs">
+                  {off > 0 && (
+                    <span className="admin-fade-in inline-flex h-6 items-center rounded-full bg-emerald-50 px-2.5 font-semibold tabular-nums text-emerald-700 ring-1 ring-inset ring-emerald-600/15">
+                      {off}% off
+                    </span>
+                  )}
+                </span>
+              }
+            >
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <Field label="Offer price">
                   <MoneyInput value={form.price} onChange={(v) => set("price", v)} placeholder="On request" />
@@ -2010,41 +2243,7 @@ export default function ProductFormDrawer({
                 <Field label="MRP">
                   <MoneyInput value={form.originalPrice} onChange={(v) => set("originalPrice", v)} placeholder="Optional" />
                 </Field>
-                <div className="col-span-2 sm:col-span-1">
-                  <span className={labelClass}>Discount</span>
-                  <div
-                    aria-live="polite"
-                    className={`flex h-12 items-center rounded-md px-3.5 text-sm font-semibold tabular-nums sm:h-10 sm:px-3 ${
-                      off > 0 ? "bg-emerald-50 text-emerald-700" : "bg-paper text-slate"
-                    }`}
-                  >
-                    {off > 0 ? `${off}% off` : "No discount"}
-                  </div>
-                </div>
-              </div>
-            </Section>
-  );
-
-  const specsSection = (
-            <Section title="Specifications" icon={Ruler}>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Field label="Material">
-                  <input
-                    value={form.material}
-                    onChange={(e) => set("material", e.target.value)}
-                    className={inputClass}
-                    placeholder="e.g. Brass with glass shade"
-                  />
-                </Field>
-                <Field label="Size">
-                  <input
-                    value={form.dimensions}
-                    onChange={(e) => set("dimensions", e.target.value)}
-                    className={inputClass}
-                    placeholder="e.g. 6 ft × 3 ft, or 54 in wide"
-                  />
-                </Field>
-                <Field label="Stock status">
+                <Field label="Stock status" className="col-span-2 sm:col-span-1">
                   <input
                     value={form.stockStatus}
                     onChange={(e) => set("stockStatus", e.target.value)}
@@ -2053,18 +2252,42 @@ export default function ProductFormDrawer({
                   />
                 </Field>
               </div>
+            </Section>
+  );
+
+  const specsSection = (
+            <Section title="Specifications">
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Material">
+                  <input
+                    value={form.material}
+                    onChange={(e) => set("material", e.target.value)}
+                    className={inputClass}
+                    placeholder="e.g. Solid brass"
+                  />
+                </Field>
+                <Field label="Size">
+                  <input
+                    value={form.dimensions}
+                    onChange={(e) => set("dimensions", e.target.value)}
+                    className={inputClass}
+                    placeholder="e.g. 6 × 3 ft"
+                  />
+                </Field>
+              </div>
               <div>
-                <span className={`${labelClass} gap-1.5`}>
-                  <SlidersHorizontal className="h-3.5 w-3.5 text-slate" aria-hidden />
+                <span className={fieldLabelClass}>
                   More specs
+                  <LabelAside>Shown on the product page and in filters</LabelAside>
                 </span>
                 <div className="flex flex-col gap-2">
                   {form.specs.map((sp, i) => (
-                    <div key={i} className="flex items-center gap-2">
+                    // min-w-0 columns: the inputs shrink instead of pushing the delete button off a phone screen.
+                    <div key={i} className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)_auto] items-center gap-2">
                       <input
                         value={sp.label}
                         onChange={(e) => updateSpec(i, { label: e.target.value })}
-                        className={`${inputClass} w-[38%] shrink-0`}
+                        className={inputClass}
                         placeholder="e.g. Wood"
                         maxLength={40}
                         aria-label={`Spec ${i + 1} name`}
@@ -2083,7 +2306,7 @@ export default function ProductFormDrawer({
                         className={iconBtn}
                         aria-label={`Remove spec ${i + 1}`}
                       >
-                        <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                        <Trash2 className="h-4 w-4" aria-hidden />
                       </button>
                     </div>
                   ))}
@@ -2093,7 +2316,6 @@ export default function ProductFormDrawer({
                     </AddRowButton>
                   )}
                 </div>
-                <p className="mt-1.5 text-xs leading-snug text-slate">Shown on the product page and used for filters.</p>
               </div>
             </Section>
   );
@@ -2101,7 +2323,6 @@ export default function ProductFormDrawer({
   const coloursSection = (
             <Section
               title="Colours"
-              icon={Palette}
               collapsible
               summary={
                 form.colors.length ? (
@@ -2123,7 +2344,7 @@ export default function ProductFormDrawer({
               {form.colors.map((c, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <label
-                    className="relative h-12 w-12 shrink-0 cursor-pointer overflow-hidden rounded-md ring-1 ring-inset ring-ink/15 sm:h-10 sm:w-10"
+                    className="relative h-11 w-11 shrink-0 cursor-pointer overflow-hidden rounded-md ring-1 ring-inset ring-ink/15 sm:h-9 sm:w-9"
                     style={{ backgroundColor: c.hex }}
                     title="Pick colour"
                   >
@@ -2162,7 +2383,6 @@ export default function ProductFormDrawer({
   const highlightsSection = (
             <Section
               title="Highlights"
-              icon={ListChecks}
               collapsible
               summary={filledHighlights ? `${filledHighlights} point${filledHighlights === 1 ? "" : "s"}` : "None"}
             >
@@ -2195,7 +2415,6 @@ export default function ProductFormDrawer({
   const reviewsSection = (
             <Section
               title="Reviews"
-              icon={MessageSquareQuote}
               collapsible
               summary={
                 <span className="inline-flex items-center gap-1 tabular-nums">
@@ -2499,10 +2718,7 @@ export default function ProductFormDrawer({
         {/* AI recognised it: everything on one screen, ready to add. */}
         {quick && (
           <div className="admin-step-in-right mt-1 flex flex-col gap-5 border-t border-line pt-5">
-            <p className="flex items-center gap-2 rounded-md bg-emerald-50/70 px-3 py-2 text-xs font-medium text-emerald-800">
-              <WandSparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              Filled in from your photo. Check it and change anything that&apos;s wrong.
-            </p>
+            {redetectCard("ok", "Filled in from your photo", REDETECT_PROMPT)}
             {detailsFields}
             <div className="flex flex-col gap-4">
               <p className="flex items-baseline gap-2 text-[15px] font-semibold text-ink">
@@ -2516,18 +2732,12 @@ export default function ProductFormDrawer({
 
       {step === 1 && (
         <div key="step-details" className={`${stepAnim} flex flex-col gap-5`}>
-          {detectNote?.kind === "ok" && (
-            <p className="flex items-center gap-2 rounded-md bg-emerald-50/70 px-3 py-2 text-xs font-medium text-emerald-800">
-              <WandSparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              Filled in from your photo. Check it and change anything that&apos;s wrong.
-            </p>
-          )}
-          {detectNote?.kind === "outside" && (
-            <p className="flex items-start gap-2 rounded-md bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
-              <Info className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
-              {detectNote.text}
-            </p>
-          )}
+          {detectNote?.kind === "ok" && redetectCard("ok", "Filled in from your photo", REDETECT_PROMPT)}
+          {detectNote?.kind === "outside" && redetectCard("outside", "Not in your categories", detectNote.text)}
+          {/* Couldn't read the photo the first time: try again with a category. */}
+          {detectNote?.kind === "error" &&
+            form.images.length > 0 &&
+            redetectCard("error", "Couldn't read this photo", "Re-detect reads it again. Choosing the category helps.")}
           {detailsFields}
         </div>
       )}
@@ -2721,7 +2931,7 @@ export default function ProductFormDrawer({
           {wizard ? (
             wizardBody
           ) : (
-            <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-3 sm:p-4">
+            <div className="flex flex-1 flex-col overflow-y-auto bg-white sm:gap-2.5 sm:bg-paper sm:p-3">
               {mediaSection}
               {basicSection}
               {orgSection}
@@ -2757,17 +2967,15 @@ export default function ProductFormDrawer({
       </div>
 
 
-      {confirmAutofill && (
-        <ConfirmDialog
-          title="Replace the details?"
-          confirmLabel="Replace details"
-          busy={false}
-          onConfirm={autofillFromCover}
-          onCancel={() => setConfirmAutofill(false)}
-        >
-          The name, category, subcategory, description, size, specs, tags, highlights and search keywords
-          are replaced with what&apos;s detected from the cover photo. You can still edit them before saving.
-        </ConfirmDialog>
+      {redetectOpen && (
+        <RedetectDialog
+          categoryOptions={categoryOptions}
+          categorySuggestions={categorySuggestions}
+          busy={redetecting}
+          error={redetectError}
+          onDetect={redetect}
+          onCancel={() => setRedetectOpen(false)}
+        />
       )}
 
       {mismatch && (

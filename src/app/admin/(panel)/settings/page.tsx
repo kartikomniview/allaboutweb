@@ -6,7 +6,6 @@ import {
   CalendarDays,
   CircleCheck,
   Clock,
-  Image as ImageIcon,
   LayoutGrid,
   Mail,
   MapPin,
@@ -19,8 +18,20 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useLiveCatalogUrl, useSetAdminStore } from "@/components/admin/AdminShell";
-import { authFieldErrorClass, authInputClass, authInputIconClass, authLabelClass } from "@/components/admin/AuthLayout";
-import { Breadcrumbs, Button, Card, Skeleton, buttonClass } from "@/components/admin/ui";
+import {
+  Breadcrumbs,
+  Button,
+  Card,
+  Skeleton,
+  buttonClass,
+  panelFieldErrorClass,
+  panelHintClass,
+  panelIconBaseClass,
+  panelInputClass,
+  panelInputIconClass,
+  panelLabelClass,
+  panelTextareaClass,
+} from "@/components/admin/ui";
 import BusinessTypePicker from "@/components/admin/BusinessTypePicker";
 import StoreLogoPicker from "@/components/admin/StoreLogoPicker";
 import WhatsappNumberPanel, { WhatsappStatusBadge } from "@/components/admin/WhatsappNumberPanel";
@@ -47,15 +58,15 @@ const toForm = (s: StoreDetails): Form => ({
   businessTypes: s.businessTypes,
 });
 
-/** A settings section: a white card with an icon header. */
+/** A settings section: a white card with a small icon header. */
 function Section({ icon: Icon, title, aside, children }: { icon: LucideIcon; title: string; aside?: ReactNode; children: ReactNode }) {
   return (
     <Card className="admin-fade-in overflow-hidden">
-      <div className="flex items-center gap-2.5 border-b border-line px-4 py-3 sm:px-5">
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-tint text-primary" aria-hidden>
-          <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
+      <div className="flex min-h-11 items-center gap-2 border-b border-line px-3 py-2 sm:min-h-10 sm:px-4">
+        <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-tint text-primary" aria-hidden>
+          <Icon className="h-3.5 w-3.5" strokeWidth={2.25} />
         </span>
-        <h2 className="min-w-0 flex-1 text-[15px] font-semibold text-ink">{title}</h2>
+        <h2 className="min-w-0 flex-1 text-sm font-semibold text-ink">{title}</h2>
         {aside}
       </div>
       {children}
@@ -63,7 +74,7 @@ function Section({ icon: Icon, title, aside, children }: { icon: LucideIcon; tit
   );
 }
 
-/** A labelled 48px input with an icon on the left, and its error or hint underneath. */
+/** A labelled input (44px on phones, 36px from sm up) with an icon on the left, and its error or hint underneath. */
 function Field({
   id,
   label,
@@ -89,7 +100,7 @@ function Field({
   const shared = { id, "aria-invalid": !!error, "aria-describedby": describedBy };
   return (
     <div data-field className={`min-w-0 ${className}`}>
-      <label htmlFor={id} className={authLabelClass}>
+      <label htmlFor={id} className={panelLabelClass}>
         {label}
         {required && (
           <span className="ml-0.5 text-primary" aria-hidden>
@@ -98,24 +109,21 @@ function Field({
         )}
       </label>
       <div className="relative">
-        <Icon className={`${authInputIconClass} ${multiline ? "top-[15px] translate-y-0" : ""}`} aria-hidden />
+        {/* A textarea's icon lines up with its first line. */}
+        <Icon className={multiline ? `${panelIconBaseClass} top-[13px] sm:top-[9px]` : panelInputIconClass} aria-hidden />
         {multiline ? (
-          <textarea
-            {...shared}
-            {...(input as ComponentProps<"textarea">)}
-            className={`${authInputClass} h-auto resize-y py-3 leading-snug`}
-          />
+          <textarea {...shared} {...(input as ComponentProps<"textarea">)} className={panelTextareaClass} />
         ) : (
-          <input {...shared} {...input} className={authInputClass} />
+          <input {...shared} {...input} className={panelInputClass} />
         )}
       </div>
       {error ? (
-        <p id={`${id}-error`} className={authFieldErrorClass}>
+        <p id={`${id}-error`} className={panelFieldErrorClass}>
           {error}
         </p>
       ) : (
         hint && (
-          <p id={`${id}-hint`} className="mt-1.5 text-xs text-slate">
+          <p id={`${id}-hint`} className={panelHintClass}>
             {hint}
           </p>
         )
@@ -198,22 +206,20 @@ export default function StoreSettingsPage() {
   const showBar = dirty || saving || !!message;
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 sm:gap-5">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-2.5 sm:gap-3">
       <header className="admin-fade-in flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="mb-2 hidden sm:block">
+          <div className="mb-1 hidden sm:block">
             <Breadcrumbs items={[{ label: "Dashboard", href: "/admin/dashboard" }, { label: "Store settings" }]} />
           </div>
-          <h1 className="truncate text-lg font-bold leading-tight tracking-[-0.02em] text-ink sm:text-[1.5rem] sm:tracking-[-0.025em]">
-            Store settings
-          </h1>
+          <h1 className="truncate text-lg font-bold leading-tight tracking-[-0.02em] text-ink sm:text-xl">Store settings</h1>
         </div>
         <a
           href={liveUrl}
           target="_blank"
           rel="noopener noreferrer"
           aria-label="View live catalog"
-          className={buttonClass("secondary")}
+          className={buttonClass("secondary", "touch")}
         >
           View live
           <ArrowUpRight className="h-4 w-4 text-slate" aria-hidden />
@@ -221,37 +227,37 @@ export default function StoreSettingsPage() {
       </header>
 
       {loadError ? (
-        <Card className="flex items-start gap-2.5 p-4 text-sm text-red-700">
-          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+        <Card className="flex items-start gap-2 p-3 text-[13px] text-red-700">
+          <TriangleAlert className="mt-px h-4 w-4 shrink-0" aria-hidden />
           {loadError}
         </Card>
       ) : !form || !store ? (
         <>
           {[0, 1, 2].map((i) => (
-            <Card key={i} className="flex flex-col gap-4 p-4 sm:p-5">
-              <Skeleton className="h-6 w-32" />
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
+            <Card key={i} className="flex flex-col gap-3 p-3 sm:p-4">
+              <Skeleton className="h-5 w-28" />
+              <Skeleton className="h-11 w-full sm:h-9" />
+              <Skeleton className="h-11 w-full sm:h-9" />
             </Card>
           ))}
         </>
       ) : (
-        <form onSubmit={handleSubmit} noValidate className={`flex flex-col gap-3 sm:gap-5 ${showBar ? "pb-24 lg:pb-0" : ""}`}>
-          <Section icon={ImageIcon} title="Logo">
-            <StoreLogoPicker
-              layout="dashboard"
-              logo={form.logo}
-              storeName={form.name || store.name}
-              onChange={(url) => {
-                // An earlier upload that was never saved isn't needed any more.
-                if (form.logo && form.logo !== store.logo) discardUploads([form.logo]).catch(() => {});
-                set("logo", url);
-              }}
-            />
-          </Section>
-
+        <form onSubmit={handleSubmit} noValidate className={`flex flex-col gap-2.5 sm:gap-3 ${showBar ? "pb-24 lg:pb-0" : ""}`}>
           <Section icon={Store} title="Store">
-            <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:gap-5 sm:p-5">
+            {/* The logo row, then the store's details */}
+            <div className="border-b border-line">
+              <StoreLogoPicker
+                layout="dashboard"
+                logo={form.logo}
+                storeName={form.name || store.name}
+                onChange={(url) => {
+                  // An earlier upload that was never saved isn't needed any more.
+                  if (form.logo && form.logo !== store.logo) discardUploads([form.logo]).catch(() => {});
+                  set("logo", url);
+                }}
+              />
+            </div>
+            <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 sm:gap-x-4 sm:p-4">
               <Field
                 id="store-name"
                 label="Store name"
@@ -260,7 +266,7 @@ export default function StoreSettingsPage() {
                 error={errors.name}
                 hint={
                   <>
-                    Link stays <span className="font-semibold text-ink">{store.slug}.catalog24.in</span>
+                    Link stays <span className="font-medium text-ink">{store.slug}.catalog24.in</span>
                   </>
                 }
                 value={form.name}
@@ -323,22 +329,23 @@ export default function StoreSettingsPage() {
           </Section>
 
           <Section icon={LayoutGrid} title="What you sell">
-            <div id="business-types" data-field className="p-4 sm:p-5">
+            <div id="business-types" data-field className="p-3 sm:p-4">
               <span id="business-types-label" className="sr-only">
                 What you sell
               </span>
               <BusinessTypePicker
-                className="grid-cols-3 sm:grid-cols-4"
+                compact
+                className="grid-cols-3 sm:grid-cols-5 md:grid-cols-6"
                 value={form.businessTypes}
                 onChange={(next) => set("businessTypes", next)}
                 labelledBy="business-types-label"
               />
-              {errors.businessTypes && <p className={authFieldErrorClass}>{errors.businessTypes}</p>}
+              {errors.businessTypes && <p className={panelFieldErrorClass}>{errors.businessTypes}</p>}
             </div>
           </Section>
 
-          <Section icon={Phone} title="Contact" aside={<span className="text-xs font-medium text-slate">Optional</span>}>
-            <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:gap-5 sm:p-5">
+          <Section icon={Phone} title="Contact" aside={<span className="text-[11px] font-medium text-slate">Optional</span>}>
+            <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 sm:gap-x-4 sm:p-4">
               <Field
                 id="store-phone"
                 label="Phone"
@@ -396,19 +403,19 @@ export default function StoreSettingsPage() {
 
           {/* Save bar */}
           <div
-            className={`${showBar ? "admin-pop-in flex" : "hidden lg:flex"} fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 flex-col gap-2 border-t border-line bg-white/95 px-3 py-2.5 backdrop-blur sm:px-4 lg:static lg:z-auto lg:border-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none`}
+            className={`${showBar ? "admin-pop-in flex" : "hidden lg:flex"} fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 flex-col gap-2 border-t border-line bg-white/95 px-3 py-2 backdrop-blur sm:px-4 lg:static lg:z-auto lg:border-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none`}
           >
             {message && (
               <p
                 role={message.kind === "error" ? "alert" : "status"}
-                className={`flex items-start gap-2 rounded-md px-3.5 py-2.5 text-[13px] font-medium ring-1 ring-inset ${
+                className={`flex items-start gap-2 rounded-md px-3 py-2 text-xs font-medium ring-1 ring-inset ${
                   message.kind === "ok" ? "bg-emerald-50 text-emerald-800 ring-emerald-600/15" : "bg-red-50 text-red-700 ring-red-600/15"
                 }`}
               >
                 {message.kind === "ok" ? (
-                  <CircleCheck className="admin-pop-check mt-px h-4 w-4 shrink-0" aria-hidden />
+                  <CircleCheck className="admin-pop-check h-4 w-4 shrink-0" aria-hidden />
                 ) : (
-                  <TriangleAlert className="mt-px h-4 w-4 shrink-0" aria-hidden />
+                  <TriangleAlert className="h-4 w-4 shrink-0" aria-hidden />
                 )}
                 {message.text}
               </p>

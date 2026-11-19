@@ -9,6 +9,7 @@ This is the backend for Catalog24: store registration, the store owners' admin p
 | `POST /auth/register` | **Public.** Body `{ storeName, businessTypes, email, password, deviceId, whatsapp? }`. `whatsapp` is optional (added later in Store settings). `businessTypes` is what the store sells: one or more of `furniture`, `decor`, `lighting`, `flooring`, `curtains`, `fabrics`, `bath`, `clothing`, `footwear`, `jewellery`, `optical`, `electronics`, `mobiles`. Creates the store and the owner's Firebase account, binds this device (the one-device rule) and logs them in: returns `{ token, expiresAt, user }`. 409 `STORE_TAKEN` if the store name (its slug) exists, 409 `EMAIL_TAKEN` if the email has an account |
 | `GET /stores/check?name=…` | **Public.** Whether a store name is free: `{ slug, available, message }`. The registration form's live check |
 | `POST /auth/login` | Body `{ email, password, deviceId }`. Checks the credentials with Firebase Auth, applies the one-device rule, and returns `{ token, expiresAt, user }`. `user.store` is `{ slug, name }` |
+| `POST /auth/google` | Body `{ idToken, deviceId }`. "Continue with Google": `idToken` is the credential from Google Identity Services. Checks it (issued for `GOOGLE_CLIENT_ID`, verified email), finds the account linked to that Google account (or with the same email, which it then links), and logs in like `/auth/login`. 404 `GOOGLE_NO_ACCOUNT` when no store uses that Google account. `POST /auth/register` also accepts `{ googleIdToken }` instead of `{ email, password }`: the owner's account is then the Google address, without a password |
 | `GET /auth/session` | Headers `Authorization: Bearer <token>` and `X-Device-Id`. Returns `{ user, expiresAt }`, or 401 |
 | `POST /auth/logout` | Header `Authorization: Bearer <token>`. Deletes the session |
 | `GET /catalog/{store}/products` | **Public, no login.** A store's public details and its published products (`isActive: true`): `{ store, products }`, or 404 `STORE_NOT_FOUND`. Each store's catalog page reads this |
@@ -29,7 +30,7 @@ This is the backend for Catalog24: store registration, the store owners' admin p
 | `DELETE /admin/stores/{slug}` | **Super admins only.** Body `{ confirm: "<slug>" }`. Permanently deletes the store: its products and their images (plus anything else in its S3 folder), every login (sessions, `users/{uid}` and the Firebase account, the owner's too) and `stores/{slug}`. The slug can then be registered again. Returns `{ deleted: { slug, products, users } }`. 400 for the Demo store or your own store. The store is switched off first and deleted last, so if it fails partway, calling it again finishes the job |
 | `POST /products/uploads` | Body `{ categoryName, subcategoryName, productName, files: [{ contentType, size }] }`. Returns `{ uploads: [{ uploadUrl, fields, publicUrl }] }`, one signed S3 upload form per file. The browser then uploads each file straight to S3 |
 | `POST /products/uploads/discard` | Body `{ urls }`. Deletes images that were uploaded but never saved to a product (for example when the editor is cancelled) |
-| `POST /products/detect` | Body `{ businessTypes, categories: [{ name, subcategories }], image: { data, mediaType } }` (a base64 photo) or `{ businessTypes, categories, imageUrl }` (an uploaded image). `businessTypes` are labels for the prompt ("Furniture", "Lighting"; at most 20); `categories` (at most 120) are the predefined categories of the store's business types. Asks Claude to identify any kind of product and returns `{ detected: { productName, productType, categoryFit, categoryName, subcategoryName, description, dimensions, specs, tags, highlights, keywords } }`. `productType` is what the product is ("ceramic jug"). `categoryFit` is `exact`, `close` (the closest subcategory was chosen) or `none`: the product is a different kind of thing from what the `categories` cover (a jug in a furniture store), and the category and subcategory are then empty, so the admin form asks the owner to choose one. Otherwise the category and subcategory are always one of the `categories` sent (with its spelling); the model never suggests a new category |
+| `POST /products/detect` | Body `{ businessTypes, categories: [{ name, subcategories }], image: { data, mediaType } }` (a base64 photo) or `{ businessTypes, categories, imageUrl }` (an uploaded image). `businessTypes` are labels for the prompt ("Furniture", "Lighting"; at most 20); `categories` (at most 120) are the predefined categories of the store's business types. Asks Claude to identify any kind of product and returns `{ detected: { productName, productType, categoryFit, categoryName, subcategoryName, description, dimensions, specs, tags, highlights, keywords } }`. `productType` is what the product is ("ceramic jug"). `categoryFit` is `exact`, `close` (the closest subcategory was chosen) or `none`: the product is a different kind of thing from what the `categories` cover (a jug in a furniture store), and the category and subcategory are then empty, so the admin form asks the owner to choose one. Otherwise the category and subcategory are always one of the `categories` sent (with its spelling); the model never suggests a new category. Optional `hint: { categoryName, subcategoryName? }` ("Re-detect" in the admin form, for when the first detection got the product wrong) is the category the owner chose: the answer always keeps it (it may be the owner's own, outside `categories`), the model reads the photo as that kind of product, and it picks the closest of that category's subcategories unless `subcategoryName` is given (`subcategoryName` comes back empty when none fits) |
 
 Every `/products` and `/store` route needs a logged-in store owner: the same `Authorization: Bearer <token>` and `X-Device-Id` headers as `GET /auth/session`. They only ever see and change that owner's own store: another store's product id returns 404. Each store's images are stored under `ecatalog/stores/{slug}/` in S3 (the demo store's older images stay under `ecatalog/`).
 
@@ -371,6 +372,29 @@ When a photo is added to a new product, the admin form fills in the name, catego
 
 If the key is missing or invalid, the admin form shows "Photo detection is not set up". You can then still fill in the name, category and subcategory by hand and click **Retry** on the photo.
 
+### Adding Google sign-in to an existing deployment
+
+"Continue with Google" on the login page and on the last step of registration. The website gets an ID token from Google Identity Services, and the Lambda checks it itself, so the Firebase web SDK isn't needed. A Google login costs the same as an email/password login in Firebase: free up to 3,000 users signing in a day on the Spark plan, and up to 50,000 a month on Blaze.
+
+1. **Turn on the Google provider in Firebase.** Firebase console → **Authentication → Sign-in method → Add new provider → Google**. Switch it on, choose the support email, and click **Save**. Open the Google provider again and expand **Web SDK configuration**: copy the **Web client ID** (it ends in `.apps.googleusercontent.com`).
+2. **Allow the website's addresses.** Google Cloud console (same project) → **APIs & Services → Credentials** → **OAuth 2.0 Client IDs** → the **Web client (auto created by Google Service)**. Under **Authorized JavaScript origins**, add:
+   - `https://catalog24.in`
+   - `http://localhost` and `http://localhost:3000` (local testing)
+
+   Click **Save**. It can take a few minutes to start working.
+3. **Consent screen.** Google Cloud console → **Google Auth Platform** (or **APIs & Services → OAuth consent screen**):
+   - **Branding:** app name `Catalog24`, a support email, and under **Authorized domains** `catalog24.in`.
+   - **Audience:** user type **External**, then **Publish app** (status "In production"). While it says "Testing", only the test users you list can sign in.
+
+   Sign-in only asks for name, email and profile picture, so Google doesn't need to review the app.
+4. **Lambda.** Run `npm install` and `npm run package`, and upload `lambda.zip` to `aaw-admin-auth`. Under **Configuration → Environment variables**, add `GOOGLE_CLIENT_ID` with the Web client ID.
+5. **API Gateway.** Add the route `POST /auth/google` and attach the `aaw-admin-auth` integration to it.
+6. **Website.** Set `NEXT_PUBLIC_GOOGLE_CLIENT_ID` to the same Web client ID: in `.env.local` for local testing, and in the hosting environment variables (Amplify → **Hosting → Environment variables**) for the live site. Redeploy the website so the build picks it up. Without it, the Google button is hidden.
+
+**Testing locally:** Google only accepts `localhost` as a plain-HTTP address, not `catalog24.localhost`. Run `npm run dev:catalog24` (Catalog24 on every host) and open <http://localhost:3000/admin>.
+
+**Which store a Google account opens:** the store whose login is linked to that Google account. The first time, it's the account with the same email address (so an owner whose login email is their Gmail address can use either). A Google account with no store is asked to create one. Accounts created with Google have no password: they always sign in with Google. The one-device rule applies as usual.
+
 ---
 
 ## Error codes returned by the API
@@ -388,6 +412,9 @@ If the key is missing or invalid, the admin form shows "Photo detection is not s
 | 403 | `FORBIDDEN` | A super-admin route called by someone else |
 | 404 | `STORE_NOT_FOUND` | No store with that slug |
 | 404 | `USER_NOT_FOUND` | Store users: the uid isn't a login of that store |
+| 401 | `GOOGLE_INVALID` | Google sign-in: the credential is invalid, expired, or for another OAuth client |
+| 403 | `GOOGLE_EMAIL_UNVERIFIED` | Google sign-in: Google hasn't verified the account's email |
+| 404 | `GOOGLE_NO_ACCOUNT` | Google sign-in: no store uses this Google account yet |
 | 409 | `STORE_TAKEN` / `EMAIL_TAKEN` | Registration: the store name or the email is already used |
 | 403 | `USER_DISABLED` | The account is disabled in Firebase Auth |
 | 429 | `TOO_MANY_ATTEMPTS` | Firebase rate-limited this account |

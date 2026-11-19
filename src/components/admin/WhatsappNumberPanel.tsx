@@ -3,19 +3,28 @@
 import { useState, type FormEvent } from "react";
 import { Clock, ShieldCheck, TriangleAlert, XCircle } from "lucide-react";
 import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
-import { authFieldErrorClass, authInputClass, authInputIconClass, authLabelClass } from "./AuthLayout";
 import { flagField, ripple } from "./ripple";
-import { Badge, Button, formatRelative } from "./ui";
+import { Badge, Button, formatRelative, panelFieldErrorClass, panelInputClass, panelInputIconClass, panelLabelClass } from "./ui";
 import { AuthError } from "@/lib/adminAuth";
 import { formatWhatsapp, requestWhatsapp, withdrawWhatsappRequest, type StoreDetails } from "@/lib/adminStore";
 
 /** "Live", "Waiting for approval" or "Not approved", for the section header. */
 export function WhatsappStatusBadge({ store }: { store: StoreDetails }) {
   const request = store.whatsappRequest;
-  if (request?.status === "pending") return <Badge tone="brand">Waiting for approval</Badge>;
-  if (request?.status === "rejected") return <Badge tone="danger">Not approved</Badge>;
+  if (request?.status === "pending")
+    return (
+      <Badge tone="brand" size="sm">
+        Waiting for approval
+      </Badge>
+    );
+  if (request?.status === "rejected")
+    return (
+      <Badge tone="danger" size="sm">
+        Not approved
+      </Badge>
+    );
   return store.whatsapp ? (
-    <Badge tone="success" dot>
+    <Badge tone="success" dot size="sm">
       Live
     </Badge>
   ) : null;
@@ -81,25 +90,25 @@ export default function WhatsappNumberPanel({
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4 sm:p-5">
+    <div className="flex flex-col gap-3 p-3 sm:p-4">
       {/* The number customers' enquiries go to now */}
-      <div className="flex items-center gap-3">
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-md bg-emerald-50 text-whatsapp" aria-hidden>
-          <WhatsAppIcon className="h-5 w-5" />
+      <div className="flex items-center gap-2.5">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-emerald-50 text-whatsapp" aria-hidden>
+          <WhatsAppIcon className="h-[18px] w-[18px]" />
         </span>
         <div className="min-w-0">
-          <p className="text-[13px] font-medium text-slate">Number on your catalog</p>
-          <p className={`text-base font-semibold tabular-nums ${live ? "text-ink" : "text-slate"}`}>{live || "Not added yet"}</p>
+          <p className="text-[11px] font-medium text-slate">Number on your catalog</p>
+          <p className={`text-sm font-semibold tabular-nums ${live ? "text-ink" : "text-slate"}`}>{live || "Not added yet"}</p>
         </div>
       </div>
 
       {pending && request && (
         <div
           role="status"
-          className={`flex flex-col gap-3 rounded-md border border-amber-200 bg-amber-50 px-3.5 py-3 sm:flex-row sm:items-center ${sent ? "admin-pop-in" : ""}`}
+          className={`flex flex-col gap-2.5 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 sm:flex-row sm:items-center ${sent ? "admin-pop-in" : ""}`}
         >
-          <Clock className="hidden h-5 w-5 shrink-0 text-amber-600 sm:block" aria-hidden />
-          <div className="min-w-0 flex-1 text-[13px] leading-relaxed text-amber-900">
+          <Clock className="hidden h-4 w-4 shrink-0 text-amber-600 sm:block" aria-hidden />
+          <div className="min-w-0 flex-1 text-xs leading-relaxed text-amber-900">
             <p className="font-semibold">
               <span className="tabular-nums">{formatWhatsapp(request.number)}</span> is waiting for approval
             </p>
@@ -108,15 +117,15 @@ export default function WhatsappNumberPanel({
               your catalog{live ? ` in place of ${live}` : ""}.
             </p>
           </div>
-          <Button size="sm" className="h-10 self-start px-3.5 sm:self-center" loading={busy === "withdraw"} onClick={withdraw}>
+          <Button size="sm" className="h-10 self-start px-3 sm:h-8 sm:self-center" loading={busy === "withdraw"} onClick={withdraw}>
             Withdraw
           </Button>
         </div>
       )}
 
       {request?.status === "rejected" && (
-        <div className="flex gap-3 rounded-md border border-red-200 bg-red-50 px-3.5 py-3 text-[13px] leading-relaxed text-red-800">
-          <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" aria-hidden />
+        <div className="flex gap-2.5 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-xs leading-relaxed text-red-800">
+          <XCircle className="mt-px h-4 w-4 shrink-0 text-red-600" aria-hidden />
           <div className="min-w-0">
             <p className="font-semibold">
               Your request for <span className="tabular-nums">{formatWhatsapp(request.number)}</span> wasn&apos;t approved
@@ -128,13 +137,13 @@ export default function WhatsappNumberPanel({
       )}
 
       {!pending && (
-        <form onSubmit={submit} noValidate className="flex flex-col gap-3 sm:flex-row sm:items-start">
+        <form onSubmit={submit} noValidate className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:gap-2">
           <div data-field className="min-w-0 flex-1">
-            <label htmlFor="whatsapp-request" className={authLabelClass}>
+            <label htmlFor="whatsapp-request" className={panelLabelClass}>
               {live ? "New WhatsApp number" : "Your WhatsApp number"}
             </label>
             <div className="relative">
-              <WhatsAppIcon className={authInputIconClass} aria-hidden />
+              <WhatsAppIcon className={panelInputIconClass} aria-hidden />
               <input
                 id="whatsapp-request"
                 type="tel"
@@ -150,11 +159,11 @@ export default function WhatsappNumberPanel({
                 }}
                 aria-invalid={!!fieldError}
                 aria-describedby={fieldError ? "whatsapp-request-error" : undefined}
-                className={authInputClass}
+                className={panelInputClass}
               />
             </div>
             {fieldError && (
-              <p id="whatsapp-request-error" className={authFieldErrorClass}>
+              <p id="whatsapp-request-error" className={panelFieldErrorClass}>
                 {fieldError}
               </p>
             )}
@@ -162,9 +171,10 @@ export default function WhatsappNumberPanel({
           <Button
             type="submit"
             variant="primary"
+            size="touch"
             onPointerDown={ripple}
             loading={busy === "request"}
-            className="h-12 w-full px-5 text-[15px] sm:mt-[1.625rem] sm:w-auto"
+            className="w-full sm:mt-5 sm:w-auto"
           >
             {live ? "Request change" : "Request number"}
           </Button>
@@ -172,14 +182,14 @@ export default function WhatsappNumberPanel({
       )}
 
       {error && (
-        <p role="alert" className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3.5 py-3 text-[13px] font-medium text-red-700">
-          <TriangleAlert className="mt-px h-4 w-4 shrink-0" aria-hidden />
+        <p role="alert" className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+          <TriangleAlert className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
           {error}
         </p>
       )}
 
-      <p className="flex items-start gap-1.5 text-xs leading-relaxed text-slate">
-        <ShieldCheck className="mt-px h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden />
+      <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-slate">
+        <ShieldCheck className="mt-0.5 h-3 w-3 shrink-0 text-emerald-600" aria-hidden />
         To keep enquiries safe, Catalog24 checks every number before it goes live on your catalog.
       </p>
     </div>

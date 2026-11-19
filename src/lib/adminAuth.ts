@@ -157,14 +157,28 @@ export async function login(email: string, password: string): Promise<AdminUser>
   return withStore(data.user);
 }
 
+// "Continue with Google": `idToken` is the credential from Google Identity Services.
+// A Google account without a store fails with code GOOGLE_NO_ACCOUNT.
+export async function loginWithGoogle(idToken: string): Promise<AdminUser> {
+  const data = await apiRequest<{ token: string; user: AdminUser }>("/auth/google", {
+    method: "POST",
+    body: JSON.stringify({ idToken, deviceId: getDeviceId() }),
+  });
+  localStorage.setItem(TOKEN_KEY, data.token);
+  setOwnerHint(data.user.store.slug);
+  return withStore(data.user);
+}
+
 export type Registration = {
   storeName: string;
   /** Optional: added later in Store settings. */
   whatsapp?: string;
   businessTypes: BusinessTypeId[];
-  email: string;
-  password: string;
-};
+} & (
+  | { email: string; password: string }
+  /** The login is a Google account (it then signs in with Google only). */
+  | { googleIdToken: string }
+);
 
 // Creates the store and the owner's account, and logs them in on this device.
 export async function register(details: Registration): Promise<AdminUser> {

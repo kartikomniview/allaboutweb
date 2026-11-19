@@ -29,8 +29,16 @@ export type DetectedProduct = {
   keywords: string[];
 };
 
+/** The category the owner chose when re-detecting: the answer keeps it, and the AI
+ *  reads the photo as that kind of product. No subcategory: the AI picks the closest. */
+export type DetectHint = { categoryName: string; subcategoryName: string };
+
 /** What the store sells, and the categories the AI may choose from (its business types' ones). */
-export type DetectContext = { businessTypes: readonly string[]; categories: readonly PickerCategory[] };
+export type DetectContext = {
+  businessTypes: readonly string[];
+  categories: readonly PickerCategory[];
+  hint?: DetectHint;
+};
 
 // The API takes at most 120 categories with 40 subcategories each.
 const categoryPayload = (categories: readonly PickerCategory[]) =>
@@ -47,6 +55,7 @@ async function detect(
     body: JSON.stringify({
       businessTypes: context.businessTypes.map(businessTypeLabel),
       categories: categoryPayload(context.categories),
+      ...(context.hint && { hint: context.hint }),
       ...image,
     }),
   });
