@@ -118,10 +118,11 @@ export default function FurnitureCatalogApp({
   // scroll to and the previous tab's scroll position carried over — landing at
   // the bottom of a shorter tab. Opening/closing a product keeps the tab, so it
   // doesn't reset the scroll.
-  // The header's height (it changes when search opens) as --catalog-header-h,
-  // so sticky bars further down, like the Catalog tab's filter chips, sit right under it.
+  // The pinned header's height (owner strip + top bar; it changes when search opens) as
+  // --catalog-header-h, so sticky bars further down, like the Catalog tab's filter chips,
+  // sit right under it.
   const shellRef = useRef<HTMLDivElement>(null);
-  const headerRef = useRef<HTMLElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const header = headerRef.current;
     const shell = shellRef.current;
@@ -389,33 +390,32 @@ export default function FurnitureCatalogApp({
       {/* Desktop: a light grey page, so the white section panels stand apart */}
       <div ref={shellRef} className="w-full min-h-screen bg-white md:bg-neutral-50 flex flex-col relative">
 
+        {/* PINNED TO THE TOP — the owner strip (if any) and the top bar stick together */}
+        <div ref={headerRef} className="sticky top-0 z-30">
+
         {/* OWNER STRIP — only for this store's owner, logged in on this browser */}
         {isOwner && (
-        <div className="bg-[#111111] text-white shrink-0 z-50">
-          <div className="mx-auto w-full max-w-7xl px-3 md:px-6 h-10 flex items-center gap-3 text-xs">
-            <p className="flex min-w-0 flex-1 items-center gap-1.5 text-white/75">
-              <StoreIcon className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              <span className="truncate">
-                <span className="hidden sm:inline">You&apos;re viewing </span>
-                <span className="sm:hidden">Your store</span>
-                <span className="hidden sm:inline">your store as customers see it</span>
-              </span>
+        <div className="bg-[#111111] text-white">
+          <div className="mx-auto w-full max-w-7xl px-3 md:px-6 h-11 flex items-center gap-3 text-xs">
+            <p className="flex min-w-0 flex-1 items-center gap-1.5 text-white/80">
+              <StoreIcon className="hidden sm:block h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span className="truncate">You are viewing your store</span>
             </p>
-            <nav aria-label="Store owner" className="flex shrink-0 items-center gap-1">
+            <nav aria-label="Store owner" className="flex shrink-0 items-center gap-1.5">
+              {/* Phones: only the main action fits beside the text. */}
               <a
                 href={`${adminOrigin}/admin/ecatalog`}
-                className="flex h-8 items-center gap-1.5 rounded-md px-2.5 font-semibold text-white hover:bg-white/10 transition-colors"
+                className="hidden sm:flex h-8 items-center gap-1.5 rounded-md px-2.5 font-semibold text-white hover:bg-white/10 transition-colors"
               >
                 <Package className="h-3.5 w-3.5" aria-hidden />
-                <span className="sm:hidden">Products</span>
-                <span className="hidden sm:inline">Manage products</span>
+                Manage products
               </a>
               <a
                 href={`${adminOrigin}/admin/dashboard`}
-                className="flex h-8 items-center gap-1.5 rounded-md bg-white px-2.5 font-semibold text-[#111111] hover:bg-white/90 transition-colors"
+                className="flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 font-bold text-white shadow-md shadow-primary/50 hover:bg-primary/90 transition-colors"
               >
                 <LayoutDashboard className="h-3.5 w-3.5" aria-hidden />
-                Dashboard
+                Open Dashboard
               </a>
             </nav>
           </div>
@@ -423,7 +423,7 @@ export default function FurnitureCatalogApp({
         )}
 
         {/* TOP BAR — brand and quick actions on phones; brand, search and navigation on desktop */}
-        <header ref={headerRef} className="sticky top-0 z-30 bg-white/95 backdrop-blur-md shadow-xs md:border-b md:border-neutral-200 md:shadow-[0_4px_16px_-10px_rgba(0,0,0,0.12)]">
+        <header className="bg-white/95 backdrop-blur-md shadow-xs md:border-b md:border-neutral-200 md:shadow-[0_4px_16px_-10px_rgba(0,0,0,0.12)]">
 
           {/* Brand & Action Row */}
           <div className="mx-auto w-full max-w-7xl px-4 py-2.5 md:px-6 md:py-3 flex items-center justify-between gap-3 md:gap-6">
@@ -514,6 +514,7 @@ export default function FurnitureCatalogApp({
             </div>
           )}
         </header>
+        </div>
 
         {/* SCROLLABLE MAIN APP BODY (with pb-24 on phones so content never clips behind the bottom tab bar) */}
         {/* overflow-x-clip, not overflow-auto: the window scrolls, and a scroll

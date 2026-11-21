@@ -33,7 +33,7 @@ import BusinessTypePicker from "@/components/admin/BusinessTypePicker";
 import GoogleSignInButton, { googleSignInEnabled } from "@/components/admin/GoogleSignInButton";
 import PasswordStrength from "@/components/admin/PasswordStrength";
 import { flagField, ripple } from "@/components/admin/ripple";
-import type { BusinessTypeId } from "@/lib/taxonomy";
+import { isBusinessType, type BusinessTypeId } from "@/lib/taxonomy";
 import "@/components/admin/admin.css";
 
 // Same rule as the API (backend-api/src/stores.mjs): "Demo Store" -> "demostore".
@@ -58,7 +58,7 @@ type FieldErrors = Partial<Record<Field, string>>;
 // AdminShell before the dashboard); other details are added in Store settings.
 const STEPS = [
   { title: "Name your store", subtitle: "This is also your catalog's link. You can change the name later, not the link.", label: "Store" },
-  { title: "What do you sell?", subtitle: "Choose all that apply. We suggest product categories for these.", label: "Business" },
+  { title: "What do you sell?", subtitle: "Choose the one that fits your store best. We suggest product categories for it.", label: "Business" },
   { title: "Create your login", subtitle: "You'll use these to manage your store.", label: "Login" },
 ] as const;
 
@@ -88,11 +88,17 @@ export default function RegisterStorePage() {
   const passwordRef = useRef<HTMLInputElement>(null);
   const confirmRef = useRef<HTMLInputElement>(null);
 
-  // Already logged in on this device: straight to the dashboard.
+  // Already logged in on this device: straight to the dashboard. Otherwise show the form, with
+  // the business type already chosen when coming from one on the home page (/register?type=furniture).
   useEffect(() => {
+    const showForm = () => {
+      const type = new URLSearchParams(window.location.search).get("type");
+      if (isBusinessType(type)) setBusinessTypes([type]);
+      setChecking(false);
+    };
     checkSession()
-      .then((user) => (user ? router.replace("/admin/dashboard") : setChecking(false)))
-      .catch(() => setChecking(false));
+      .then((user) => (user ? router.replace("/admin/dashboard") : showForm()))
+      .catch(showForm);
   }, [router]);
 
   const slug = toSlug(storeName.trim());
@@ -129,7 +135,7 @@ export default function RegisterStorePage() {
       if (storeName.trim().length < 3 || slug.length < 3) errors.storeName = "Enter at least 3 letters or numbers.";
       else if (nameTaken) errors.storeName = nameStatus.result.message || "This name is already taken. Try another.";
     }
-    if (i === 1 && !businessTypes.length) errors.businessTypes = "Choose at least one.";
+    if (i === 1 && !businessTypes.length) errors.businessTypes = "Choose what you sell.";
     if (i === 2) {
       if (!username) errors.email = "Choose a username.";
       else if (!USERNAME_RE.test(username)) errors.email = "Use 3 to 30 letters, numbers, dots, dashes or underscores.";
@@ -346,6 +352,7 @@ export default function RegisterStorePage() {
               What do you sell?
             </span>
             <BusinessTypePicker
+              single
               value={businessTypes}
               onChange={(next) => {
                 setBusinessTypes(next);

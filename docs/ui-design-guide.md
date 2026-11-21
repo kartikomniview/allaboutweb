@@ -175,10 +175,11 @@ Import the shared classes from `@/components/admin/AuthLayout`. Don't restyle ea
 - **Disabled:** only while the action can't run yet (submitting, or waiting for a check). Otherwise keep it enabled and explain the problem under the field when tapped.
 - **Icon buttons:** `relative grid h-11 w-11 place-items-center overflow-hidden rounded-full`, with an `aria-label`.
 
-### Option cards (multi-select choices)
+### Option cards (choices with pictures)
 
 Follow `BusinessTypePicker`:
-- A grid of cards, 3 per row on phones.
+- **Multi-select** by default (`aria-pressed`). With `single` (registration's "What do you sell?") they act as radio buttons (`role="radio"`): a tap replaces the choice.
+- A grid of cards: 2 per row on phones and 3 from `sm` up (registration). Compact cards (Store settings) fit 3 per row on phones.
 - The icon sits in a 44px `rounded-md` tile above a 12.5px semibold label. `BusinessTypePicker` shows a 4:3 photo instead (edge to edge at the top of the card; see `src/lib/businessImages.ts`).
 - **Selected:** `border-primary bg-tint/60 ring-1 ring-inset ring-primary`, the icon turns primary, and a check badge pops in (`admin-pop-check`).
 - **Tap:** a ripple and `hapticTick()`.

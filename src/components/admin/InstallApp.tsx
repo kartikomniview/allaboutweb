@@ -101,7 +101,7 @@ export function useInstallApp(): InstallState {
 /** On the dashboard: the first popup of the visit, a few seconds in. */
 const FIRST_SHOW_MS = 4000;
 /** On the dashboard: shown again this long after "Skip for now". */
-const REPEAT_MS = 30_000;
+const REPEAT_MS = 7000;
 /** Another dialog is open when the popup is due: look again after this. */
 const RETRY_MS = 5000;
 
@@ -109,7 +109,7 @@ const RETRY_MS = 5000;
  * The install popup. Owners on an Android phone or tablet are pushed to install the
  * app (`install.push`):
  * - AdminShell opens it straight after the WhatsApp number is added.
- * - On the dashboard (`autoShow`) it shows a few seconds in, then again 30 seconds
+ * - On the dashboard (`autoShow`) it shows a few seconds in, then again 7 seconds
  *   after each "Skip for now", until the app is installed.
  * It never opens by itself on computers or iPhone/iPad. `open` also opens it on
  * demand (the top bar's Install button on iPhone).

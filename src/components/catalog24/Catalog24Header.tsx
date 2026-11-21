@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, LayoutDashboard } from "lucide-react";
 import { checkSession, type AdminUser } from "@/lib/adminAuth";
+import { CATALOG_DEMO_BASE } from "@/lib/catalogDomain";
 import Logo from "./Logo";
 
 const NAV_LINKS = [
-  { href: "/#demo", label: "Live demo" },
+  { href: CATALOG_DEMO_BASE, label: "Live demo" },
   { href: "/#how-it-works", label: "How it works" },
   { href: "/#pricing", label: "Pricing" },
   { href: "/#faq", label: "FAQ" },
@@ -58,7 +59,7 @@ export default function Catalog24Header() {
           </div>
         </div>
       )}
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6 header:px-8">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:gap-4 sm:px-6 header:px-8">
         <Link href="/" className="flex shrink-0 items-center" aria-label="Catalog24 home">
           <Logo size="sm" eager />
         </Link>
@@ -75,13 +76,16 @@ export default function Catalog24Header() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-1.5 sm:gap-3">
-          <Link href="/login" className="rounded-md px-2.5 py-2 text-sm font-semibold text-ink transition-colors hover:text-primary">
+        <div className="flex items-center gap-1.5 sm:gap-2.5">
+          <Link
+            href="/login"
+            className="inline-flex h-10 items-center rounded-md border border-line bg-white px-3 text-sm font-semibold text-ink shadow-[0_1px_2px_rgba(1,18,60,0.05)] transition-colors hover:border-slate/35 hover:bg-paper sm:px-4"
+          >
             Log in
           </Link>
           <Link
             href="/register"
-            className="group inline-flex h-10 items-center gap-1.5 rounded-md bg-button px-4 text-sm font-semibold text-white transition-colors hover:bg-button-hover"
+            className="group inline-flex h-10 items-center gap-1.5 rounded-md bg-button px-3.5 text-sm font-semibold text-white transition-colors hover:bg-button-hover sm:px-4"
           >
             <span className="sm:hidden">Create store</span>
             <span className="hidden sm:inline">Create your store</span>

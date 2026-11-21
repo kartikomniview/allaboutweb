@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -9,20 +8,23 @@ import {
   Layers,
   Link2,
   MessageCircle,
+  Play,
   RefreshCw,
   Search,
   Sparkles,
   Store,
-  WandSparkles,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
+import BusinessShowcase, { type ShowcaseBusiness } from "@/components/catalog24/BusinessShowcase";
 import Catalog24Footer from "@/components/catalog24/Catalog24Footer";
 import Catalog24Header from "@/components/catalog24/Catalog24Header";
-import DemoLauncher from "@/components/catalog24/DemoLauncher";
+import HeroSlider from "@/components/catalog24/HeroSlider";
 import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 import RevealObserver from "@/components/landing/RevealObserver";
 import { businessImage } from "@/lib/businessImages";
 import { CATALOG_DEMO_BASE, CATALOG_ICONS } from "@/lib/catalogDomain";
+import { categoriesFor, type BusinessTypeId } from "@/lib/taxonomy";
 
 // The catalog24.in home page, served at "/" on that domain by src/proxy.ts
 // (on any other domain this route redirects to catalog24.in).
@@ -70,7 +72,7 @@ const STEPS: { icon: LucideIcon; title: string; text: string; tone: Tone }[] = [
 ];
 
 const FEATURES: { icon: LucideIcon; title: string; text: string; tone: Tone }[] = [
-  { icon: WandSparkles, title: "AI does the typing", text: "Snap a photo; the name, category and details are filled in.", tone: "violet" },
+  { icon: Zap, title: "AI does the typing", text: "Snap a photo; the name, category and details are filled in.", tone: "violet" },
   { icon: Link2, title: "Your own link", text: "One simple link for your whole catalog. No app to install.", tone: "sky" },
   { icon: MessageCircle, title: "Enquiries on WhatsApp", text: "Customers tap a product and message you with its details.", tone: "emerald" },
   { icon: Search, title: "Search and filters", text: "Customers find products by category, price and more.", tone: "amber" },
@@ -79,21 +81,29 @@ const FEATURES: { icon: LucideIcon; title: string; text: string; tone: Tone }[] 
 ];
 
 // "Made for every kind of shop". Each card's photo is on S3, named after its label
-// (see businessImage in src/lib/businessImages.ts).
-const BUSINESSES = [
-  "Furniture",
-  "Home decor",
-  "Lighting",
-  "Flooring",
-  "Curtains & blinds",
-  "Bath & sanitaryware",
-  "Clothing & fabrics",
-  "Footwear",
-  "Jewellery & accessories",
-  "Optical & eyewear",
-  "Electronics",
-  "Mobiles & accessories",
+// (see businessImage in src/lib/businessImages.ts). `types` are the business types it covers:
+// its sheet lists their categories, and "Create your store" opens registration with the first chosen.
+const BUSINESSES: { label: string; types: BusinessTypeId[] }[] = [
+  { label: "Furniture", types: ["furniture"] },
+  { label: "Home decor", types: ["decor"] },
+  { label: "Lighting", types: ["lighting"] },
+  { label: "Flooring", types: ["flooring"] },
+  { label: "Curtains & blinds", types: ["curtains"] },
+  { label: "Bath & sanitaryware", types: ["bath"] },
+  { label: "Clothing & fabrics", types: ["clothing", "fabrics"] },
+  { label: "Footwear", types: ["footwear"] },
+  { label: "Jewellery & accessories", types: ["jewellery"] },
+  { label: "Optical & eyewear", types: ["optical"] },
+  { label: "Electronics", types: ["electronics"] },
+  { label: "Mobiles & accessories", types: ["mobiles"] },
 ];
+
+const SHOWCASE: ShowcaseBusiness[] = BUSINESSES.map(({ label, types }) => ({
+  label,
+  image: businessImage(label),
+  registerHref: `${REGISTER}?type=${types[0]}`,
+  categories: categoriesFor(types).map((c) => c.label),
+}));
 
 // Monthly plans, cheapest first. `featured` is the highlighted one.
 const PLANS = [
@@ -138,10 +148,10 @@ function PrimaryCta({ className = "" }: { className?: string }) {
   return (
     <Link
       href={REGISTER}
-      className={`group inline-flex h-11 items-center justify-center gap-2 rounded-md bg-button px-7 text-[15px] font-semibold text-white shadow-[0_10px_24px_-12px_rgba(20,62,59,0.8)] transition-colors hover:bg-button-hover sm:h-14 sm:px-8 sm:text-base ${className}`}
+      className={`group inline-flex h-12 items-center justify-center gap-2 rounded-md bg-button px-6 text-[15px] font-semibold text-white shadow-[0_10px_24px_-12px_rgba(20,62,59,0.8)] transition-colors hover:bg-button-hover sm:px-7 ${className}`}
     >
       Create your store
-      <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-0.5" aria-hidden />
+      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
     </Link>
   );
 }
@@ -153,63 +163,49 @@ export default function Catalog24HomePage() {
       <main>
         {/* Hero: a soft orange wash on phones, white on large screens */}
         <section className="bg-linear-to-b from-tint via-white to-white lg:bg-none lg:bg-white">
-          <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 pb-10 pt-6 sm:px-6 sm:pb-14 sm:pt-14 header:px-8 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:pb-20 lg:pt-20">
+          <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 pb-10 pt-7 sm:px-6 sm:pb-14 sm:pt-12 header:px-8 lg:grid-cols-[1.1fr_1fr] lg:gap-12 lg:pb-16 lg:pt-14">
             <div className="text-center lg:text-left">
               <p
                 data-reveal="up"
                 className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-[#c4501a] shadow-[0_1px_2px_rgba(196,80,26,0.15)] ring-1 ring-inset ring-primary/20 sm:bg-tint sm:text-xs sm:shadow-none sm:ring-0"
               >
-                <WandSparkles className="h-3.5 w-3.5" aria-hidden />
-                Add products with just a photo
+                <Store className="h-3.5 w-3.5" aria-hidden />
+                Works for every business
               </p>
               <h1
                 data-reveal="up"
-                className="mx-auto mt-3 max-w-xl text-[1.625rem] font-bold leading-[1.2] tracking-[-0.025em] text-ink [--reveal-delay:80ms] sm:mt-4 sm:text-5xl sm:leading-[1.15] sm:tracking-[-0.03em] lg:mx-0 lg:text-[3.25rem]"
+                className="mt-3 text-[1.625rem] font-bold leading-[1.18] tracking-[-0.025em] text-ink [--reveal-delay:80ms] sm:mt-4 sm:text-4xl sm:leading-[1.12] sm:tracking-[-0.03em] lg:text-[2.75rem]"
               >
-                Your products in <span className="text-primary">one link</span>. Enquiries on{" "}
-                <span className="text-emerald-600">WhatsApp</span>.
+                Create your own <span className="block text-primary">digital catalog</span>
               </h1>
               <p
                 data-reveal="up"
-                className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate [--reveal-delay:160ms] sm:mt-4 sm:text-lg sm:leading-8 lg:mx-0"
+                className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate [--reveal-delay:160ms] sm:mt-4 sm:text-base sm:leading-7 lg:mx-0"
               >
-                Create your online catalog in minutes. Snap a product photo, AI fills in the details, and you share one link
-                with your customers.
+                Add products with just a photo and AI fills in the details. Share one link, and customers enquire on
+                WhatsApp.
               </p>
-              <div data-reveal="up" className="mt-6 flex flex-col items-center gap-2.5 [--reveal-delay:240ms] sm:mt-7 sm:gap-3 lg:items-start">
+              <div data-reveal="up" className="mt-6 flex justify-center [--reveal-delay:240ms] sm:mt-7 lg:justify-start">
                 <PrimaryCta className="w-full max-w-xs sm:w-auto" />
-                <p className="text-[13px] text-slate sm:text-sm">
-                  Already have a store?{" "}
-                  <Link href="/login" className="font-semibold text-ink hover:text-primary">
-                    Log in
-                  </Link>
-                </p>
               </div>
               <ul
                 data-reveal="up"
-                className="mx-auto mt-5 flex max-w-md flex-wrap justify-center gap-1.5 [--reveal-delay:320ms] sm:mt-7 sm:gap-2 lg:mx-0 lg:justify-start"
+                className="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-2 [--reveal-delay:320ms] sm:mt-8 sm:gap-x-6 lg:justify-start lg:border-t lg:border-line lg:pt-6"
               >
                 {["Ready in 2 minutes", "No app to install", "Works on any phone"].map((point) => (
-                  <li
-                    key={point}
-                    className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-800 ring-1 ring-inset ring-emerald-100 sm:text-[13px]"
-                  >
-                    <Check className="h-3.5 w-3.5 text-emerald-600" strokeWidth={2.5} aria-hidden />
+                  <li key={point} className="inline-flex items-center gap-1.5 text-xs font-medium text-slate sm:text-[13px]">
+                    <span className="grid h-4 w-4 place-items-center rounded-full bg-emerald-100 text-emerald-700">
+                      <Check className="h-2.5 w-2.5" strokeWidth={3.5} aria-hidden />
+                    </span>
                     {point}
                   </li>
                 ))}
               </ul>
             </div>
 
-            {/* The live demo: a small button on phones, the phone preview on larger screens */}
-            <div id="demo" data-reveal="up" className="-mt-2 mx-auto w-full max-w-[20rem] scroll-mt-24 text-center [--reveal-delay:160ms] sm:mt-0 sm:max-w-[22rem]">
-              <DemoLauncher
-                src={CATALOG_DEMO_BASE}
-                title="Live demo of a Catalog24 store"
-                fullDemoHref={CATALOG_DEMO_BASE}
-                compactOnPhones
-              />
-              <p className="mt-3 hidden text-xs text-slate sm:block">A real store catalog. Tap to try it.</p>
+            {/* Sliding phone screenshots of real stores, each with its own floating badges */}
+            <div data-reveal="up" className="mx-auto w-full max-w-[21rem] [--reveal-delay:160ms] sm:max-w-[24rem] lg:max-w-[26rem]">
+              <HeroSlider />
             </div>
           </div>
         </section>
@@ -224,30 +220,14 @@ export default function Catalog24HomePage() {
               <h2 data-reveal="up" className="mt-1.5 text-xl font-bold tracking-[-0.02em] text-ink [--reveal-delay:80ms] sm:mt-2 sm:text-3xl">
                 Whatever you sell, show it well
               </h2>
+              <p data-reveal="up" className="mt-1.5 text-[13px] text-slate [--reveal-delay:120ms] sm:mt-2 sm:text-base">
+                Tap your business to see what you get.
+              </p>
             </div>
-            <ul className="mt-5 grid grid-cols-2 gap-2 sm:mt-8 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 lg:gap-4">
-              {BUSINESSES.map((label, i) => (
-                <li
-                  key={label}
-                  data-reveal="up"
-                  style={{ "--reveal-delay": `${(i % 4) * 60}ms` } as React.CSSProperties}
-                  className="relative aspect-[4/3] overflow-hidden rounded-lg bg-line/60"
-                >
-                  <Image
-                    src={businessImage(label)}
-                    alt=""
-                    fill
-                    sizes="(min-width: 1152px) 270px, (min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-                    className="object-cover"
-                  />
-                  {/* Keeps the label readable on any photo */}
-                  <span aria-hidden className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
-                  <span className="absolute inset-x-0 bottom-0 px-2.5 py-2 text-xs font-semibold leading-tight text-white sm:px-3 sm:py-2.5 sm:text-sm lg:text-[15px]">
-                    {label}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <BusinessShowcase businesses={SHOWCASE} />
+            <div className="mt-6 text-center sm:mt-10">
+              <PrimaryCta className="w-full max-w-xs sm:w-auto" />
+            </div>
           </div>
         </section>
 
@@ -318,6 +298,31 @@ export default function Catalog24HomePage() {
                 </li>
               ))}
             </ul>
+          </div>
+        </section>
+
+        {/* Live demo strip: a slim band between the features and pricing */}
+        <section className="border-y border-primary/15 bg-tint">
+          <div className="mx-auto flex max-w-6xl flex-col items-center gap-3.5 px-4 py-5 text-center sm:flex-row sm:justify-between sm:gap-6 sm:px-6 sm:py-6 sm:text-left header:px-8">
+            <div data-reveal="up" className="flex items-center gap-3.5">
+              <span className="hidden h-11 w-11 shrink-0 place-items-center rounded-full bg-white text-primary shadow-[0_1px_2px_rgba(196,80,26,0.15)] ring-1 ring-inset ring-primary/20 sm:grid">
+                <Play className="ml-0.5 h-4 w-4 fill-current" aria-hidden />
+              </span>
+              <div>
+                <p className="text-[15px] font-semibold text-ink sm:text-base">See a real store in action</p>
+                <p className="mt-0.5 text-[13px] leading-5 text-slate sm:text-sm">
+                  Browse our demo catalog the way your customers will.
+                </p>
+              </div>
+            </div>
+            <Link
+              data-reveal="up"
+              href={CATALOG_DEMO_BASE}
+              className="group inline-flex h-11 w-full max-w-xs shrink-0 items-center justify-center gap-2 rounded-md border border-primary/25 bg-white px-6 text-[15px] font-semibold text-ink shadow-[0_1px_2px_rgba(196,80,26,0.12)] transition-colors [--reveal-delay:80ms] hover:border-primary/45 sm:w-auto"
+            >
+              View live demo
+              <ArrowRight className="h-4 w-4 text-primary transition-transform group-hover:translate-x-0.5" aria-hidden />
+            </Link>
           </div>
         </section>
 
@@ -433,7 +438,7 @@ export default function Catalog24HomePage() {
             </p>
             <Link
               href={REGISTER}
-              className="group mt-6 inline-flex h-11 w-full max-w-xs items-center justify-center gap-2 rounded-md bg-white px-7 text-[15px] font-semibold text-ink transition-colors hover:bg-paper sm:mt-7 sm:h-14 sm:w-auto sm:px-8 sm:text-base"
+              className="group mt-6 inline-flex h-12 w-full max-w-xs items-center justify-center gap-2 rounded-md bg-white px-7 text-[15px] font-semibold text-ink transition-colors hover:bg-paper sm:mt-7 sm:h-14 sm:w-auto sm:px-8 sm:text-base"
             >
               Create your store
               <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-0.5" aria-hidden />

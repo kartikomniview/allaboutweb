@@ -182,12 +182,13 @@ export default function ProductDetail({ product }: { product: CatalogProduct }) 
             )}
 
             {images.length > 1 && (
-              <div className="absolute inset-x-0 bottom-2.5 flex justify-center gap-1">
+              // Same dots as the product cards: equal circles, the photo in view is dark.
+              <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-2.5 flex justify-center gap-1.5">
                 {images.map((src, idx) => (
                   <span
                     key={src}
-                    className={`h-1 rounded-full transition-all duration-300 ${
-                      idx === activeImage ? 'w-4 bg-white' : 'w-1 bg-white/60'
+                    className={`h-1.5 w-1.5 rounded-full ring-1 ring-white/70 transition-colors duration-300 ${
+                      idx === activeImage ? 'bg-neutral-900' : 'bg-neutral-900/30'
                     }`}
                   />
                 ))}

@@ -26,12 +26,11 @@ import {
   Info,
   Plus,
   RotateCcw,
-  Sparkles,
   Star,
   Trash2,
   TriangleAlert,
-  WandSparkles,
   X,
+  Zap,
 } from "lucide-react";
 import { AuthError } from "@/lib/adminAuth";
 import {
@@ -75,14 +74,14 @@ import ConfirmDialog from "./ConfirmDialog";
 import CategoryCombobox, { type ComboOption } from "./CategoryCombobox";
 import { useOverlay } from "./useOverlay";
 
-// The edit form's fields. Phones: 44px controls with 16px text (smaller text makes
+// The edit form's fields. Phones: 40px controls with 16px text (smaller text makes
 // iOS zoom in on focus). From sm up: compact, 36px with 13px text.
 const fieldBase =
   "w-full rounded-md border border-line bg-white px-3 text-base text-ink transition placeholder:text-slate/55 hover:border-slate/35 focus:border-primary focus:outline-none focus-visible:outline-none! focus:ring-[3px] focus:ring-primary/15 sm:px-2.5 sm:text-[13px]";
-const inputClass = `h-11 sm:h-9 ${fieldBase}`;
-const textareaClass = `resize-y py-2.5 leading-relaxed sm:py-2 ${fieldBase}`;
+const inputClass = `h-10 sm:h-9 ${fieldBase}`;
+const textareaClass = `resize-y py-2 leading-relaxed ${fieldBase}`;
 
-const labelClass = "mb-1.5 flex items-center gap-0.5 text-[13px] font-semibold text-ink";
+const labelClass = "mb-1 flex items-center gap-0.5 text-xs font-semibold text-ink sm:mb-1.5 sm:text-[13px]";
 
 // Numbers are kept as strings while editing so fields can be empty mid-typing.
 type FormState = Omit<ProductInput, "price" | "originalPrice" | "rating" | "reviewCount" | "keywords" | "specs"> & {
@@ -206,9 +205,9 @@ function toInput(form: FormState): ProductInput | string {
 
 /* ---------- Layout pieces ---------- */
 
-// The edit form's text levels: section title (14px semibold, ink) > field value
+// The edit form's text levels: section title (13px on phones, 14px from sm; semibold, ink) > field value
 // (ink) > field label (12px medium, softer ink) > help text (11px, slate).
-const sectionTitleClass = "text-sm font-semibold leading-5 tracking-[-0.01em] text-ink";
+const sectionTitleClass = "text-[13px] font-semibold sm:text-sm leading-5 tracking-[-0.01em] text-ink";
 const fieldLabelClass = "mb-1 flex min-h-4 items-center gap-0.5 text-xs font-medium text-ink/75";
 
 /** Help text on the right of a field's label row (a counter, a short tip). */
@@ -254,7 +253,7 @@ function Section({
             onClick={() => setOpen((o) => !o)}
             onPointerDown={ripple}
             aria-expanded={open}
-            className="relative flex min-h-11 w-full items-center gap-3 overflow-hidden px-4 py-2.5 text-left transition-colors hover:bg-paper/60 focus-visible:outline-none! focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-primary/25 sm:min-h-10 sm:py-2"
+            className="relative flex min-h-10 w-full items-center gap-3 overflow-hidden px-4 py-2 text-left transition-colors hover:bg-paper/60 focus-visible:outline-none! focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-primary/25"
           >
             <span className={sectionTitleClass}>{titleText}</span>
             <span className="ml-auto flex min-w-0 items-center gap-2.5">
@@ -267,13 +266,13 @@ function Section({
           </button>
         </h3>
       ) : (
-        <div className="flex min-h-5 items-center gap-3 px-4 pt-3">
+        <div className="flex min-h-5 items-center gap-3 px-4 pt-2.5 sm:pt-3">
           <h3 className={sectionTitleClass}>{titleText}</h3>
           {action && <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2">{action}</div>}
         </div>
       )}
       {open && (
-        <div className={`flex flex-col gap-3 px-4 pb-3.5 ${collapsible ? "pt-0.5" : "pt-2.5"}`}>{children}</div>
+        <div className={`flex flex-col gap-2.5 px-4 pb-3 sm:gap-3 sm:pb-3.5 ${collapsible ? "pt-0.5" : "pt-2.5"}`}>{children}</div>
       )}
     </section>
   );
@@ -303,7 +302,7 @@ function Field({
         {aside && <LabelAside>{aside}</LabelAside>}
       </span>
       {children}
-      {hint && <span className="mt-1.5 block text-xs leading-snug text-slate">{hint}</span>}
+      {hint && <span className="mt-1 block text-[11px] leading-snug text-slate sm:mt-1.5 sm:text-xs">{hint}</span>}
     </label>
   );
 }
@@ -359,11 +358,11 @@ function TagInput({
   }
 
   return (
-    <div className="flex min-h-11 flex-wrap items-center gap-1.5 rounded-md border border-line bg-white px-1.5 py-1 transition hover:border-slate/35 focus-within:border-primary focus-within:ring-[3px] focus-within:ring-primary/15 sm:min-h-9 sm:gap-1 sm:py-[5px]">
+    <div className="flex min-h-10 flex-wrap items-center gap-1.5 rounded-md border border-line bg-white px-1.5 py-1 transition hover:border-slate/35 focus-within:border-primary focus-within:ring-[3px] focus-within:ring-primary/15 sm:min-h-9 sm:gap-1 sm:py-[5px]">
       {tags.map((tag, i) => (
         <span
           key={tag}
-          className={`inline-flex h-8 items-center gap-1 rounded-[5px] pl-2 pr-0.5 text-xs font-semibold ring-1 ring-inset sm:h-6 sm:pl-1.5 sm:text-[11px] ${
+          className={`inline-flex h-7 items-center gap-1 rounded-[5px] pl-2 pr-0.5 text-xs font-semibold ring-1 ring-inset sm:h-6 sm:pl-1.5 sm:text-[11px] ${
             badge && i === 0 ? "bg-tint text-[#c4501a] ring-primary/20" : "bg-ink/[0.04] text-ink ring-ink/10"
           }`}
         >
@@ -372,7 +371,7 @@ function TagInput({
           <button
             type="button"
             onClick={() => onChange(tags.filter((t) => t !== tag))}
-            className="grid h-7 w-7 place-items-center rounded hover:bg-ink/10 sm:h-4 sm:w-4"
+            className="grid h-6 w-6 place-items-center rounded hover:bg-ink/10 sm:h-4 sm:w-4"
             aria-label={`Remove ${tag}`}
           >
             <X className="h-3.5 w-3.5 sm:h-3 sm:w-3" aria-hidden />
@@ -387,14 +386,14 @@ function TagInput({
         aria-labelledby={labelledBy}
         enterKeyHint="done"
         placeholder={tags.length ? (badge ? "Add tag…" : "Add keyword…") : "Type and press Enter"}
-        className="h-8 min-w-[7rem] flex-1 bg-transparent px-1.5 text-base text-ink placeholder:text-slate/55 focus:outline-none focus-visible:outline-none! sm:h-6 sm:px-1 sm:text-[13px]"
+        className="h-7 min-w-[7rem] flex-1 bg-transparent px-1.5 text-base text-ink placeholder:text-slate/55 focus:outline-none focus-visible:outline-none! sm:h-6 sm:px-1 sm:text-[13px]"
       />
     </div>
   );
 }
 
 const iconBtn =
-  "grid h-11 w-11 shrink-0 place-items-center rounded-md text-slate transition-colors hover:bg-red-50 hover:text-red-600 sm:h-9 sm:w-9";
+  "grid h-10 w-10 shrink-0 place-items-center rounded-md text-slate transition-colors hover:bg-red-50 hover:text-red-600 sm:h-9 sm:w-9";
 
 function AddRowButton({ children, onClick }: { children: ReactNode; onClick: () => void }) {
   return (
@@ -402,7 +401,7 @@ function AddRowButton({ children, onClick }: { children: ReactNode; onClick: () 
       type="button"
       onClick={onClick}
       onPointerDown={ripple}
-      className="relative inline-flex h-11 items-center gap-1.5 self-start overflow-hidden rounded-md border border-dashed border-line px-3 text-xs font-semibold text-slate transition-colors hover:border-primary/50 hover:text-primary sm:h-8 sm:px-2.5"
+      className="relative inline-flex h-10 items-center gap-1.5 self-start overflow-hidden rounded-md border border-dashed border-line px-3 text-xs font-semibold text-slate transition-colors hover:border-primary/50 hover:text-primary sm:h-8 sm:px-2.5"
     >
       <Plus className="h-3.5 w-3.5" aria-hidden />
       {children}
@@ -853,19 +852,19 @@ function ImageManager({
       {empty && hero ? (
         <div
           {...dropProps}
-          className={`flex flex-col items-center gap-4 rounded-md border border-dashed px-5 py-9 text-center transition-colors ${
+          className={`flex flex-col items-center gap-3 rounded-md border border-dashed px-4 py-6 text-center sm:gap-4 sm:px-5 sm:py-9 transition-colors ${
             fileOver ? "border-primary bg-tint/60" : "border-[#cfd4df] bg-paper/40"
           }`}
         >
-          <span className="grid h-14 w-14 place-items-center rounded-full bg-tint text-primary">
-            <ImagePlus className="h-6 w-6" aria-hidden />
+          <span className="grid h-11 w-11 place-items-center rounded-full bg-tint text-primary sm:h-14 sm:w-14">
+            <ImagePlus className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden />
           </span>
           <div>
-            <p className="text-[15px] font-semibold text-ink">Add product photos</p>
-            <p className="mt-1 text-[13px] leading-relaxed text-slate">The first photo is used to fill in the details.</p>
+            <p className="text-sm font-semibold text-ink sm:text-[15px]">Add product photos</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-slate sm:mt-1 sm:text-[13px]">The first photo is used to fill in the details.</p>
           </div>
           {/* Touch devices: the gallery and the camera side by side, as two equal tiles. */}
-          <div className="grid w-full max-w-xs grid-cols-2 gap-3 [@media(pointer:fine)]:hidden">
+          <div className="grid w-full max-w-xs grid-cols-2 gap-2.5 sm:gap-3 [@media(pointer:fine)]:hidden">
             {[
               { label: "From gallery", icon: Images, input: inputRef },
               { label: "Take a photo", icon: Camera, input: cameraRef },
@@ -875,9 +874,9 @@ function ImageManager({
                 type="button"
                 onClick={() => input.current?.click()}
                 onPointerDown={ripple}
-                className="relative flex flex-col items-center justify-center gap-2.5 overflow-hidden rounded-md border border-slate/40 bg-white px-3 py-5 text-sm font-semibold text-ink shadow-[0_1px_2px_rgba(1,18,60,0.06),0_6px_16px_-6px_rgba(1,18,60,0.18)] transition-[background-color,border-color,box-shadow,transform] duration-150 hover:border-slate/60 hover:bg-paper active:scale-[0.97] active:shadow-[0_1px_2px_rgba(1,18,60,0.06)] focus-visible:outline-none! focus-visible:ring-[3px] focus-visible:ring-primary/15"
+                className="relative flex flex-col items-center justify-center gap-2 overflow-hidden rounded-md border border-slate/40 bg-white px-3 py-3.5 text-[13px] font-semibold sm:gap-2.5 sm:py-5 sm:text-sm text-ink shadow-[0_1px_2px_rgba(1,18,60,0.06),0_6px_16px_-6px_rgba(1,18,60,0.18)] transition-[background-color,border-color,box-shadow,transform] duration-150 hover:border-slate/60 hover:bg-paper active:scale-[0.97] active:shadow-[0_1px_2px_rgba(1,18,60,0.06)] focus-visible:outline-none! focus-visible:ring-[3px] focus-visible:ring-primary/15"
               >
-                <Icon className="h-8 w-8 text-primary" strokeWidth={1.75} aria-hidden />
+                <Icon className="h-7 w-7 text-primary sm:h-8 sm:w-8" strokeWidth={1.75} aria-hidden />
                 {label}
               </button>
             ))}
@@ -910,7 +909,7 @@ function ImageManager({
               inputRef.current?.click();
             }
           }}
-          className={`flex flex-col items-center justify-center gap-2 rounded-[8px] border border-dashed px-4 py-7 text-center transition-colors ${
+          className={`flex flex-col items-center justify-center gap-2 rounded-[8px] border border-dashed px-4 py-5 text-center sm:py-7 transition-colors ${
             fileOver
               ? "cursor-pointer border-primary bg-tint/60"
               : "cursor-pointer border-[#cfd4df] bg-paper/50 hover:border-primary/50 hover:bg-tint/30"
@@ -933,10 +932,10 @@ function ImageManager({
           {picker}
         </div>
       ) : (
-        // Add product: 3 big columns. The edit form: smaller tiles, so the photos don't fill the screen.
+        // Phones: 4 columns. From sm, Add product gets 3 big columns; the edit form 5 smaller ones.
         <div
           ref={gridRef}
-          className={`relative grid ${hero ? "grid-cols-3 gap-2.5" : "grid-cols-4 gap-1.5 sm:grid-cols-5"} ${dragging ? "select-none" : ""}`}
+          className={`relative grid ${hero ? "grid-cols-4 gap-1.5 sm:grid-cols-3 sm:gap-2.5" : "grid-cols-4 gap-1.5 sm:grid-cols-5"} ${dragging ? "select-none" : ""}`}
           {...dropProps}
         >
           {shownImages.map((url, n) => {
@@ -967,7 +966,7 @@ function ImageManager({
                     draggable={false}
                   />
                   {isCover && (
-                    <span className="pointer-events-none absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-ink shadow-sm">
+                    <span className="pointer-events-none absolute bottom-1.5 left-1.5 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 text-[11px] sm:bottom-2 sm:left-2 sm:px-2.5 sm:py-1 font-semibold text-ink shadow-sm">
                       <Star className="h-3 w-3 fill-primary text-primary" aria-hidden />
                       Cover
                     </span>
@@ -994,7 +993,7 @@ function ImageManager({
                       onKeyDown={(e) => keyMove(e, url)}
                       aria-label={`Move image ${n + 1}. Use the arrow keys; the first image is the cover.`}
                       title="Drag to reorder"
-                      className={`absolute left-2 top-2 grid h-9 w-9 touch-none place-items-center rounded-md bg-white/95 text-ink shadow-[0_1px_4px_rgba(1,18,60,0.25)] ring-1 ring-ink/5 transition-colors hover:bg-white ${
+                      className={`absolute left-1.5 top-1.5 grid h-8 w-8 touch-none place-items-center sm:left-2 sm:top-2 sm:h-9 sm:w-9 rounded-md bg-white/95 text-ink shadow-[0_1px_4px_rgba(1,18,60,0.25)] ring-1 ring-ink/5 transition-colors hover:bg-white ${
                         isDragged ? "cursor-grabbing text-primary" : "cursor-grab"
                       }`}
                     >
@@ -1007,7 +1006,7 @@ function ImageManager({
                       // A saved product needs an image, and image changes save right away.
                       autoSave && images.length === 1 ? flashTile(url, "Add another image first") : setConfirmRemove(url)
                     }
-                    className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-white/95 text-ink shadow-sm ring-1 ring-ink/5 transition hover:bg-red-50 hover:text-red-600 focus-visible:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
+                    className="absolute right-1.5 top-1.5 grid h-7 w-7 place-items-center rounded-full sm:right-2 sm:top-2 sm:h-8 sm:w-8 bg-white/95 text-ink shadow-sm ring-1 ring-ink/5 transition hover:bg-red-50 hover:text-red-600 focus-visible:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
                     aria-label={`Remove image ${n + 1}`}
                     title="Remove"
                   >
@@ -1299,16 +1298,16 @@ function CategoryMismatchDialog({
         tabIndex={-1}
         className="admin-pop-in w-full rounded-t-lg bg-white shadow-2xl focus:outline-none focus-visible:outline-none! sm:max-w-md sm:rounded-lg"
       >
-        <div className="flex flex-col gap-4 px-5 pb-4 pt-5 sm:px-6 sm:pt-6">
-          <div className="flex gap-3.5">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-amber-50 text-amber-600">
+        <div className="flex flex-col gap-3 px-4 pb-3 pt-4 sm:gap-4 sm:px-6 sm:pb-4 sm:pt-6">
+          <div className="flex gap-3 sm:gap-3.5">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full sm:h-10 sm:w-10 bg-amber-50 text-amber-600">
               <TriangleAlert className="h-5 w-5" aria-hidden />
             </span>
             <div className="min-w-0">
-              <h2 id="mismatch-title" className="text-base font-semibold text-ink">
+              <h2 id="mismatch-title" className="text-[15px] font-semibold text-ink sm:text-base">
                 Category doesn&apos;t match
               </h2>
-              <p id="mismatch-text" className="mt-1 text-sm leading-relaxed text-slate">
+              <p id="mismatch-text" className="mt-0.5 text-[13px] leading-relaxed text-slate sm:mt-1 sm:text-sm">
                 <span className="font-semibold text-ink">{productName}</span>
                 {productType ? ` looks like a ${productType}, which isn't` : " isn't"} one of your {storeLabel} categories. Choose the
                 right category, or type a new one.
@@ -1323,7 +1322,7 @@ function CategoryMismatchDialog({
             </p>
           )}
         </div>
-        <div className="flex flex-col-reverse gap-2 border-t border-line px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:flex-row sm:justify-end sm:px-6 sm:pb-4">
+        <div className="flex flex-col-reverse gap-2 border-t border-line px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 sm:flex-row sm:justify-end sm:px-6 sm:pb-4 sm:pt-4">
           <button type="button" onClick={onSkip} onPointerDown={ripple} className={`${authSecondaryButtonClass} sm:w-auto sm:px-5`}>
             Skip for now
           </button>
@@ -1360,10 +1359,17 @@ function RedetectButton({
       disabled={disabled}
       title={title}
       className={`relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-md bg-tint font-semibold whitespace-nowrap text-ink shadow-[0_1px_2px_rgba(252,108,38,0.18)] ring-1 ring-inset ring-primary/45 transition-[background-color,box-shadow,transform] hover:bg-primary/15 hover:ring-primary active:scale-[0.98] focus-visible:outline-none! focus-visible:ring-[3px] focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 ${
-        compact ? "h-10 gap-1.5 px-3 text-[13px] sm:h-8 sm:px-2.5 sm:text-xs" : "h-11 gap-2 px-4 text-sm sm:h-10"
+        compact
+          ? "h-10 gap-1.5 px-3 text-[13px] sm:h-8 sm:px-2.5 sm:text-xs"
+          : // The Add product card: small on phones, beside the card's title.
+            "h-8 gap-1.5 px-2.5 text-xs sm:h-10 sm:gap-2 sm:px-4 sm:text-sm"
       } ${className}`}
     >
-      <WandSparkles className={`${compact ? "h-4 w-4 sm:h-3.5 sm:w-3.5" : "h-[18px] w-[18px]"} text-primary`} strokeWidth={2} aria-hidden />
+      <Zap
+        className={`${compact ? "h-4 w-4 sm:h-3.5 sm:w-3.5" : "h-3.5 w-3.5 sm:h-[18px] sm:w-[18px]"} text-primary`}
+        strokeWidth={2}
+        aria-hidden
+      />
       Re-detect
     </button>
   );
@@ -1409,16 +1415,17 @@ function RedetectDialog({
         tabIndex={-1}
         className="admin-pop-in w-full rounded-t-lg bg-white shadow-2xl focus:outline-none focus-visible:outline-none! sm:max-w-md sm:rounded-lg"
       >
-        <div className="flex flex-col gap-4 px-5 pb-4 pt-5 sm:px-6 sm:pt-6">
-          <div className="flex gap-3.5">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-tint text-primary">
-              <WandSparkles className="h-5 w-5" aria-hidden />
+        <div className="flex flex-col gap-3 px-4 pb-3 pt-4 sm:gap-4 sm:px-6 sm:pb-4 sm:pt-6">
+          <div className="flex items-center gap-3 sm:items-start sm:gap-3.5">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full sm:h-10 sm:w-10 bg-tint text-primary">
+              <Zap className="h-5 w-5" aria-hidden />
             </span>
             <div className="min-w-0">
-              <h2 id="redetect-title" className="text-base font-semibold text-ink">
+              <h2 id="redetect-title" className="text-[15px] font-semibold text-ink sm:text-base">
                 Re-detect from photo
               </h2>
-              <p id="redetect-text" className="mt-1 text-sm leading-relaxed text-slate">
+              {/* Phones: the title alone keeps the sheet short. */}
+              <p id="redetect-text" className="hidden text-slate sm:mt-1 sm:block sm:text-sm sm:leading-relaxed">
                 AI reads the cover photo again and fills in the name and details. If it got the category wrong, choose the
                 right one.
               </p>
@@ -1462,7 +1469,7 @@ function RedetectDialog({
             </p>
           )}
         </div>
-        <div className="flex flex-col-reverse gap-2 border-t border-line px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:flex-row sm:justify-end sm:px-6 sm:pb-4">
+        <div className="flex flex-col-reverse gap-2 border-t border-line px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 sm:flex-row sm:justify-end sm:px-6 sm:pb-4 sm:pt-4">
           <button
             type="button"
             onClick={onCancel}
@@ -2074,25 +2081,26 @@ export default function ProductFormDrawer({
   );
 
   // "Add product": what AI made of the photo, with Re-detect as the card's action
-  // (full width under the text on phones, on the right from sm up).
+  // on the right.
   const redetectCard = (tone: "ok" | "outside" | "error", title: string, text: string) => {
     const look = {
       ok: { box: "border-emerald-600/20 bg-emerald-50/70", icon: "text-emerald-600", Icon: CircleCheck },
       outside: { box: "border-amber-500/25 bg-amber-50", icon: "text-amber-600", Icon: Info },
-      error: { box: "border-line bg-paper", icon: "text-primary", Icon: Sparkles },
+      error: { box: "border-line bg-paper", icon: "text-primary", Icon: Zap },
     }[tone];
     return (
-      <div role="status" className={`admin-fade-in flex flex-col gap-3 rounded-md border p-3.5 sm:flex-row sm:items-center ${look.box}`}>
-        <div className="flex min-w-0 flex-1 items-start gap-3">
-          <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-md bg-white ${look.icon}`}>
+      <div role="status" className={`admin-fade-in flex items-center gap-2.5 rounded-md border p-3 sm:gap-3 sm:p-3.5 ${look.box}`}>
+        <div className="flex min-w-0 flex-1 items-center gap-3 sm:items-start">
+          <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-md bg-white sm:h-9 sm:w-9 ${look.icon}`}>
             <look.Icon className="h-[18px] w-[18px]" aria-hidden />
           </span>
           <div className="min-w-0">
             <p className="text-[13px] font-semibold text-ink">{title}</p>
-            <p className="mt-0.5 text-xs leading-relaxed text-slate">{text}</p>
+            {/* Phones: just the title, so the card stays small. */}
+            <p className="mt-0.5 hidden text-xs leading-relaxed text-slate sm:block">{text}</p>
           </div>
         </div>
-        {redetectButton("w-full sm:w-auto")}
+        {redetectButton()}
       </div>
     );
   };
@@ -2125,7 +2133,7 @@ export default function ProductFormDrawer({
                   }`}
                 >
                   {detectNote.kind === "ok" ? (
-                    <WandSparkles className="mt-2 h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <Zap className="mt-2 h-3.5 w-3.5 shrink-0" aria-hidden />
                   ) : (
                     <Info className="mt-2 h-3.5 w-3.5 shrink-0" aria-hidden />
                   )}
@@ -2591,14 +2599,14 @@ export default function ProductFormDrawer({
   const lastStep = WIZARD_STEPS.length - 1;
   const needsIdentity = detectTried && !detecting && !isCompleteFolder(form);
   const bigInput =
-    "h-12 w-full rounded-md border border-line bg-white px-3.5 text-base text-ink transition-[border-color,box-shadow] placeholder:text-slate/55 hover:border-slate/35 focus:border-primary focus:outline-none focus-visible:outline-none! focus:ring-[3px] focus:ring-primary/15";
-  const bigLabel = "mb-1.5 block text-[13px] font-semibold text-ink";
+    "h-11 w-full rounded-md border border-line bg-white px-3.5 text-base text-ink transition-[border-color,box-shadow] sm:h-12 placeholder:text-slate/55 hover:border-slate/35 focus:border-primary focus:outline-none focus-visible:outline-none! focus:ring-[3px] focus:ring-primary/15";
+  const bigLabel = "mb-1 block text-xs font-semibold text-ink sm:mb-1.5 sm:text-[13px]";
 
   // The AI's progress on the first photo.
   const aiStatus = detectNote?.kind === "ok" && form.productName.trim() ? (
-    <div className="admin-fade-in flex items-start gap-3 rounded-md border border-emerald-600/20 bg-emerald-50/70 p-3.5" role="status">
-      <span className="admin-pop-check grid h-9 w-9 shrink-0 place-items-center rounded-md bg-white text-emerald-600">
-        <WandSparkles className="h-4 w-4" aria-hidden />
+    <div className="admin-fade-in flex items-start gap-2.5 rounded-md border border-emerald-600/20 bg-emerald-50/70 p-3 sm:gap-3 sm:p-3.5" role="status">
+      <span className="admin-pop-check grid h-8 w-8 shrink-0 place-items-center rounded-md bg-white text-emerald-600 sm:h-9 sm:w-9">
+        <Zap className="h-4 w-4" aria-hidden />
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-[13px] font-semibold text-ink">Filled in by AI</p>
@@ -2613,8 +2621,8 @@ export default function ProductFormDrawer({
       </div>
     </div>
   ) : detectNote?.kind === "outside" ? (
-    <div className="admin-fade-in flex items-start gap-3 rounded-md border border-amber-500/25 bg-amber-50 p-3.5" role="status">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-white text-amber-600">
+    <div className="admin-fade-in flex items-start gap-2.5 rounded-md border border-amber-500/25 bg-amber-50 p-3 sm:gap-3 sm:p-3.5" role="status">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-white text-amber-600 sm:h-9 sm:w-9">
         <Info className="h-4 w-4" aria-hidden />
       </span>
       <div className="min-w-0 flex-1">
@@ -2623,8 +2631,8 @@ export default function ProductFormDrawer({
       </div>
     </div>
   ) : detectNote?.kind === "error" ? (
-    <div className="admin-fade-in flex items-start gap-3 rounded-md border border-amber-500/25 bg-amber-50 p-3.5" role="status">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-white text-amber-600">
+    <div className="admin-fade-in flex items-start gap-2.5 rounded-md border border-amber-500/25 bg-amber-50 p-3 sm:gap-3 sm:p-3.5" role="status">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-white text-amber-600 sm:h-9 sm:w-9">
         <Info className="h-4 w-4" aria-hidden />
       </span>
       <div className="min-w-0 flex-1">
@@ -2633,8 +2641,8 @@ export default function ProductFormDrawer({
       </div>
     </div>
   ) : form.images.length === 0 ? (
-    <p className="flex items-start gap-2 rounded-md bg-paper px-3.5 py-3 text-xs leading-relaxed text-slate">
-      <Sparkles className="mt-px h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
+    <p className="flex items-start gap-2 rounded-md bg-paper px-3 py-2.5 text-[11px] leading-relaxed text-slate sm:px-3.5 sm:py-3 sm:text-xs">
+      <Zap className="mt-px h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
       Tip: a clear photo of the whole product on a plain background gives the best results.
     </p>
   ) : null;
@@ -2664,7 +2672,7 @@ export default function ProductFormDrawer({
   // Offer price and MRP: step 3, or part of the one-screen review.
   const priceFields = (
     <>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
             <label className="block">
               <span className={bigLabel}>Offer price</span>
               <span className="relative block">
@@ -2675,7 +2683,7 @@ export default function ProductFormDrawer({
                   min={0}
                   value={form.price}
                   onChange={(e) => set("price", e.target.value)}
-                  className={`${bigInput} pl-8 text-lg font-semibold tabular-nums`}
+                  className={`${bigInput} pl-8 text-base font-semibold tabular-nums sm:text-lg`}
                   placeholder="0"
                   enterKeyHint="next"
                 />
@@ -2691,7 +2699,7 @@ export default function ProductFormDrawer({
                   min={0}
                   value={form.originalPrice}
                   onChange={(e) => set("originalPrice", e.target.value)}
-                  className={`${bigInput} pl-8 text-lg tabular-nums`}
+                  className={`${bigInput} pl-8 text-base tabular-nums sm:text-lg`}
                   placeholder="0"
                   enterKeyHint="done"
                 />
@@ -2700,7 +2708,7 @@ export default function ProductFormDrawer({
           </div>
           <div
             aria-live="polite"
-            className={`flex items-center gap-2.5 rounded-md px-3.5 py-3 text-sm ${
+            className={`flex items-center gap-2 rounded-md px-3 py-2.5 text-[13px] sm:gap-2.5 sm:px-3.5 sm:py-3 sm:text-sm ${
               off > 0 ? "bg-emerald-50 text-emerald-800" : "bg-paper text-slate"
             }`}
           >
@@ -2723,7 +2731,7 @@ export default function ProductFormDrawer({
   const wizardSteps = (
     <>
       {/* Photos: kept mounted (just hidden) on later steps so uploads carry on. */}
-      <div className={step === 0 ? `${stepAnim} flex flex-col gap-4` : "hidden"}>
+      <div className={step === 0 ? `${stepAnim} flex flex-col gap-3 sm:gap-4` : "hidden"}>
         {imageManager}
         {/* Before the first photo: the owner can tell AI the category. Optional. */}
         {!detectTried && !detecting && !uploading && !form.images.length && (
@@ -2761,7 +2769,7 @@ export default function ProductFormDrawer({
         )}
         {!quick && aiStatus}
         {step === 0 && needsIdentity && !quick && (
-          <div className="admin-fade-in flex flex-col gap-4 rounded-md border border-line p-4">
+          <div className="admin-fade-in flex flex-col gap-3 rounded-md border border-line p-3 sm:gap-4 sm:p-4">
             <p className="text-[13px] font-semibold text-ink">What is this product?</p>
             <label className="block">
               <span className={bigLabel}>Product name</span>
@@ -2781,11 +2789,11 @@ export default function ProductFormDrawer({
 
         {/* AI recognised it: everything on one screen, ready to add. */}
         {quick && (
-          <div className="admin-step-in-right mt-1 flex flex-col gap-5 border-t border-line pt-5">
+          <div className="admin-step-in-right mt-1 flex flex-col gap-4 border-t border-line pt-4 sm:gap-5 sm:pt-5">
             {redetectCard("ok", "Filled in from your photo", REDETECT_PROMPT)}
             {detailsFields}
-            <div className="flex flex-col gap-4">
-              <p className="flex items-baseline gap-2 text-[15px] font-semibold text-ink">
+            <div className="flex flex-col gap-3 sm:gap-4">
+              <p className="flex items-baseline gap-2 text-sm font-semibold text-ink sm:text-[15px]">
                 Price <span className="text-xs font-normal text-slate">Optional</span>
               </p>
               {priceFields}
@@ -2795,7 +2803,7 @@ export default function ProductFormDrawer({
       </div>
 
       {step === 1 && (
-        <div key="step-details" className={`${stepAnim} flex flex-col gap-5`}>
+        <div key="step-details" className={`${stepAnim} flex flex-col gap-4 sm:gap-5`}>
           {detectNote?.kind === "ok" && redetectCard("ok", "Filled in from your photo", REDETECT_PROMPT)}
           {detectNote?.kind === "outside" && redetectCard("outside", "Not in your categories", detectNote.text)}
           {/* Couldn't read the photo the first time: try again with a category. */}
@@ -2807,7 +2815,7 @@ export default function ProductFormDrawer({
       )}
 
       {step === 2 && (
-        <div key="step-price" className={`${stepAnim} flex flex-col gap-5`}>
+        <div key="step-price" className={`${stepAnim} flex flex-col gap-4 sm:gap-5`}>
           {priceFields}
         </div>
       )}
@@ -2816,7 +2824,7 @@ export default function ProductFormDrawer({
 
   const wizardHeader = (
         <header className={`shrink-0 border-b border-line bg-white ${layout === "page" ? "pt-[env(safe-area-inset-top)] sm:pt-0" : ""}`}>
-          <div className="flex h-14 items-center gap-1 px-1.5">
+          <div className="flex h-12 items-center gap-1 px-1.5 sm:h-14">
             <button
               type="button"
               onClick={step > 0 && !created ? () => window.history.back() : requestClose}
@@ -2846,7 +2854,7 @@ export default function ProductFormDrawer({
             )}
           </div>
           {!created && !quick && (
-            <div className="px-4 pb-3 sm:px-6">
+            <div className="px-4 pb-2.5 sm:px-6 sm:pb-3">
               <AuthProgress current={step} total={WIZARD_STEPS.length} label={WIZARD_STEPS[step].label} />
             </div>
           )}
@@ -2854,7 +2862,7 @@ export default function ProductFormDrawer({
   );
 
   const wizardBody = created ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-5 overflow-y-auto bg-white px-6 py-10 text-center">
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 overflow-y-auto bg-white px-5 py-8 text-center sm:gap-5 sm:px-6 sm:py-10">
             {created.mainImageUrl || created.images[0] ? (
               // The product's cover photo, with a tick on its corner.
               <span className="admin-pop-in relative">
@@ -2862,7 +2870,7 @@ export default function ProductFormDrawer({
                 <img
                   src={created.mainImageUrl || created.images[0]}
                   alt={created.productName}
-                  className="h-44 w-44 rounded-lg border border-line bg-paper object-cover shadow-[0_12px_32px_-16px_rgba(1,18,60,0.35)]"
+                  className="h-36 w-36 rounded-lg border border-line bg-paper object-cover sm:h-44 sm:w-44 shadow-[0_12px_32px_-16px_rgba(1,18,60,0.35)]"
                 />
                 <span className="admin-pop-check absolute -bottom-3 -right-3 grid h-11 w-11 place-items-center rounded-full bg-emerald-500 text-white ring-4 ring-white">
                   <Check className="h-6 w-6" strokeWidth={3} aria-hidden />
@@ -2874,7 +2882,7 @@ export default function ProductFormDrawer({
               </span>
             )}
             <div className="admin-fade-in">
-              <p className="text-lg font-bold text-ink">{created.productName}</p>
+              <p className="text-base font-bold text-ink sm:text-lg">{created.productName}</p>
               <p className="mt-1 text-sm text-slate">
                 {created.isActive ? "is now in your catalog." : "is saved as hidden."}
               </p>
@@ -2901,12 +2909,13 @@ export default function ProductFormDrawer({
             </div>
           </div>
   ) : (
-          <div className="flex-1 overflow-y-auto bg-white px-4 pb-6 pt-5 sm:px-6">
-            <div key={`title-${step}`} className={`${stepAnim} mb-5`}>
-              <h3 className="text-[1.25rem] font-bold leading-tight tracking-[-0.02em] text-ink">
+          <div className="flex-1 overflow-y-auto bg-white px-4 pb-5 pt-4 sm:px-6 sm:pb-6 sm:pt-5">
+            <div key={`title-${step}`} className={`${stepAnim} mb-4 sm:mb-5`}>
+              <h3 className="text-lg font-bold leading-tight tracking-[-0.02em] text-ink sm:text-[1.25rem]">
                 {quick ? "Review & add" : WIZARD_STEPS[step].title}
               </h3>
-              <p className="mt-1 text-sm leading-relaxed text-slate">
+              {/* "Review & add" on phones: the title alone (the AI card below says the same). */}
+              <p className={`mt-0.5 text-[13px] leading-relaxed text-slate sm:mt-1 sm:block sm:text-sm ${quick ? "hidden" : ""}`}>
                 {quick ? "AI filled in the details from your photo. Check them, add a price if you like, and you're done." : WIZARD_STEPS[step].subtitle}
               </p>
             </div>
@@ -3011,17 +3020,17 @@ export default function ProductFormDrawer({
             <div
               role="status"
               aria-live="polite"
-              className="admin-fade-in absolute inset-0 z-20 flex flex-col items-center justify-center gap-5 bg-white/90 px-8 text-center backdrop-blur-sm"
+              className="admin-fade-in absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-white/90 px-8 sm:gap-5 text-center backdrop-blur-sm"
             >
-              <span className="relative grid h-20 w-20 place-items-center">
-                <Spinner className="absolute inset-0 h-20 w-20 text-primary" />
-                <span className="grid h-14 w-14 place-items-center rounded-full bg-tint text-primary">
-                  <WandSparkles className="h-6 w-6" aria-hidden />
+              <span className="relative grid h-16 w-16 place-items-center sm:h-20 sm:w-20">
+                <Spinner className="absolute inset-0 h-16 w-16 text-primary sm:h-20 sm:w-20" />
+                <span className="grid h-11 w-11 place-items-center rounded-full bg-tint text-primary sm:h-14 sm:w-14">
+                  <Zap className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden />
                 </span>
               </span>
               <div className="max-w-xs">
-                <p className="text-base font-semibold text-ink">Reading your photo…</p>
-                <p className="mt-1 text-sm leading-relaxed text-slate">
+                <p className="text-[15px] font-semibold text-ink sm:text-base">Reading your photo…</p>
+                <p className="mt-0.5 text-[13px] leading-relaxed text-slate sm:mt-1 sm:text-sm">
                   {ownerCategory(form)
                     ? `AI is reading it as ${categoryLabel(form.categoryName)} and finding the name and details. This takes a few seconds.`
                     : "AI is finding the name, category and details. This takes a few seconds."}

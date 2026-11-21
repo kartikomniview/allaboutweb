@@ -382,7 +382,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         install={install}
         open={installOpen}
         onOpenChange={setInstallOpen}
-        // Keeps coming back on the dashboard until the app is installed.
+        // Keeps coming back on the dashboard (7s after each skip) until the app is installed.
         autoShow={pathname === "/admin/dashboard" && !mobileNavOpen}
       />
     </AdminUserContext.Provider>

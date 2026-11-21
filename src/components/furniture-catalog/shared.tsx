@@ -656,8 +656,8 @@ const CardPhotos: React.FC<{ product: CatalogProduct; images: string[] }> = ({ p
   };
   const dot = (i: number) => {
     // Hovering (desktop) shows the second photo, so its dot is the lit one then.
-    const onHover = i === 0 ? 'group-hover:w-[5px] group-hover:bg-neutral-900/30' : i === 1 ? 'group-hover:w-3 group-hover:bg-neutral-900' : '';
-    return `${i === active ? 'w-3 bg-neutral-900' : 'w-[5px] bg-neutral-900/30'} ${onHover}`;
+    const onHover = i === 0 ? 'group-hover:bg-neutral-900/30' : i === 1 ? 'group-hover:bg-neutral-900' : '';
+    return `${i === active ? 'bg-neutral-900' : 'bg-neutral-900/30'} ${onHover}`;
   };
 
   return (
@@ -692,12 +692,12 @@ const CardPhotos: React.FC<{ product: CatalogProduct; images: string[] }> = ({ p
         <Image src={images[1]} alt="" fill sizes={CARD_SIZES} draggable={false} className="object-contain" />
       </div>
 
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-2 flex justify-center">
-        <span className="flex items-center gap-1 rounded-full bg-white/70 px-1.5 py-1 backdrop-blur-sm">
-          {images.map((src, i) => (
-            <span key={src} className={`h-[5px] rounded-full transition-all duration-300 ${dot(i)}`} />
-          ))}
-        </span>
+      {/* Same-size dots, no backing; the in-view one is dark. A thin white edge keeps
+          them visible on a dark photo. */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-2 flex justify-center gap-1.5">
+        {images.map((src, i) => (
+          <span key={src} className={`h-1.5 w-1.5 rounded-full ring-1 ring-white/70 transition-colors duration-300 ${dot(i)}`} />
+        ))}
       </div>
     </>
   );
