@@ -171,7 +171,7 @@ export async function loginWithGoogle(idToken: string): Promise<AdminUser> {
 
 export type Registration = {
   storeName: string;
-  /** Optional: added later in Store settings. */
+  /** Optional here: the admin asks for it right after registration (WhatsappSetup). */
   whatsapp?: string;
   businessTypes: BusinessTypeId[];
 } & (

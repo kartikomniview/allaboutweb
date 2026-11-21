@@ -4,12 +4,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { ArrowUpRight, BookOpen, Building2, Download, LayoutDashboard, LogOut, Menu, Plus, Store, TriangleAlert, X } from "lucide-react";
-import { checkSession, logout, type AdminStore, type AdminUser } from "@/lib/adminAuth";
+import { checkSession, logout, sessionCredentials, type AdminStore, type AdminUser } from "@/lib/adminAuth";
+import { getOwnStore, hasWhatsapp, type StoreDetails } from "@/lib/adminStore";
 import { storeUrlFor } from "@/lib/catalogDomain";
 import { InstallAppPopup, useInstallApp } from "./InstallApp";
 import LogoLoader from "./LogoLoader";
 import { ripple } from "./ripple";
 import { Button } from "./ui";
+import WhatsappSetup from "./WhatsappSetup";
 import "./admin.css";
 
 type AdminContextValue = { user: AdminUser; setStore: (change: Partial<AdminStore>) => void };
@@ -196,6 +198,8 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<AdminUser | null>(null);
+  // The store, while it has no WhatsApp number: the owner adds one before anything else.
+  const [needsWhatsapp, setNeedsWhatsapp] = useState<StoreDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -206,10 +210,18 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const startInstall = () => (install.ios ? setInstallOpen(true) : install.prompt());
 
   const verify = useCallback(() => {
+    // The store's WhatsApp number loads alongside the session, not after it.
+    const storeLoad = sessionCredentials().token ? getOwnStore().catch(() => null) : Promise.resolve(null);
     checkSession()
-      .then((u) => {
-        if (u) setUser(u);
-        else router.replace("/admin");
+      .then(async (u) => {
+        if (!u) return router.replace("/admin");
+        // Super admins aren't held up: they set numbers themselves, on All stores.
+        if (!u.isSuperAdmin) {
+          const store = await storeLoad;
+          if (!store) throw new Error("Couldn't load the store");
+          setNeedsWhatsapp(hasWhatsapp(store) ? null : store);
+        }
+        setUser(u);
       })
       .catch(() => setError("We couldn't verify your session. Check your connection and try again."));
   }, [router]);
@@ -257,6 +269,19 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   }
 
   if (!user) return <LogoLoader label="Loading your workspace…" />;
+
+  // No WhatsApp number yet: every admin page waits until the owner has added one.
+  if (needsWhatsapp) {
+    return (
+      <WhatsappSetup
+        store={needsWhatsapp}
+        email={user.email}
+        onDone={() => setNeedsWhatsapp(null)}
+        onLogout={handleLogout}
+        loggingOut={loggingOut}
+      />
+    );
+  }
 
   const sidebarProps = { user, pathname };
   const storeName = user.store.name;

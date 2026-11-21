@@ -864,9 +864,26 @@ function ImageManager({
             <p className="text-[15px] font-semibold text-ink">Add product photos</p>
             <p className="mt-1 text-[13px] leading-relaxed text-slate">The first photo is used to fill in the details.</p>
           </div>
-          {/* Main action: choose existing photos. The camera is the outlined second option,
-              and only on touch devices (with a mouse it would just open the same file picker). */}
-          <div className="flex w-full max-w-xs flex-col items-center">
+          {/* Touch devices: the gallery and the camera side by side, as two equal tiles. */}
+          <div className="grid w-full max-w-xs grid-cols-2 gap-3 [@media(pointer:fine)]:hidden">
+            {[
+              { label: "From gallery", icon: Images, input: inputRef },
+              { label: "Take a photo", icon: Camera, input: cameraRef },
+            ].map(({ label, icon: Icon, input }) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => input.current?.click()}
+                onPointerDown={ripple}
+                className="relative flex flex-col items-center justify-center gap-2.5 overflow-hidden rounded-md border border-slate/40 bg-white px-3 py-5 text-sm font-semibold text-ink shadow-[0_1px_2px_rgba(1,18,60,0.06),0_6px_16px_-6px_rgba(1,18,60,0.18)] transition-[background-color,border-color,box-shadow,transform] duration-150 hover:border-slate/60 hover:bg-paper active:scale-[0.97] active:shadow-[0_1px_2px_rgba(1,18,60,0.06)] focus-visible:outline-none! focus-visible:ring-[3px] focus-visible:ring-primary/15"
+              >
+                <Icon className="h-8 w-8 text-primary" strokeWidth={1.75} aria-hidden />
+                {label}
+              </button>
+            ))}
+          </div>
+          {/* With a mouse, one button: a camera option would just open the same file picker. */}
+          <div className="hidden w-full max-w-xs [@media(pointer:fine)]:block">
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
@@ -874,23 +891,8 @@ function ImageManager({
               className={`${authButtonClass} whitespace-nowrap`}
             >
               <Images className="h-[18px] w-[18px] shrink-0" aria-hidden />
-              <span className="sm:hidden">Select from gallery</span>
-              <span className="hidden sm:inline">Upload photos</span>
+              Upload photos
             </button>
-            <div className="flex w-full flex-col items-center [@media(pointer:fine)]:hidden">
-              <p className="my-2 flex w-full items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate before:h-px before:flex-1 before:bg-line after:h-px after:flex-1 after:bg-line">
-                or
-              </p>
-              <button
-                type="button"
-                onClick={() => cameraRef.current?.click()}
-                onPointerDown={ripple}
-                className={`${authSecondaryButtonClass} w-full whitespace-nowrap`}
-              >
-                <Camera className="h-[18px] w-[18px] shrink-0 text-primary" aria-hidden />
-                Take a photo
-              </button>
-            </div>
           </div>
           <p className="hidden text-[11px] text-slate sm:block">or drag and drop, or paste with Ctrl+V</p>
           {picker}
@@ -1612,15 +1614,43 @@ export default function ProductFormDrawer({
     return next;
   }
 
+  // A category the owner chose (e.g. before the first photo), not one AI filled in.
+  const ownerCategory = (f: FormState) => (f.categoryName.trim() && f.categoryName !== autoFilled.categoryName ? f.categoryName : "");
+
   // First photo of a product without name/category/subcategory (from ImageManager).
+  // With a category the owner chose, AI reads the photo as that kind of product (as
+  // Re-detect does); without one it chooses from the store's categories.
   async function detectForUpload(file: File): Promise<ImageFolder> {
     setDetecting(true);
     setDetectNote(null);
+    const categoryName = ownerCategory(formRef.current);
     let detected: DetectedProduct;
     let next: FormState;
     try {
-      detected = await detectFromFile(file, detectContext);
-      next = applyDetected(detected, "fill-empty");
+      if (categoryName) {
+        const chosen = findPickerCategory(categoryName);
+        const d = await detectFromFile(file, {
+          businessTypes: store.businessTypes,
+          categories: chosen ? [chosen] : [],
+          hint: { categoryName, subcategoryName: "" },
+        });
+        // The owner's choice wins, also over an API build that doesn't know hints.
+        detected = {
+          ...d,
+          categoryFit: d.categoryFit === "exact" ? "exact" : "close",
+          categoryName,
+          subcategoryName: d.categoryName === categoryName ? d.subcategoryName : "",
+        };
+        next = applyDetected(detected, "fill-empty");
+        // The category was picked, not detected: no "Auto-detected" badge on it.
+        setAutoFilled((a) => ({ ...a, categoryName: undefined }));
+        if (!next.subcategoryName.trim()) {
+          setDetectNote({ kind: "ok", text: `Details filled in as ${categoryLabel(categoryName)}. Choose a subcategory.` });
+        }
+      } else {
+        detected = await detectFromFile(file, detectContext);
+        next = applyDetected(detected, "fill-empty");
+      }
     } catch (err) {
       setDetectNote({ kind: "error", text: detectError(err) });
       return formRef.current;
@@ -2695,6 +2725,40 @@ export default function ProductFormDrawer({
       {/* Photos: kept mounted (just hidden) on later steps so uploads carry on. */}
       <div className={step === 0 ? `${stepAnim} flex flex-col gap-4` : "hidden"}>
         {imageManager}
+        {/* Before the first photo: the owner can tell AI the category. Optional. */}
+        {!detectTried && !detecting && !uploading && !form.images.length && (
+          // Not <label>: it would re-open the dropdown when an option is clicked.
+          <div className="min-w-0">
+            <span id="upload-category-label" className={labelClass}>
+              Category
+              {form.categoryName ? (
+                <button
+                  type="button"
+                  onClick={() => changeCategory("")}
+                  className="ml-auto text-xs font-semibold text-primary hover:underline"
+                >
+                  Let AI choose
+                </button>
+              ) : (
+                <span className="ml-auto text-xs font-normal text-slate">Optional</span>
+              )}
+            </span>
+            <CategoryCombobox
+              labelledBy="upload-category-label"
+              value={form.categoryName}
+              options={categoryOptions}
+              suggestions={categorySuggestions}
+              onChange={changeCategory}
+              placeholder="Let AI choose"
+              searchPlaceholder="Search or type a new category"
+            />
+            <p className="mt-1.5 text-xs leading-snug text-slate">
+              {form.categoryName
+                ? `AI reads the photo as ${categoryLabel(form.categoryName)} and fills in the rest.`
+                : "Know the category? Choose it, and AI reads the photo as that kind of product."}
+            </p>
+          </div>
+        )}
         {!quick && aiStatus}
         {step === 0 && needsIdentity && !quick && (
           <div className="admin-fade-in flex flex-col gap-4 rounded-md border border-line p-4">
@@ -2958,7 +3022,9 @@ export default function ProductFormDrawer({
               <div className="max-w-xs">
                 <p className="text-base font-semibold text-ink">Reading your photo…</p>
                 <p className="mt-1 text-sm leading-relaxed text-slate">
-                  AI is finding the name, category and details. This takes a few seconds.
+                  {ownerCategory(form)
+                    ? `AI is reading it as ${categoryLabel(form.categoryName)} and finding the name and details. This takes a few seconds.`
+                    : "AI is finding the name, category and details. This takes a few seconds."}
                 </p>
               </div>
             </div>

@@ -54,7 +54,8 @@ type Field = "storeName" | "businessTypes" | "email" | "password" | "confirm";
 type FieldErrors = Partial<Record<Field, string>>;
 
 // The registration steps: the store's name (its link), what it sells, then the
-// owner's login. The WhatsApp number and other details are added in Store settings.
+// owner's login. The admin then asks for the WhatsApp number (WhatsappSetup, shown by
+// AdminShell before the dashboard); other details are added in Store settings.
 const STEPS = [
   { title: "Name your store", subtitle: "This is also your catalog's link. You can change the name later, not the link.", label: "Store" },
   { title: "What do you sell?", subtitle: "Choose all that apply. We suggest product categories for these.", label: "Business" },

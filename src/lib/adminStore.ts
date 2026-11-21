@@ -34,6 +34,21 @@ export function formatWhatsapp(digits: string): string {
   return `+${d}`;
 }
 
+/**
+ * A quick check of a typed WhatsApp number before it's sent: the message to show under
+ * the field, or null. The API has the final say (its 400 message goes under the field too).
+ */
+export function whatsappInputError(value: string): string | null {
+  const digits = value.replace(/\D/g, "").replace(/^0+/, "");
+  return digits.length < 10 ? "Enter a 10-digit mobile number, e.g. 98765 43210." : null;
+}
+
+/**
+ * Whether the store has a WhatsApp number: a live one, or one waiting for approval.
+ * Every store needs one; without it the admin asks for it before anything else.
+ */
+export const hasWhatsapp = (store: StoreDetails) => !!store.whatsapp || store.whatsappRequest?.status === "pending";
+
 const toDetails = (store: StoreDetails): StoreDetails => ({
   ...store,
   businessTypes: toBusinessTypes(store.businessTypes),

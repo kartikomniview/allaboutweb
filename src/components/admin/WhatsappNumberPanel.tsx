@@ -6,7 +6,13 @@ import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 import { flagField, ripple } from "./ripple";
 import { Badge, Button, formatRelative, panelFieldErrorClass, panelInputClass, panelInputIconClass, panelLabelClass } from "./ui";
 import { AuthError } from "@/lib/adminAuth";
-import { formatWhatsapp, requestWhatsapp, withdrawWhatsappRequest, type StoreDetails } from "@/lib/adminStore";
+import {
+  formatWhatsapp,
+  requestWhatsapp,
+  whatsappInputError,
+  withdrawWhatsappRequest,
+  type StoreDetails,
+} from "@/lib/adminStore";
 
 /** "Live", "Waiting for approval" or "Not approved", for the section header. */
 export function WhatsappStatusBadge({ store }: { store: StoreDetails }) {
@@ -33,6 +39,8 @@ export function WhatsappStatusBadge({ store }: { store: StoreDetails }) {
 // Store settings: the store's WhatsApp number. Owners can't set it themselves (so nobody
 // can put someone else's number on their catalog): they request a number, and a Catalog24
 // admin approves it before it goes live. Saved on its own, not with "Save changes".
+// A number is required (see WhatsappSetup), so without a live one the pending request
+// can't be withdrawn, only changed: the new number replaces it.
 export default function WhatsappNumberPanel({
   store,
   onUpdated,
@@ -45,6 +53,8 @@ export default function WhatsappNumberPanel({
   const [busy, setBusy] = useState<"request" | "withdraw" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  // Correcting a pending request (when there's no live number to fall back on).
+  const [changing, setChanging] = useState(false);
 
   const request = store.whatsappRequest;
   const pending = request?.status === "pending";
@@ -52,9 +62,9 @@ export default function WhatsappNumberPanel({
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const digits = number.replace(/\D/g, "").replace(/^0+/, "");
-    if (digits.length < 10) {
-      setFieldError("Enter a 10-digit mobile number, e.g. 98765 43210.");
+    const problem = whatsappInputError(number);
+    if (problem) {
+      setFieldError(problem);
       return flagField(document.getElementById("whatsapp-request"));
     }
     setBusy("request");
@@ -62,6 +72,7 @@ export default function WhatsappNumberPanel({
     try {
       onUpdated(await requestWhatsapp(number));
       setNumber("");
+      setChanging(false);
       setSent(true);
     } catch (err) {
       // A bad or unchanged number belongs under the field.
@@ -117,9 +128,25 @@ export default function WhatsappNumberPanel({
               your catalog{live ? ` in place of ${live}` : ""}.
             </p>
           </div>
-          <Button size="sm" className="h-10 self-start px-3 sm:h-8 sm:self-center" loading={busy === "withdraw"} onClick={withdraw}>
-            Withdraw
-          </Button>
+          {live ? (
+            <Button size="sm" className="h-10 self-start px-3 sm:h-8 sm:self-center" loading={busy === "withdraw"} onClick={withdraw}>
+              Withdraw
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              className="h-10 self-start px-3 sm:h-8 sm:self-center"
+              aria-expanded={changing}
+              aria-controls="whatsapp-request-form"
+              onClick={() => {
+                setChanging((c) => !c);
+                setNumber("");
+                setFieldError(null);
+              }}
+            >
+              {changing ? "Cancel" : "Change"}
+            </Button>
+          )}
         </div>
       )}
 
@@ -136,11 +163,16 @@ export default function WhatsappNumberPanel({
         </div>
       )}
 
-      {!pending && (
-        <form onSubmit={submit} noValidate className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:gap-2">
+      {(!pending || changing) && (
+        <form
+          id="whatsapp-request-form"
+          onSubmit={submit}
+          noValidate
+          className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:gap-2"
+        >
           <div data-field className="min-w-0 flex-1">
             <label htmlFor="whatsapp-request" className={panelLabelClass}>
-              {live ? "New WhatsApp number" : "Your WhatsApp number"}
+              {live || changing ? "New WhatsApp number" : "Your WhatsApp number"}
             </label>
             <div className="relative">
               <WhatsAppIcon className={panelInputIconClass} aria-hidden />
@@ -176,7 +208,7 @@ export default function WhatsappNumberPanel({
             loading={busy === "request"}
             className="w-full sm:mt-5 sm:w-auto"
           >
-            {live ? "Request change" : "Request number"}
+            {live || changing ? "Request change" : "Request number"}
           </Button>
         </form>
       )}
