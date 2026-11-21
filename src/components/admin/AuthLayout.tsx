@@ -71,11 +71,37 @@ export function AuthSupportLink({ prompt, message }: { prompt: string; message: 
 }
 
 /** A thin line with a word in the middle ("or"), between Google sign-in and the form. */
-export function AuthDivider({ label = "or" }: { label?: string }) {
+export function AuthDivider({ label = "or", className = "my-5" }: { label?: string; className?: string }) {
   return (
-    <p className="my-5 flex items-center gap-3 text-xs font-medium text-slate before:h-px before:flex-1 before:bg-line after:h-px after:flex-1 after:bg-line">
+    <p className={`${className} flex items-center gap-3 text-xs font-medium text-slate before:h-px before:flex-1 before:bg-line after:h-px after:flex-1 after:bg-line`}>
       {label}
     </p>
+  );
+}
+
+/**
+ * The way to the other screen ("New to Catalog24?" → Create your store): an outline
+ * button under the main one, so it's easy to spot and tap but stays secondary.
+ */
+export function AuthSwitchLink({
+  prompt,
+  href,
+  label,
+  icon,
+}: {
+  prompt: string;
+  href: string;
+  label: string;
+  icon: ReactNode;
+}) {
+  return (
+    <>
+      <AuthDivider label={prompt} className="mb-3 mt-4" />
+      <Link href={href} onPointerDown={ripple} className={`${authSecondaryButtonClass} w-full`}>
+        {icon}
+        {label}
+      </Link>
+    </>
   );
 }
 

@@ -150,6 +150,7 @@ Import the shared classes from `@/components/admin/AuthLayout`. Don't restyle ea
 | `authButtonClass` | Main action: filled dark green, full width, ripple-ready |
 | `authSecondaryButtonClass` | Outline button (Back, Cancel) |
 | `authFormClass` | The `<form>` that fills the screen so `AuthActions` can sit at the bottom |
+| `AuthSwitchLink` | The way to the other screen ("New to Catalog24?" → Create your store, "Already have a store?" → Log in): a divider with the question, then a full-width outline button under the main one |
 | `AuthLayout`, `AuthActions`, `AuthProgress`, `AuthLoading`, `BrandMark` | Layout pieces |
 
 ### Field

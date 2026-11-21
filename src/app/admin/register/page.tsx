@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowLeft, Check, Eye, EyeOff, Lock, Store, TriangleAlert, UserRound, X } from "lucide-react";
+import { ArrowLeft, Check, Eye, EyeOff, Lock, LogIn, Store, TriangleAlert, UserRound, X } from "lucide-react";
 import {
   AuthError,
   LOGIN_DOMAIN,
@@ -21,6 +20,7 @@ import AuthLayout, {
   AuthLoading,
   AuthProgress,
   AuthSupportLink,
+  AuthSwitchLink,
   authButtonClass,
   authFieldErrorClass as fieldErrorClass,
   authFormClass,
@@ -540,12 +540,12 @@ export default function RegisterStorePage() {
             </button>
           </div>
           {step === 0 ? (
-            <p className="mt-3 text-center text-sm text-slate">
-              Already have a store?{" "}
-              <Link href="/admin" className="font-semibold text-primary hover:underline">
-                Log in
-              </Link>
-            </p>
+            <AuthSwitchLink
+              prompt="Already have a store?"
+              href="/admin"
+              label="Log in"
+              icon={<LogIn className="h-[18px] w-[18px]" aria-hidden />}
+            />
           ) : (
             step === STEPS.length - 1 && (
               <p className="mt-3 text-center text-[11px] leading-relaxed text-slate/80">

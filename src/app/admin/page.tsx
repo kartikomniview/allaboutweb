@@ -2,8 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import Link from "next/link";
-import { Eye, EyeOff, Lock, ShieldCheck, TriangleAlert, UserRound } from "lucide-react";
+import { Eye, EyeOff, Lock, ShieldCheck, Store, TriangleAlert, UserRound } from "lucide-react";
 import {
   AuthError,
   checkSession,
@@ -24,6 +23,7 @@ import AuthLayout, {
   AuthDivider,
   AuthLoading,
   AuthSupportLink,
+  AuthSwitchLink,
   authButtonClass,
   authFieldErrorClass as fieldErrorClass,
   authFormClass,
@@ -267,12 +267,12 @@ export default function AdminLoginPage() {
               "Log in"
             )}
           </button>
-          <p className="mt-3 text-center text-sm text-slate">
-            New to Catalog24?{" "}
-            <Link href="/admin/register" className="font-semibold text-primary hover:underline">
-              Create your store
-            </Link>
-          </p>
+          <AuthSwitchLink
+            prompt="New to Catalog24?"
+            href="/admin/register"
+            label="Create your store"
+            icon={<Store className="h-[18px] w-[18px]" aria-hidden />}
+          />
           <AuthSupportLink
             prompt="Trouble logging in?"
             message="Hi Catalog24 support, I need help logging in to my store."

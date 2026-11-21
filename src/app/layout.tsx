@@ -1,14 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Open_Sans } from "next/font/google";
+import { openSans } from "@/fonts/site";
 import "./globals.css";
-
-const openSans = Open_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  style: ["normal", "italic"],
-  variable: "--font-open-sans",
-  display: "swap",
-});
 
 const TITLE = "AllAboutWeb — Websites, E-Catalogs & Product Catalogs";
 const DESCRIPTION =

@@ -1,26 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Plus_Jakarta_Sans, Poppins } from "next/font/google";
+import { plusJakarta, poppins } from "@/fonts/store";
 import FurnitureCatalogApp from "@/components/furniture-catalog/FurnitureCatalogApp";
 import StoreUnavailable from "@/components/furniture-catalog/StoreUnavailable";
 import { getStoreCatalog, isInactive } from "@/lib/catalogProducts";
 import { CATALOG_ICONS } from "@/lib/catalogDomain";
 import { firstPhoto, productCount, shareTags } from "@/lib/shareMeta";
 import { categoryLabel, sortCategoryNames, storeTypeLabel } from "@/lib/taxonomy";
-
-const plusJakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-plus-jakarta",
-  display: "swap",
-});
-
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-poppins",
-  display: "swap",
-});
 
 // The demo store is AllAboutWeb's live demo, so a shared link previews the e-catalog
 // offer (image + pitch) rather than the store. Product links override this with

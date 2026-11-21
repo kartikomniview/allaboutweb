@@ -4,6 +4,9 @@ import { useEffect, useRef } from "react";
 // (e.g. the delete dialog opened from inside the product drawer).
 const stack: symbol[] = [];
 
+/** True while a drawer or dialog is open, so a popup can wait instead of covering it. */
+export const isOverlayOpen = () => stack.length > 0;
+
 // Shared behaviour for the drawer and dialog: lock page scroll, focus the panel,
 // and close on Escape (unless `busy`, e.g. while a request is in flight).
 export function useOverlay<T extends HTMLElement>(onClose: () => void, busy = false) {

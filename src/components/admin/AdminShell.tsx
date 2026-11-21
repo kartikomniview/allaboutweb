@@ -276,7 +276,11 @@ export default function AdminShell({ children }: { children: ReactNode }) {
       <WhatsappSetup
         store={needsWhatsapp}
         email={user.email}
-        onDone={() => setNeedsWhatsapp(null)}
+        onDone={() => {
+          setNeedsWhatsapp(null);
+          // Straight on to installing the app (Android phones and tablets).
+          if (install.push) setInstallOpen(true);
+        }}
         onLogout={handleLogout}
         loggingOut={loggingOut}
       />
@@ -374,7 +378,13 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         </div>
       </div>
       <MobileTabBar user={user} pathname={pathname} />
-      <InstallAppPopup install={install} open={installOpen} onOpenChange={setInstallOpen} />
+      <InstallAppPopup
+        install={install}
+        open={installOpen}
+        onOpenChange={setInstallOpen}
+        // Keeps coming back on the dashboard until the app is installed.
+        autoShow={pathname === "/admin/dashboard" && !mobileNavOpen}
+      />
     </AdminUserContext.Provider>
   );
 }
