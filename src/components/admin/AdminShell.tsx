@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowUpRight, BookOpen, Building2, Download, LayoutDashboard, LogOut, Menu, Plus, Store, TriangleAlert, X } from "lucide-react";
 import { checkSession, logout, sessionCredentials, type AdminStore, type AdminUser } from "@/lib/adminAuth";
 import { getOwnStore, hasWhatsapp, type StoreDetails } from "@/lib/adminStore";
@@ -46,6 +46,16 @@ const NAV = [
 const SUPER_ADMIN_NAV = { group: "Catalog24", items: [{ href: "/admin/stores", label: "All stores", icon: Building2 }] } as const;
 
 const navFor = (user: AdminUser) => (user.isSuperAdmin ? [...NAV, SUPER_ADMIN_NAV] : NAV);
+
+/**
+ * What a page's content scrolls in: on desktop the shell's content area (below the
+ * top bar), on phones and tablets the page itself (null), so the browser bar still
+ * hides on scroll. For an IntersectionObserver `root`, so its rootMargin counts.
+ */
+export function scrollRootOf(el: Element): HTMLElement | null {
+  const area = el.closest<HTMLElement>("[data-admin-scroll]");
+  return area && getComputedStyle(area).overflowY !== "visible" ? area : null;
+}
 
 const FOCUS_ROUTES = ["/admin/ecatalog/new"];
 
@@ -228,6 +238,13 @@ export default function AdminShell({ children }: { children: ReactNode }) {
 
   useEffect(verify, [verify]);
 
+  // The desktop content area stays mounted across tabs, so a new tab would open at
+  // the last one's scroll position. (Layout effect: before the new tab is painted.)
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    scrollAreaRef.current?.scrollTo({ top: 0 });
+  }, [pathname]);
+
   useEffect(() => {
     if (!mobileNavOpen) return;
     const onKeyDown = (e: KeyboardEvent) => e.key === "Escape" && setMobileNavOpen(false);
@@ -342,7 +359,10 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         </div>
       )}
 
-      <div className="flex flex-1 flex-col lg:pl-64">
+      {/* Desktop: exactly the window's height, with the top bar fixed and only the
+          content below it scrolling (so the scrollbar starts under the top bar).
+          Phones and tablets: the page scrolls, under the sticky top bar. */}
+      <div className="flex flex-1 flex-col lg:h-dvh lg:flex-none lg:pl-64">
         <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-line bg-white/90 px-3 backdrop-blur sm:px-4 lg:h-16 lg:px-5">
           <div className="flex min-w-0 items-center gap-2">
             <button
@@ -373,8 +393,16 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           </div>
         </header>
         {/* Bottom padding on phones and tablets keeps the end of the page clear of the tab bar. */}
-        <div className="w-full flex-1 px-3 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-3 sm:px-4 sm:pt-5 lg:px-5 lg:py-6">
-          {children}
+        {/* The padding is on an inner box, so the pages' sticky bars (top-0 on desktop)
+            stick right under the top bar, not a padding's height below it. */}
+        <div
+          ref={scrollAreaRef}
+          data-admin-scroll
+          className="flex-1 lg:overflow-x-hidden lg:overflow-y-auto lg:[scrollbar-gutter:stable]"
+        >
+          <div className="w-full px-3 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-3 sm:px-4 sm:pt-5 lg:px-5 lg:py-6">
+            {children}
+          </div>
         </div>
       </div>
       <MobileTabBar user={user} pathname={pathname} />

@@ -22,7 +22,7 @@ import ShareCatalogDialog from "@/components/admin/ecatalog/ShareCatalogDialog";
 import StoreLogoPicker, { StoreLogo } from "@/components/admin/StoreLogoPicker";
 import { ripple } from "@/components/admin/ripple";
 import { ProductLimitNotice, limitState } from "@/components/admin/ProductLimit";
-import { Badge, Card, Skeleton, buttonClass } from "@/components/admin/ui";
+import { Badge, Button, Card, Skeleton, buttonClass } from "@/components/admin/ui";
 import { formatPrice } from "@/components/furniture-catalog/data";
 import { discardUploads, listProducts, type Product } from "@/lib/adminProducts";
 import { getOwnStore, toStoreInput, updateOwnStore, type StoreDetails } from "@/lib/adminStore";
@@ -272,9 +272,10 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 gap-3 sm:gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
         {/* Side column on desktop, first on phones: link + stats */}
         <div className="flex flex-col gap-3 sm:gap-5 lg:order-2">
-          {/* Catalog link, with copy / share / open */}
-          <Card className="admin-pop-in overflow-hidden">
-            <div className="flex items-center gap-3 p-3 sm:p-4">
+          {/* The live store: its link (with Copy), then two plain-worded buttons, to open
+              it and to share it. Side by side on tablets, stacked elsewhere. */}
+          <Card className="admin-pop-in overflow-hidden p-3 sm:p-4">
+            <div className="flex items-center gap-3">
               {details ? (
                 <>
                   {/* Phones: the thumbnail is the logo picker (no separate logo card). */}
@@ -298,51 +299,55 @@ export default function AdminDashboardPage() {
                 </span>
               )}
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-medium text-slate sm:text-xs">Catalog link</p>
+                <p className="flex items-center gap-1.5 text-xs font-medium text-slate">
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" aria-hidden />
+                  Your live store is
+                </p>
                 <a
                   href={liveUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block truncate text-sm font-semibold text-ink hover:text-primary sm:text-[15px]"
+                  title={liveUrl}
+                  className="block truncate text-sm font-semibold text-ink hover:text-primary hover:underline sm:text-[15px]"
                 >
                   {link}
                 </a>
               </div>
+              <Button
+                size="touch"
+                onClick={copyLink}
+                aria-label={copied ? "Link copied" : "Copy store link"}
+                className={`px-3! ${copied ? "text-emerald-700!" : ""}`}
+              >
+                {copied ? (
+                  <Check className="admin-pop-check h-4 w-4" strokeWidth={2.5} aria-hidden />
+                ) : (
+                  <Copy className="h-4 w-4" aria-hidden />
+                )}
+                {copied ? "Copied" : "Copy"}
+              </Button>
             </div>
             {logoError && (
-              <p role="alert" className="admin-fade-in -mt-1 px-3 pb-2.5 text-[13px] font-medium text-red-600 sm:hidden">
+              <p role="alert" className="admin-fade-in mt-2 text-[13px] font-medium text-red-600 sm:hidden">
                 {logoError}
               </p>
             )}
-            <div className="grid grid-cols-3 border-t border-line">
-              {[
-                {
-                  label: copied ? "Copied" : "Copy",
-                  icon: copied ? Check : Copy,
-                  onClick: copyLink,
-                  tone: copied ? "text-emerald-700 hover:bg-paper/70" : "text-ink hover:bg-paper/70",
-                },
-                { label: "Share", icon: Share2, onClick: shareLink, tone: "bg-emerald-50 text-emerald-800 hover:bg-emerald-100" },
-                {
-                  label: "Open",
-                  icon: ArrowUpRight,
-                  onClick: () => window.open(liveUrl, "_blank", "noopener,noreferrer"),
-                  tone: "text-ink hover:bg-paper/70",
-                },
-              ].map(({ label, icon: Icon, onClick, tone }, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={onClick}
-                  onPointerDown={ripple}
-                  className={`relative flex h-11 items-center justify-center gap-1.5 overflow-hidden text-[13px] font-semibold transition-colors sm:h-12 ${tone} ${
-                    i > 0 ? "border-l border-line" : ""
-                  }`}
-                >
-                  <Icon className={`h-4 w-4 ${label === "Copied" ? "admin-pop-check" : ""}`} aria-hidden />
-                  {label}
-                </button>
-              ))}
+            <div className="mt-3 grid gap-2 sm:mt-4 sm:grid-cols-2 lg:grid-cols-1">
+              <a
+                href={liveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onPointerDown={ripple}
+                className={buttonClass("secondary", "md", "h-12! w-full text-[15px]!")}
+              >
+                View your store
+                <ArrowUpRight className="h-[18px] w-[18px] text-slate" aria-hidden />
+              </a>
+              {/* The share panel: the whole store, a category or chosen products. */}
+              <Button variant="share" onClick={shareLink} className="h-12! w-full text-[15px]!">
+                <Share2 className="h-[18px] w-[18px]" aria-hidden />
+                Share your store items
+              </Button>
             </div>
           </Card>
 

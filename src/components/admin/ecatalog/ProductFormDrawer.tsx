@@ -29,6 +29,7 @@ import {
   Star,
   Trash2,
   TriangleAlert,
+  Upload,
   X,
   Zap,
 } from "lucide-react";
@@ -475,7 +476,9 @@ type PendingUpload = {
   converting?: boolean;
 };
 
-const NEEDS_DETAILS = "Add the name, category and subcategory, then tap Retry.";
+// A photo waiting for the name, category and subcategory (its S3 folder) before it
+// can upload: detection failed or left one out. Not shown as an error.
+const NEEDS_DETAILS = "Add the name, category and subcategory, then tap Upload.";
 
 type ImageFolder = Pick<ProductInput, "productName" | "categoryName" | "subcategoryName">;
 
@@ -491,9 +494,12 @@ function ImageManager({
   onReorder,
   onBusyChange,
   onDetect,
+  onDetectReset,
   autoSave,
   hero = false,
 }: {
+  /** "Upload again" in the detection popup removed the photo: back to the start. */
+  onDetectReset?: () => void;
   /** Step-by-step flow: a large empty state with "Take photo" (camera) and "Gallery". */
   hero?: boolean;
   images: string[];
@@ -504,7 +510,7 @@ function ImageManager({
   onReorder: (images: string[]) => void;
   onBusyChange: (busy: boolean) => void;
   /** Detects the details from a photo and fills the empty fields. Resolves with the
-   *  folder fields after filling (still incomplete if detection failed). */
+   *  folder fields after filling (maybe still incomplete); rejects if detection failed. */
   onDetect: (file: File) => Promise<ImageFolder>;
   /** Auto-save state for an existing product; null for a new one. */
   autoSave: ImageSaveStatus | null;
@@ -672,6 +678,8 @@ function ImageManager({
   const canUpload = isCompleteFolder(folder);
   // While a detection runs, photos added meanwhile wait for the same result.
   const detection = useRef<Promise<ImageFolder> | null>(null);
+  // Detection failed: the popup with Retry and Upload again, for these waiting photos.
+  const [detectFailure, setDetectFailure] = useState<{ ids: string[]; message: string } | null>(null);
   const busy = pending.some((p) => !p.error);
   const slotsLeft = MAX_PRODUCT_IMAGES - images.length - pending.length;
 
@@ -748,21 +756,51 @@ function ImageManager({
     if (!items.length) return;
     setPending((current) => [...current, ...items]);
     if (canUpload) return uploadAll(items, folder);
+    detectThenUpload(items);
+  }
 
-    // No name/category/subcategory yet: detect them from the first photo, then
-    // upload into the folder they name.
+  // No name/category/subcategory yet: detect them from the first photo, then upload
+  // into the folder they name. If detection fails, the photos wait and a popup offers
+  // Retry and Upload again.
+  function detectThenUpload(items: PendingUpload[]) {
     detection.current ??= onDetect(items[0].file).finally(() => (detection.current = null));
-    detection.current.then((detected) => {
-      if (!isCompleteFolder(detected)) {
+    detection.current.then(
+      (detected) => {
+        if (!isCompleteFolder(detected)) {
+          items.forEach((i) => patch(i.id, { detecting: false, error: NEEDS_DETAILS }));
+          return;
+        }
+        items.forEach((i) => patch(i.id, { detecting: false }));
+        uploadAll(
+          items.map((i) => ({ ...i, detecting: false })),
+          detected,
+        );
+      },
+      (err) => {
         items.forEach((i) => patch(i.id, { detecting: false, error: NEEDS_DETAILS }));
-        return;
-      }
-      items.forEach((i) => patch(i.id, { detecting: false }));
-      uploadAll(
-        items.map((i) => ({ ...i, detecting: false })),
-        detected,
-      );
-    });
+        // Photos added while it ran join the same popup.
+        const ids = items.map((i) => i.id);
+        setDetectFailure((f) => ({ ids: [...(f?.ids ?? []), ...ids], message: detectError(err) }));
+      },
+    );
+  }
+
+  // Popup: Retry reads the same photo again.
+  function retryDetection() {
+    const ids = detectFailure?.ids ?? [];
+    setDetectFailure(null);
+    const items = pending.filter((p) => ids.includes(p.id)).map((p) => ({ ...p, error: undefined, detecting: true }));
+    if (!items.length) return;
+    items.forEach((i) => patch(i.id, { error: undefined, detecting: true }));
+    detectThenUpload(items);
+  }
+
+  // Popup: Upload again removes the photo and opens the picker for another one.
+  function uploadAgain() {
+    detectFailure?.ids.forEach(dropPending);
+    setDetectFailure(null);
+    onDetectReset?.();
+    inputRef.current?.click();
   }
 
   // The Lambda signs at most 10 uploads per request.
@@ -849,6 +887,11 @@ function ImageManager({
 
   return (
     <>
+      {/* Once, outside the layouts below: "Upload again" in the detection popup opens the
+          picker as it removes the photo, which switches layouts. An input that unmounted
+          while its picker was open would drop the chosen file. */}
+      {picker}
+      {camera}
       {empty && hero ? (
         <div
           {...dropProps}
@@ -894,8 +937,6 @@ function ImageManager({
             </button>
           </div>
           <p className="hidden text-[11px] text-slate sm:block">or drag and drop, or paste with Ctrl+V</p>
-          {picker}
-          {camera}
         </div>
       ) : empty ? (
         <div
@@ -929,7 +970,6 @@ function ImageManager({
               ? "JPG, PNG, WebP or AVIF · converted to WebP and resized automatically"
               : "The name, category and details are filled in automatically from the first photo."}
           </p>
-          {picker}
         </div>
       ) : (
         // Phones: 4 columns. From sm, Add product gets 3 big columns; the edit form 5 smaller ones.
@@ -1017,7 +1057,47 @@ function ImageManager({
             );
           })}
 
-          {pending.map((item) => (
+          {pending.map((item) => {
+            // Waiting for the details (not a failure): no red, and one Upload button for
+            // once they're filled in. A failed detection is handled by the popup.
+            const waiting = item.error === NEEDS_DETAILS;
+            if (waiting) {
+              return (
+                <div key={item.id} className={`${tile} border-line`}>
+                  <div className="relative aspect-square bg-paper">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- local preview while waiting */}
+                    <img src={item.preview} alt="" className="h-full w-full object-cover opacity-40" />
+                    <div className="absolute inset-0 grid place-items-center bg-white/60 p-3 text-center">
+                      <p className="line-clamp-3 text-[11px] font-medium leading-snug text-slate">
+                        {canUpload ? "Details added. Tap Upload." : "Add the product details to upload this photo."}
+                      </p>
+                    </div>
+                  </div>
+                  <div className={tileFooter}>
+                    <button
+                      type="button"
+                      onClick={() => retry(item)}
+                      disabled={!canUpload}
+                      title={canUpload ? "Upload this photo" : NEEDS_DETAILS}
+                      className={`${footerBtn} ${canUpload ? "bg-button text-white hover:bg-button-hover" : footerBtnIdle} disabled:opacity-50`}
+                    >
+                      <Upload className="h-3.5 w-3.5" aria-hidden />
+                      Upload
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => dropPending(item.id)}
+                      className={`${footerBtn} ${footerBtnIdle} hover:text-red-600`}
+                      aria-label="Remove photo"
+                    >
+                      <X className="h-3.5 w-3.5" aria-hidden />
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+            return (
             <div key={item.id} className={`${tile} ${item.error ? "border-red-200" : "border-line"}`}>
               <div className="relative aspect-square bg-paper">
                 {/* eslint-disable-next-line @next/next/no-img-element -- local preview while uploading */}
@@ -1074,7 +1154,8 @@ function ImageManager({
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
 
           {slotsLeft > 0 && (
             <button
@@ -1089,8 +1170,6 @@ function ImageManager({
               <span className="text-[11px] font-medium">Add more</span>
             </button>
           )}
-          {picker}
-          {camera}
         </div>
       )}
 
@@ -1122,6 +1201,18 @@ function ImageManager({
         )}
       </div>
 
+      {detectFailure &&
+        createPortal(
+          <DetectFailedDialog
+            preview={pending.find((p) => detectFailure.ids.includes(p.id))?.preview}
+            message={detectFailure.message}
+            onRetry={retryDetection}
+            onUploadAgain={uploadAgain}
+            onClose={() => setDetectFailure(null)}
+          />,
+          document.body,
+        )}
+
       {/* Portaled: the drawer's slide-in transform would otherwise contain the fixed overlay. */}
       {confirmRemove &&
         createPortal(
@@ -1147,6 +1238,81 @@ function ImageManager({
           document.body,
         )}
     </>
+  );
+}
+
+// AI couldn't read the first photo: Retry reads it again, Upload again swaps it for
+// another one. "Fill in the details myself" (or Escape) closes it, and the photo
+// waits on its tile until the name, category and subcategory are filled in.
+// A bottom sheet on phones.
+function DetectFailedDialog({
+  preview,
+  message,
+  onRetry,
+  onUploadAgain,
+  onClose,
+}: {
+  preview?: string;
+  message: string;
+  onRetry: () => void;
+  onUploadAgain: () => void;
+  onClose: () => void;
+}) {
+  const panelRef = useOverlay<HTMLDivElement>(onClose);
+  // No closing on a tap outside: on a phone that's easily done by accident, and
+  // Retry would be gone with it.
+  return (
+    <div className="admin-fade-in fixed inset-0 z-[110] flex items-end justify-center bg-ink/40 backdrop-blur-[2px] sm:items-center sm:p-6">
+      <div
+        ref={panelRef}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="detect-failed-title"
+        aria-describedby="detect-failed-text"
+        tabIndex={-1}
+        className="admin-pop-in w-full rounded-t-lg bg-white shadow-2xl focus:outline-none focus-visible:outline-none! sm:max-w-md sm:rounded-lg"
+      >
+        <div className="flex gap-3 px-4 pb-4 pt-4 sm:gap-4 sm:px-6 sm:pb-5 sm:pt-6">
+          {preview ? (
+            // eslint-disable-next-line @next/next/no-img-element -- local preview of the photo
+            <img src={preview} alt="" className="h-16 w-16 shrink-0 rounded-md bg-paper object-cover ring-1 ring-line sm:h-20 sm:w-20" />
+          ) : (
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-amber-50 text-amber-600">
+              <TriangleAlert className="h-5 w-5" aria-hidden />
+            </span>
+          )}
+          <div className="min-w-0">
+            <h2 id="detect-failed-title" className="text-[15px] font-semibold text-ink sm:text-base">
+              Couldn&apos;t detect the product
+            </h2>
+            <div id="detect-failed-text">
+              <p className="mt-0.5 text-[13px] leading-relaxed text-slate sm:mt-1 sm:text-sm">{message}</p>
+              <p className="mt-1.5 text-xs leading-snug text-slate">
+                Try again, or upload another photo: the whole product on a plain background works best.
+              </p>
+            </div>
+          </div>
+        </div>
+        {/* Phones: Retry on top, then Upload again, then the link. From sm: one row. */}
+        <div className="flex flex-col-reverse gap-2 border-t border-line px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 sm:flex-row sm:items-center sm:justify-end sm:px-6 sm:pb-4 sm:pt-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-11 text-[13px] font-semibold text-slate hover:text-ink sm:mr-auto sm:h-auto"
+          >
+            Fill in the details myself
+          </button>
+          <button type="button" onClick={onUploadAgain} onPointerDown={ripple} className={`${authSecondaryButtonClass} sm:w-auto sm:px-5`}>
+            <ImagePlus className="h-[18px] w-[18px]" aria-hidden />
+            Upload again
+          </button>
+          <button type="button" onClick={onRetry} onPointerDown={ripple} className={`${authButtonClass} sm:w-auto sm:px-5`}>
+            <RotateCcw className="h-[18px] w-[18px]" aria-hidden />
+            Retry
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1660,7 +1826,8 @@ export default function ProductFormDrawer({
       }
     } catch (err) {
       setDetectNote({ kind: "error", text: detectError(err) });
-      return formRef.current;
+      // ImageManager shows the popup (Retry / Upload again) and holds the photo.
+      throw err;
     } finally {
       setDetecting(false);
       setDetectTried(true);
@@ -1937,7 +2104,7 @@ export default function ProductFormDrawer({
   function wizardStepError(i: number): string | null {
     if (i === 0) {
       if (uploading) return "Wait for the photos to finish uploading.";
-      if (!form.images.length) return needsIdentityFor(form) ? "Fill in what the product is, then tap Retry on the photo." : "Add at least one photo.";
+      if (!form.images.length) return needsIdentityFor(form) ? "Fill in what the product is, then tap Upload on the photo." : "Add at least one photo.";
     }
     if (i === 1) {
       if (!form.productName.trim()) return "Enter a product name.";
@@ -2114,6 +2281,10 @@ export default function ProductFormDrawer({
                 onReorder={(next) => changeImages((c) => ({ ...c, images: next, mainImageUrl: next[0] ?? "" }), "Order updated")}
                 onBusyChange={setUploading}
                 onDetect={detectForUpload}
+                onDetectReset={() => {
+                  setDetectNote(null);
+                  setDetectTried(false);
+                }}
                 autoSave={product ? imageSave : null}
                 hero={wizard}
               />
@@ -2637,7 +2808,7 @@ export default function ProductFormDrawer({
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-[13px] font-semibold text-ink">Couldn&apos;t read this photo</p>
-        <p className="mt-0.5 text-xs text-slate">{detectNote.text} Tell us what it is below, then tap Retry on the photo.</p>
+        <p className="mt-0.5 text-xs text-slate">{detectNote.text} Fill in what it is below, then tap Upload on the photo.</p>
       </div>
     </div>
   ) : form.images.length === 0 ? (

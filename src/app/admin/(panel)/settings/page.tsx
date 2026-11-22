@@ -6,10 +6,8 @@ import {
   CalendarDays,
   CircleCheck,
   Clock,
-  LayoutGrid,
   Mail,
   MapPin,
-  MessageCircle,
   Phone,
   Quote,
   Store,
@@ -18,20 +16,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useLiveCatalogUrl, useSetAdminStore } from "@/components/admin/AdminShell";
-import {
-  Breadcrumbs,
-  Button,
-  Card,
-  Skeleton,
-  buttonClass,
-  panelFieldErrorClass,
-  panelHintClass,
-  panelIconBaseClass,
-  panelInputClass,
-  panelInputIconClass,
-  panelLabelClass,
-  panelTextareaClass,
-} from "@/components/admin/ui";
+import { Breadcrumbs, Button, Card, Skeleton, buttonClass } from "@/components/admin/ui";
 import BusinessTypePicker from "@/components/admin/BusinessTypePicker";
 import StoreLogoPicker from "@/components/admin/StoreLogoPicker";
 import WhatsappNumberPanel, { WhatsappStatusBadge } from "@/components/admin/WhatsappNumberPanel";
@@ -43,6 +28,11 @@ import { storeTypeLabel } from "@/lib/taxonomy";
 
 type Form = Omit<StoreDetailsInput, "since"> & { since: string };
 type FieldErrors = Partial<Record<"name" | "businessTypes", string>>;
+
+// The fields and the Save button join this form through their `form` attribute, so the
+// form doesn't wrap the page: the WhatsApp section has a form of its own, and nested in
+// this one its "Request number" would have submitted (saved) the page as well.
+const FORM_ID = "store-settings";
 
 const toForm = (s: StoreDetails): Form => ({
   name: s.name,
@@ -58,23 +48,26 @@ const toForm = (s: StoreDetails): Form => ({
   businessTypes: s.businessTypes,
 });
 
-/** A settings section: a white card with a small icon header. */
-function Section({ icon: Icon, title, aside, children }: { icon: LucideIcon; title: string; aside?: ReactNode; children: ReactNode }) {
+/** A settings group, like a phone's Settings app: a small caps title, then a card of rows. */
+function Group({ id, title, aside, children }: { id: string; title: string; aside?: ReactNode; children: ReactNode }) {
   return (
-    <Card className="admin-fade-in overflow-hidden">
-      <div className="flex min-h-11 items-center gap-2 border-b border-line px-3 py-2 sm:min-h-10 sm:px-4">
-        <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-tint text-primary" aria-hidden>
-          <Icon className="h-3.5 w-3.5" strokeWidth={2.25} />
-        </span>
-        <h2 className="min-w-0 flex-1 text-sm font-semibold text-ink">{title}</h2>
+    <section aria-labelledby={id} className="admin-fade-in">
+      <div className="flex min-h-6 items-end justify-between gap-2 px-1 pb-1.5">
+        <h2 id={id} className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate">
+          {title}
+        </h2>
         {aside}
       </div>
-      {children}
-    </Card>
+      <Card className="divide-y divide-line overflow-hidden">{children}</Card>
+    </section>
   );
 }
 
-/** A labelled input (44px on phones, 36px from sm up) with an icon on the left, and its error or hint underneath. */
+/**
+ * One row of a group: an icon, a small label and a borderless input; tapping anywhere
+ * on the row focuses the input. Phones: the label above the input, which keeps 16px
+ * text so iOS doesn't zoom in on focus. From sm up: the label on the left.
+ */
 function Field({
   id,
   label,
@@ -82,7 +75,6 @@ function Field({
   required,
   hint,
   error,
-  className = "",
   multiline,
   ...input
 }: {
@@ -92,42 +84,71 @@ function Field({
   required?: boolean;
   hint?: ReactNode;
   error?: string;
-  className?: string;
   multiline?: boolean;
-} & Omit<ComponentProps<"input">, "id" | "className"> &
+} & Omit<ComponentProps<"input">, "id" | "className" | "form"> &
   Pick<ComponentProps<"textarea">, "rows">) {
   const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
-  const shared = { id, "aria-invalid": !!error, "aria-describedby": describedBy };
+  const shared = { id, form: FORM_ID, "aria-invalid": !!error, "aria-describedby": describedBy };
+  // Above the label's tap area (its ::after covers the row), so a tap in the text still
+  // places the caret there.
+  const control =
+    "relative z-[1] block w-full min-w-0 bg-transparent p-0 text-base text-ink placeholder:text-slate/50 focus:outline-none focus-visible:outline-none! sm:text-sm";
   return (
-    <div data-field className={`min-w-0 ${className}`}>
-      <label htmlFor={id} className={panelLabelClass}>
-        {label}
-        {required && (
-          <span className="ml-0.5 text-primary" aria-hidden>
-            *
-          </span>
-        )}
-      </label>
-      <div className="relative">
-        {/* A textarea's icon lines up with its first line. */}
-        <Icon className={multiline ? `${panelIconBaseClass} top-[13px] sm:top-[9px]` : panelInputIconClass} aria-hidden />
-        {multiline ? (
-          <textarea {...shared} {...(input as ComponentProps<"textarea">)} className={panelTextareaClass} />
-        ) : (
-          <input {...shared} {...input} className={panelInputClass} />
-        )}
+    <div
+      data-field
+      className={`group relative flex gap-3 px-3 py-2 transition-colors focus-within:bg-tint/25 sm:px-4 sm:py-1.5 ${
+        error ? "bg-red-50/60" : ""
+      }`}
+    >
+      {/* Focus: an accent bar down the left edge. */}
+      <span
+        aria-hidden
+        className={`pointer-events-none absolute inset-y-0 left-0 w-0.5 transition-opacity ${
+          error ? "bg-red-500 opacity-100" : "bg-primary opacity-0 group-focus-within:opacity-100"
+        }`}
+      />
+      <Icon
+        className={`mt-3 h-4 w-4 shrink-0 sm:mt-2 ${error ? "text-red-500" : "text-slate/60 group-focus-within:text-primary"}`}
+        aria-hidden
+      />
+      <div className="min-w-0 flex-1 sm:grid sm:grid-cols-[8.5rem_minmax(0,1fr)] sm:items-start sm:gap-3">
+        <label
+          htmlFor={id}
+          className={`block text-[11px] font-medium leading-4 after:absolute after:inset-0 sm:py-1.5 sm:text-[13px] sm:leading-5 ${
+            error ? "text-red-600" : "text-slate sm:text-ink/80"
+          }`}
+        >
+          {label}
+          {required && (
+            <span className="ml-0.5 text-primary" aria-hidden>
+              *
+            </span>
+          )}
+        </label>
+        <div className="min-w-0">
+          {multiline ? (
+            <textarea
+              {...shared}
+              {...(input as ComponentProps<"textarea">)}
+              // Grows with the text where supported (Chrome, Android); scrolls elsewhere.
+              className={`${control} max-h-40 min-h-11 resize-none leading-snug [field-sizing:content] sm:min-h-0 sm:py-1.5 sm:leading-5`}
+            />
+          ) : (
+            <input {...shared} {...input} className={`${control} h-6 sm:h-8`} />
+          )}
+          {error ? (
+            <p id={`${id}-error`} className="admin-fade-in mt-0.5 text-[11px] font-medium leading-snug text-red-600 sm:mb-1 sm:text-xs">
+              {error}
+            </p>
+          ) : (
+            hint && (
+              <p id={`${id}-hint`} className="mt-0.5 text-[11px] leading-snug text-slate sm:mb-1">
+                {hint}
+              </p>
+            )
+          )}
+        </div>
       </div>
-      {error ? (
-        <p id={`${id}-error`} className={panelFieldErrorClass}>
-          {error}
-        </p>
-      ) : (
-        hint && (
-          <p id={`${id}-hint`} className={panelHintClass}>
-            {hint}
-          </p>
-        )
-      )}
     </div>
   );
 }
@@ -177,7 +198,7 @@ export default function StoreSettingsPage() {
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!form) return;
+    if (!form || !dirty) return;
 
     const next: FieldErrors = {};
     if (form.name.trim().length < 3) next.name = "Use at least 3 characters.";
@@ -202,26 +223,21 @@ export default function StoreSettingsPage() {
   }
 
   // Phones and tablets: the bar is pinned above the bottom tabs, and only shows while there's
-  // something to save or say. Desktop: it sits at the end of the form.
+  // something to save or say. Desktop: it sits at the end of the page.
   const showBar = dirty || saving || !!message;
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-2.5 sm:gap-3">
+    <div className={`mx-auto flex w-full max-w-2xl flex-col gap-4 sm:gap-5 ${showBar ? "pb-24 lg:pb-0" : ""}`}>
       <header className="admin-fade-in flex items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="mb-1 hidden sm:block">
             <Breadcrumbs items={[{ label: "Dashboard", href: "/admin/dashboard" }, { label: "Store settings" }]} />
           </div>
-          <h1 className="truncate text-lg font-bold leading-tight tracking-[-0.02em] text-ink sm:text-xl">Store settings</h1>
+          <h1 className="truncate text-[17px] font-bold leading-tight tracking-[-0.02em] text-ink sm:text-xl">Store settings</h1>
+          <p className="mt-0.5 text-xs text-slate sm:text-[13px]">What customers see on your store.</p>
         </div>
-        <a
-          href={liveUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="View live catalog"
-          className={buttonClass("secondary", "touch")}
-        >
-          View live
+        <a href={liveUrl} target="_blank" rel="noopener noreferrer" className={buttonClass("secondary", "touch", "px-3!")}>
+          View store
           <ArrowUpRight className="h-4 w-4 text-slate" aria-hidden />
         </a>
       </header>
@@ -233,92 +249,96 @@ export default function StoreSettingsPage() {
         </Card>
       ) : !form || !store ? (
         <>
-          {[0, 1, 2].map((i) => (
-            <Card key={i} className="flex flex-col gap-3 p-3 sm:p-4">
-              <Skeleton className="h-5 w-28" />
-              <Skeleton className="h-11 w-full sm:h-9" />
-              <Skeleton className="h-11 w-full sm:h-9" />
-            </Card>
+          {[3, 1, 4].map((rows, i) => (
+            <div key={i} aria-hidden>
+              <Skeleton className="mb-2 ml-1 h-3 w-20" />
+              <Card className="divide-y divide-line overflow-hidden">
+                {Array.from({ length: rows }, (_, r) => (
+                  <div key={r} className="flex gap-3 px-3 py-2.5 sm:px-4">
+                    <Skeleton className="mt-1 h-4 w-4" />
+                    <div className="flex flex-1 flex-col gap-1.5">
+                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-4 w-3/5" />
+                    </div>
+                  </div>
+                ))}
+              </Card>
+            </div>
           ))}
         </>
       ) : (
-        <form onSubmit={handleSubmit} noValidate className={`flex flex-col gap-2.5 sm:gap-3 ${showBar ? "pb-24 lg:pb-0" : ""}`}>
-          <Section icon={Store} title="Store">
-            {/* The logo row, then the store's details */}
-            <div className="border-b border-line">
-              <StoreLogoPicker
-                layout="dashboard"
-                logo={form.logo}
-                storeName={form.name || store.name}
-                onChange={(url) => {
-                  // An earlier upload that was never saved isn't needed any more.
-                  if (form.logo && form.logo !== store.logo) discardUploads([form.logo]).catch(() => {});
-                  set("logo", url);
-                }}
-              />
-            </div>
-            <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 sm:gap-x-4 sm:p-4">
-              <Field
-                id="store-name"
-                label="Store name"
-                icon={Store}
-                required
-                error={errors.name}
-                hint={
-                  <>
-                    Link stays <span className="font-medium text-ink">{store.slug}.catalog24.in</span>
-                  </>
-                }
-                value={form.name}
-                onChange={(e) => set("name", e.target.value)}
-                maxLength={40}
-                autoComplete="organization"
-                autoCapitalize="words"
-                enterKeyHint="next"
-              />
-              <Field
-                id="store-tagline"
-                label="Tagline"
-                icon={Quote}
-                value={form.tagline}
-                onChange={(e) => set("tagline", e.target.value)}
-                maxLength={60}
-                placeholder="Lights & Decor"
-                autoCapitalize="words"
-                enterKeyHint="next"
-              />
-              <Field
-                id="store-category"
-                label="Type of store"
-                icon={Tag}
-                value={form.category}
-                onChange={(e) => set("category", e.target.value)}
-                maxLength={60}
-                // Empty: customers see one made from "What you sell" (shown here as it updates).
-                placeholder={storeTypeLabel("", form.businessTypes) || "Home Decor Store"}
-                hint={
-                  form.category.trim()
-                    ? "Shown on your store page and in link previews."
-                    : "Optional. Leave it empty to use what you sell, as shown."
-                }
-                autoCapitalize="words"
-                enterKeyHint="next"
-              />
-              <Field
-                id="store-since"
-                label="Year started"
-                icon={CalendarDays}
-                inputMode="numeric"
-                value={form.since}
-                onChange={(e) => set("since", e.target.value.replace(/\D/g, "").slice(0, 4))}
-                placeholder="2012"
-                enterKeyHint="next"
-              />
-            </div>
-          </Section>
+        <>
+          {/* Holds no fields itself; see FORM_ID. */}
+          <form id={FORM_ID} onSubmit={handleSubmit} noValidate hidden />
+
+          <Group id="group-store" title="Store">
+            <StoreLogoPicker
+              layout="dashboard"
+              logo={form.logo}
+              storeName={form.name || store.name}
+              onChange={(url) => {
+                // An earlier upload that was never saved isn't needed any more.
+                if (form.logo && form.logo !== store.logo) discardUploads([form.logo]).catch(() => {});
+                set("logo", url);
+              }}
+            />
+            <Field
+              id="store-name"
+              label="Store name"
+              icon={Store}
+              required
+              error={errors.name}
+              hint={
+                <>
+                  Your link stays <span className="font-medium text-ink">{store.slug}.catalog24.in</span>
+                </>
+              }
+              value={form.name}
+              onChange={(e) => set("name", e.target.value)}
+              maxLength={40}
+              placeholder="Your store's name"
+              autoComplete="organization"
+              autoCapitalize="words"
+              enterKeyHint="next"
+            />
+            <Field
+              id="store-tagline"
+              label="Tagline"
+              icon={Quote}
+              value={form.tagline}
+              onChange={(e) => set("tagline", e.target.value)}
+              maxLength={60}
+              placeholder="Lights & Decor"
+              autoCapitalize="words"
+              enterKeyHint="next"
+            />
+            <Field
+              id="store-category"
+              label="Type of store"
+              icon={Tag}
+              value={form.category}
+              onChange={(e) => set("category", e.target.value)}
+              maxLength={60}
+              // Empty: customers see one made from "What you sell" (shown here as it updates).
+              placeholder={storeTypeLabel("", form.businessTypes) || "Home Decor Store"}
+              hint={form.category.trim() ? "Shown on your store page and in link previews." : "Leave empty to use what you sell."}
+              autoCapitalize="words"
+              enterKeyHint="next"
+            />
+            <Field
+              id="store-since"
+              label="Year started"
+              icon={CalendarDays}
+              inputMode="numeric"
+              value={form.since}
+              onChange={(e) => set("since", e.target.value.replace(/\D/g, "").slice(0, 4))}
+              placeholder="2012"
+              enterKeyHint="next"
+            />
+          </Group>
 
           {/* Requested and approved on its own, not saved with the form */}
-          <Section icon={MessageCircle} title="WhatsApp number" aside={<WhatsappStatusBadge store={store} />}>
+          <Group id="group-whatsapp" title="WhatsApp number" aside={<WhatsappStatusBadge store={store} />}>
             <WhatsappNumberPanel
               store={store}
               onUpdated={(saved) =>
@@ -326,80 +346,75 @@ export default function StoreSettingsPage() {
                 setStore((s) => (s ? { ...s, whatsapp: saved.whatsapp, whatsappRequest: saved.whatsappRequest } : saved))
               }
             />
-          </Section>
+          </Group>
 
-          <Section icon={LayoutGrid} title="What you sell">
+          <Group id="group-sell" title="What you sell">
             <div id="business-types" data-field className="p-3 sm:p-4">
-              <span id="business-types-label" className="sr-only">
-                What you sell
-              </span>
               <BusinessTypePicker
                 compact
                 className="grid-cols-3 sm:grid-cols-5 md:grid-cols-6"
                 value={form.businessTypes}
                 onChange={(next) => set("businessTypes", next)}
-                labelledBy="business-types-label"
+                labelledBy="group-sell"
               />
-              {errors.businessTypes && <p className={panelFieldErrorClass}>{errors.businessTypes}</p>}
+              {errors.businessTypes && (
+                <p className="admin-fade-in mt-2 text-xs font-medium text-red-600">{errors.businessTypes}</p>
+              )}
             </div>
-          </Section>
+          </Group>
 
-          <Section icon={Phone} title="Contact" aside={<span className="text-[11px] font-medium text-slate">Optional</span>}>
-            <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 sm:gap-x-4 sm:p-4">
-              <Field
-                id="store-phone"
-                label="Phone"
-                icon={Phone}
-                type="tel"
-                inputMode="tel"
-                value={form.phone}
-                onChange={(e) => set("phone", e.target.value)}
-                maxLength={30}
-                placeholder="+91 98765 43210"
-                autoComplete="tel"
-                enterKeyHint="next"
-              />
-              <Field
-                id="store-email"
-                label="Email"
-                icon={Mail}
-                type="email"
-                inputMode="email"
-                value={form.email}
-                onChange={(e) => set("email", e.target.value)}
-                maxLength={120}
-                placeholder="hello@yourstore.com"
-                autoComplete="email"
-                autoCapitalize="none"
-                spellCheck={false}
-                enterKeyHint="next"
-              />
-              <Field
-                id="store-hours"
-                label="Opening hours"
-                icon={Clock}
-                className="sm:col-span-2"
-                value={form.hours}
-                onChange={(e) => set("hours", e.target.value)}
-                maxLength={100}
-                placeholder="Mon – Sun · 10:30 AM – 8:30 PM"
-                enterKeyHint="next"
-              />
-              <Field
-                id="store-address"
-                label="Address"
-                icon={MapPin}
-                multiline
-                rows={2}
-                className="sm:col-span-2"
-                value={form.address}
-                onChange={(e) => set("address", e.target.value)}
-                maxLength={300}
-                placeholder="Shop 12, Main Market, MG Road, City – 560001"
-                autoComplete="street-address"
-              />
-            </div>
-          </Section>
+          <Group id="group-contact" title="Contact" aside={<span className="text-[11px] font-medium text-slate">Optional</span>}>
+            <Field
+              id="store-phone"
+              label="Phone"
+              icon={Phone}
+              type="tel"
+              inputMode="tel"
+              value={form.phone}
+              onChange={(e) => set("phone", e.target.value)}
+              maxLength={30}
+              placeholder="+91 98765 43210"
+              autoComplete="tel"
+              enterKeyHint="next"
+            />
+            <Field
+              id="store-email"
+              label="Email"
+              icon={Mail}
+              type="email"
+              inputMode="email"
+              value={form.email}
+              onChange={(e) => set("email", e.target.value)}
+              maxLength={120}
+              placeholder="hello@yourstore.com"
+              autoComplete="email"
+              autoCapitalize="none"
+              spellCheck={false}
+              enterKeyHint="next"
+            />
+            <Field
+              id="store-hours"
+              label="Opening hours"
+              icon={Clock}
+              value={form.hours}
+              onChange={(e) => set("hours", e.target.value)}
+              maxLength={100}
+              placeholder="Mon – Sun · 10:30 AM – 8:30 PM"
+              enterKeyHint="next"
+            />
+            <Field
+              id="store-address"
+              label="Address"
+              icon={MapPin}
+              multiline
+              rows={2}
+              value={form.address}
+              onChange={(e) => set("address", e.target.value)}
+              maxLength={300}
+              placeholder="Shop 12, Main Market, MG Road, City – 560001"
+              autoComplete="street-address"
+            />
+          </Group>
 
           {/* Save bar */}
           <div
@@ -425,13 +440,13 @@ export default function StoreSettingsPage() {
                 <Button size="touch" onClick={discardChanges} disabled={saving} className="flex-1 lg:flex-none">
                   Discard
                 </Button>
-                <Button size="touch" type="submit" variant="primary" loading={saving} className="flex-[2] lg:flex-none">
+                <Button size="touch" type="submit" form={FORM_ID} variant="primary" loading={saving} className="flex-[2] lg:flex-none">
                   {saving ? "Saving…" : "Save changes"}
                 </Button>
               </div>
             )}
           </div>
-        </form>
+        </>
       )}
     </div>
   );

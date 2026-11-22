@@ -626,7 +626,7 @@ export default function AllStoresPage() {
         </Button>
       </header>
 
-      <div className="sticky top-14 z-20 -mx-3 flex flex-col gap-2.5 bg-paper/95 px-3 py-2 backdrop-blur sm:-mx-4 sm:flex-row sm:px-4 lg:top-16 lg:-mx-5 lg:px-5">
+      <div className="sticky top-14 z-20 -mx-3 flex flex-col gap-2.5 bg-paper/95 px-3 py-2 backdrop-blur sm:-mx-4 sm:flex-row sm:px-4 lg:top-0 lg:-mx-5 lg:px-5">
         <label className="relative min-w-0 flex-1">
           <span className="sr-only">Search stores</span>
           <Search

@@ -14,11 +14,10 @@ import {
   Search,
   SearchX,
   Share2,
-  SlidersHorizontal,
   TriangleAlert,
   X,
 } from "lucide-react";
-import { useAdminUser, useLiveCatalogUrl } from "@/components/admin/AdminShell";
+import { scrollRootOf, useAdminUser, useLiveCatalogUrl } from "@/components/admin/AdminShell";
 import { ProductLimitNotice, limitState, usageLabel } from "@/components/admin/ProductLimit";
 import ConfirmDialog from "@/components/admin/ecatalog/ConfirmDialog";
 import { useOverlay } from "@/components/admin/ecatalog/useOverlay";
@@ -98,7 +97,9 @@ function LoadMore({ shown, total, onVisible }: { shown: number; total: number; o
       (entries) => {
         if (entries.some((e) => e.isIntersecting)) onVisibleRef.current();
       },
-      { rootMargin: "400px 0px" },
+      // Against what actually scrolls: on desktop that's the shell's content area,
+      // and the margin would do nothing measured against the window.
+      { root: scrollRootOf(el), rootMargin: "400px 0px" },
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -136,8 +137,8 @@ function EmptyState({
   );
 }
 
-// Phones: status, category and layout live in this bottom sheet, so the page
-// keeps a single row (search, Filters, Share, View live) above the products.
+// Phones: search, status, category and layout live in this bottom sheet, so the
+// page keeps a single row (Search & filter, Share items, View Store) above the products.
 function FilterSheet({
   onClose,
   onRefresh,
@@ -173,7 +174,7 @@ function FilterSheet({
       >
         <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-line pl-4 pr-1">
           <h2 id="filter-sheet-title" className="text-[15px] font-semibold text-ink">
-            Filter &amp; view
+            Search &amp; filter
           </h2>
           <div className="flex items-center">
             <button
@@ -410,8 +411,36 @@ export default function ManageEcatalogPage() {
     { key: "published", label: "Published" },
     { key: "hidden", label: "Hidden" },
   ];
-  // Filters set in the phone sheet (the search has its own box), shown as a badge on its button.
-  const sheetFilterCount = (category !== DEFAULT_CATEGORY ? 1 : 0) + (status !== "all" ? 1 : 0);
+  // What's set in the phone sheet (search included), shown as a badge on its button.
+  const trimmedQuery = query.trim();
+  const sheetFilterCount =
+    (trimmedQuery ? 1 : 0) + (category !== DEFAULT_CATEGORY ? 1 : 0) + (status !== "all" ? 1 : 0);
+
+  // The search box: in the sticky bar from sm up, at the top of the filter sheet on phones.
+  const searchBox = (className: string) => (
+    <label className={`relative min-w-0 ${className}`}>
+      <span className="sr-only">Search products</span>
+      <Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate/60 sm:left-3 sm:h-4 sm:w-4" aria-hidden />
+      <input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search products"
+        enterKeyHint="search"
+        className={`h-11 w-full rounded-md border border-line bg-white pl-11 text-base sm:h-9 sm:pl-9 sm:text-[13px] ${query ? "pr-10" : "pr-3"} text-ink transition-[border-color,box-shadow] placeholder:text-slate/55 focus:border-primary focus:outline-none focus-visible:outline-none! focus:ring-[3px] focus:ring-primary/15 [&::-webkit-search-cancel-button]:hidden`}
+      />
+      {query && (
+        <button
+          type="button"
+          onClick={() => setQuery("")}
+          aria-label="Clear search"
+          className="absolute right-0.5 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-md text-slate hover:text-ink sm:h-8 sm:w-8"
+        >
+          <X className="h-4 w-4" aria-hidden />
+        </button>
+      )}
+    </label>
+  );
 
   // Status and category filters: in the sticky bar from sm up, in the filter sheet on phones.
   const statusTabs = (className: string) => (
@@ -574,45 +603,35 @@ export default function ManageEcatalogPage() {
       {products && <ProductLimitNotice state={limit} storeName={store.name} compact />}
 
       {/* Search & filters: stick under the top bar while scrolling. On phones this is the
-          page's only row: search, Filters (opens the sheet), Share and View live. Add product
-          is the raised button in the bottom tab bar. */}
-      <div className="sticky top-14 z-20 -mx-3 flex flex-col gap-2 bg-paper/95 px-2 py-2 backdrop-blur sm:-mx-4 sm:gap-2 sm:px-4 lg:top-16 lg:-mx-5 lg:px-5">
+          page's only row: Search & filter (opens the sheet, which holds the search box too),
+          Share items and View Store. Add product is the raised button in the bottom tab bar. */}
+      <div className="sticky top-14 z-20 -mx-3 flex flex-col gap-2 bg-paper/95 px-2 py-2 backdrop-blur sm:-mx-4 sm:gap-2 sm:px-4 lg:top-0 lg:-mx-5 lg:px-5">
         <div className="flex gap-1.5 sm:gap-2">
-          <label className="relative min-w-0 flex-1">
-            <span className="sr-only">Search products</span>
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate/60 sm:left-3 sm:h-4 sm:w-4" aria-hidden />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search products"
-              enterKeyHint="search"
-              className={`h-11 w-full rounded-md border border-line bg-white pl-11 text-base sm:h-9 sm:pl-9 sm:text-[13px] ${query ? "pr-10" : "pr-3"} text-ink transition-[border-color,box-shadow] placeholder:text-slate/55 focus:border-primary focus:outline-none focus-visible:outline-none! focus:ring-[3px] focus:ring-primary/15 [&::-webkit-search-cancel-button]:hidden`}
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery("")}
-                aria-label="Clear search"
-                className="absolute right-0.5 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-md text-slate hover:text-ink sm:h-8 sm:w-8"
-              >
-                <X className="h-4 w-4" aria-hidden />
-              </button>
-            )}
-          </label>
+          {searchBox("hidden flex-1 sm:block")}
 
-          {/* Phones only: the rest of the controls as 44px icon buttons */}
+          {/* Phones only: 44px tall, 13px labels so all three fit on a 360px screen. The
+              long label needs about 400px; narrower phones show "Search". While a search is
+              on, the button shows it, as the box itself is in the sheet. */}
           <button
             type="button"
             onClick={() => setFiltersOpen(true)}
             onPointerDown={ripple}
-            aria-label={sheetFilterCount ? `Filters, ${sheetFilterCount} on` : "Filters"}
+            aria-label={sheetFilterCount ? `Search and filter, ${sheetFilterCount} on` : "Search and filter"}
             aria-haspopup="dialog"
-            className={`relative grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-md border bg-white transition-colors sm:hidden ${
-              sheetFilterCount ? "border-ink text-ink" : "border-line text-ink"
+            className={`relative flex h-11 min-w-0 flex-1 items-center gap-1.5 overflow-hidden rounded-md border bg-white px-3 text-[13px] font-semibold text-ink transition-colors sm:hidden ${
+              sheetFilterCount ? "border-ink" : "border-line"
             }`}
           >
-            <SlidersHorizontal className="h-[18px] w-[18px]" aria-hidden />
+            <Search className="h-[18px] w-[18px] shrink-0 text-slate" aria-hidden />
+            {trimmedQuery ? (
+              <span className="min-w-0 truncate">“{trimmedQuery}”</span>
+            ) : (
+              // Under ~352px not even "Search" fits: the icon alone (the aria-label names it).
+              <span className="min-w-0 truncate max-[351px]:hidden">
+                <span className="min-[400px]:hidden">Search</span>
+                <span className="hidden min-[400px]:inline">Search &amp; filter</span>
+              </span>
+            )}
             {sheetFilterCount > 0 && (
               <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-white">
                 {sheetFilterCount}
@@ -621,23 +640,23 @@ export default function ManageEcatalogPage() {
           </button>
           <Button
             variant="share"
-            size="icon"
+            size="sm"
             onClick={() => setSharing(true)}
             disabled={products === null}
-            aria-label="Share catalog"
-            className="h-11 w-11 sm:hidden"
+            className="h-11! sm:hidden"
           >
-            <Share2 className="h-[18px] w-[18px]" aria-hidden />
+            <Share2 className="h-4 w-4" aria-hidden />
+            Share items
           </Button>
           <a
             href={liveUrl}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="View live catalog"
             onPointerDown={ripple}
-            className={buttonClass("secondary", "icon", "h-11 w-11 sm:hidden")}
+            className={buttonClass("secondary", "sm", "h-11! sm:hidden")}
           >
-            <ArrowUpRight className="h-[18px] w-[18px]" aria-hidden />
+            View Store
+            <ArrowUpRight className="h-4 w-4 text-slate" aria-hidden />
           </a>
 
           <div role="group" aria-label="Layout" className="hidden h-9 shrink-0 items-center gap-0.5 rounded-md border border-line bg-white p-0.5 sm:flex">
@@ -724,13 +743,21 @@ export default function ManageEcatalogPage() {
           onClose={() => setFiltersOpen(false)}
           onRefresh={() => load("refresh")}
           refreshing={refreshing}
-          onClear={() => {
-            setCategory(DEFAULT_CATEGORY);
-            setStatus("all");
-          }}
+          onClear={clearFilters}
           canClear={sheetFilterCount > 0}
           resultCount={visible.length}
         >
+          {/* The keyboard's Search key closes the sheet, onto the results. */}
+          <form
+            role="search"
+            onSubmit={(e) => {
+              e.preventDefault();
+              setFiltersOpen(false);
+            }}
+          >
+            <SheetLabel>Search</SheetLabel>
+            {searchBox("block")}
+          </form>
           <section>
             <SheetLabel>Status</SheetLabel>
             {statusTabs("grid grid-cols-3 gap-1 rounded-md bg-ink/[0.05] p-1")}
