@@ -4,6 +4,7 @@
 import { apiRequest, sessionCredentials } from "./adminAuth";
 import type { WhatsappRequest } from "./adminStore";
 import { refreshStoreCatalog } from "./catalogActions";
+import type { BusinessTypeId } from "./taxonomy";
 
 export type ManagedStore = {
   slug: string;
@@ -11,6 +12,8 @@ export type ManagedStore = {
   /** The owner's login email. */
   email: string;
   active: boolean;
+  /** What the store sells (the registration's business types). Missing from older API builds. */
+  businessTypes?: BusinessTypeId[];
   /** Most products the store may have; null = unlimited. */
   productLimit: number | null;
   productCount: number;

@@ -7,7 +7,8 @@ import { businessTypesOf, isStoreActive, productLimitOf, storeInactive } from ".
 const USERS = "users";
 const SESSIONS = "sessions";
 
-const ttlMs = () => Number(process.env.SESSION_TTL_HOURS || 12) * 60 * 60 * 1000;
+// 30 days by default; SESSION_TTL_HOURS on the Lambda overrides it.
+const ttlMs = () => Number(process.env.SESSION_TTL_HOURS || 24 * 30) * 60 * 60 * 1000;
 
 // Only the hash is stored, so reading the database never yields a usable token.
 export const hashToken = (token) => createHash("sha256").update(token).digest("hex");

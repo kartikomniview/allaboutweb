@@ -546,19 +546,13 @@ export default function RegisterStorePage() {
               )}
             </button>
           </div>
-          {step === 0 ? (
+          {step === 0 && (
             <AuthSwitchLink
               prompt="Already have a store?"
               href="/admin"
               label="Log in"
               icon={<LogIn className="h-[18px] w-[18px]" aria-hidden />}
             />
-          ) : (
-            step === STEPS.length - 1 && (
-              <p className="mt-3 text-center text-[11px] leading-relaxed text-slate/80">
-                For security, your account works on this device only.
-              </p>
-            )
           )}
           <AuthSupportLink
             prompt="Need help?"

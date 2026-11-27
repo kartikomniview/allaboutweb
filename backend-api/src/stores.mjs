@@ -344,6 +344,7 @@ async function managedStore(slug, data) {
     name: data.name ?? slug,
     email: data.email ?? "",
     active: isStoreActive(data),
+    businessTypes: businessTypesOf(data),
     productLimit: productLimitOf(data),
     productCount,
     userCount,

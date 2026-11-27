@@ -127,7 +127,7 @@ Use `npm run package` rather than zipping the folder yourself. The script calls 
    | --- | --- |
    | `FIREBASE_WEB_API_KEY` | the Web API key from step 2.1 |
    | `FIREBASE_SERVICE_ACCOUNT_BASE64` | the base64 string from step 2.3 |
-   | `SESSION_TTL_HOURS` | `12` (optional, default 12) |
+   | `SESSION_TTL_HOURS` | `720` (optional, default 720 = 30 days) |
    | `SUPER_ADMIN_EMAILS` | `admin@allaboutweb.com` (comma-separated; these accounts manage every store) |
 
 7. Optional quick check: go to **Test** and create an event with this JSON, then run it:

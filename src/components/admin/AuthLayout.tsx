@@ -51,19 +51,20 @@ function Logo({ href }: { href?: string }) {
 
 /**
  * "Trouble logging in? Contact support": opens a WhatsApp chat with Catalog24 support,
- * with `message` already typed. A small centred line for the end of <AuthActions>.
+ * with `message` already typed. A centred line for the end of <AuthActions>, in the
+ * accent colour so it's easy to find when something goes wrong.
  */
 export function AuthSupportLink({ prompt, message }: { prompt: string; message: string }) {
   return (
-    <p className="mt-2 text-center text-[13px] text-slate">
-      {prompt}{" "}
+    <p className="mt-2 flex flex-wrap items-center justify-center gap-x-1.5 text-center text-sm font-medium text-ink/80">
+      {prompt}
       <a
         href={whatsappUrl(message)}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 rounded-sm font-semibold text-ink hover:text-primary hover:underline focus-visible:outline-none! focus-visible:ring-[3px] focus-visible:ring-primary/20"
+        className="inline-flex min-h-11 items-center gap-1.5 rounded-sm font-semibold text-primary hover:underline focus-visible:outline-none! focus-visible:ring-[3px] focus-visible:ring-primary/20"
       >
-        <WhatsAppIcon className="h-3.5 w-3.5 text-whatsapp" />
+        <WhatsAppIcon className="h-4 w-4 text-whatsapp" />
         Contact support
       </a>
     </p>

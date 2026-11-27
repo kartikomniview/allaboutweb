@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { Eye, EyeOff, Lock, ShieldCheck, Store, TriangleAlert, UserRound } from "lucide-react";
+import { Eye, EyeOff, Lock, Store, TriangleAlert, UserRound } from "lucide-react";
 import {
   AuthError,
   checkSession,
@@ -33,6 +33,7 @@ import AuthLayout, {
 } from "@/components/admin/AuthLayout";
 import GoogleSignInButton, { googleSignInEnabled } from "@/components/admin/GoogleSignInButton";
 import { flagField, ripple } from "@/components/admin/ripple";
+import { whatsappUrl } from "@/lib/contact";
 import "@/components/admin/admin.css";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -236,15 +237,30 @@ export default function AdminLoginPage() {
             )}
           </div>
 
-          <label className="-my-1.5 flex min-h-11 cursor-pointer select-none items-center gap-3 text-sm text-ink/80">
-            <input
-              type="checkbox"
-              checked={remember}
-              onChange={(e) => setRemember(e.target.checked)}
-              className="h-[18px] w-[18px] cursor-pointer rounded-sm border-line accent-primary"
-            />
-            Remember me on this device
-          </label>
+          <div className="-my-1.5 flex items-center justify-between gap-3">
+            <label className="flex min-h-11 min-w-0 cursor-pointer select-none items-center gap-3 text-sm text-ink/80">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+                className="h-[18px] w-[18px] shrink-0 cursor-pointer rounded-sm border-line accent-primary"
+              />
+              Remember me
+            </label>
+            {/* There's no self-service reset: support resets the password over WhatsApp. */}
+            <a
+              href={whatsappUrl(
+                `Hi Catalog24 support, I forgot my password${
+                  email.trim() && !fieldErrors.email ? ` (username: ${email.trim()})` : ""
+                }. Please help me reset it.`,
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 shrink-0 items-center rounded-sm text-sm font-semibold text-primary hover:underline focus-visible:outline-none! focus-visible:ring-[3px] focus-visible:ring-primary/20"
+            >
+              Forgot password?
+            </a>
+          </div>
         </div>
 
         <AuthActions>
@@ -274,13 +290,9 @@ export default function AdminLoginPage() {
             icon={<Store className="h-[18px] w-[18px]" aria-hidden />}
           />
           <AuthSupportLink
-            prompt="Trouble logging in?"
+            prompt="Facing issues in login?"
             message="Hi Catalog24 support, I need help logging in to my store."
           />
-          <p className="mt-2 flex items-center justify-center gap-1.5 text-center text-[11px] text-slate/80">
-            <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden />
-            Secure sign-in · Sessions are bound to this device
-          </p>
         </AuthActions>
       </form>
     </AuthLayout>

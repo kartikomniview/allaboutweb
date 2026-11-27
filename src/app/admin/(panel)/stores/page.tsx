@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { useAdminUser } from "@/components/admin/AdminShell";
+import { ripple } from "@/components/admin/ripple";
 import ConfirmDialog from "@/components/admin/ecatalog/ConfirmDialog";
 import StoreUsersDialog from "@/components/admin/StoreUsersDialog";
 import { Badge, Button, Card, Skeleton, buttonClass, formatRelative } from "@/components/admin/ui";
@@ -24,8 +25,11 @@ import { AuthError } from "@/lib/adminAuth";
 import { formatWhatsapp } from "@/lib/adminStore";
 import { DEMO_STORE_SLUG, deleteStore, listAllStores, updateStoreAccess, type ManagedStore } from "@/lib/adminStores";
 import { storeUrlFor } from "@/lib/catalogDomain";
+import { BUSINESS_TYPES, type BusinessTypeId } from "@/lib/taxonomy";
 
 type Filter = "all" | "active" | "inactive" | "requests";
+/** The business-type chip: "all", or one type. */
+type TypeFilter = "all" | BusinessTypeId;
 type Toast = { id: number; text: string; tone: "ok" | "error" };
 
 const message = (err: unknown, fallback: string) => (err instanceof AuthError ? err.message : fallback);
@@ -484,6 +488,7 @@ export default function AllStoresPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [openSlug, setOpenSlug] = useState<string | null>(null);
   const [deactivating, setDeactivating] = useState<ManagedStore | null>(null);
   const [deactivateBusy, setDeactivateBusy] = useState(false);
@@ -583,7 +588,8 @@ export default function AllStoresPage() {
     };
   }, [stores]);
 
-  const visible = useMemo(() => {
+  // Stores that pass the status tab and the search; the business-type chips count from this list.
+  const matching = useMemo(() => {
     const q = query.trim().toLowerCase();
     return (stores ?? []).filter((s) => {
       if (filter === "active" && !s.active) return false;
@@ -592,6 +598,23 @@ export default function AllStoresPage() {
       return !q || `${s.name} ${s.slug} ${s.email}`.toLowerCase().includes(q);
     });
   }, [stores, query, filter]);
+
+  // A chip for each business type some store has (in the registration's order). Older API
+  // builds don't send the types, so there are no chips then.
+  const typeChips = useMemo(() => {
+    const used = new Set((stores ?? []).flatMap((s) => s.businessTypes ?? []));
+    return BUSINESS_TYPES.filter((t) => used.has(t.id)).map((t) => ({
+      ...t,
+      count: matching.filter((s) => s.businessTypes?.includes(t.id)).length,
+    }));
+  }, [stores, matching]);
+
+  // A type no store has any more (its last store was deleted) stops filtering.
+  const activeType = typeChips.some((t) => t.id === typeFilter) ? typeFilter : "all";
+  const visible = useMemo(
+    () => (activeType === "all" ? matching : matching.filter((s) => s.businessTypes?.includes(activeType))),
+    [matching, activeType],
+  );
 
   if (!user.isSuperAdmin) {
     return (
@@ -626,55 +649,96 @@ export default function AllStoresPage() {
         </Button>
       </header>
 
-      <div className="sticky top-14 z-20 -mx-3 flex flex-col gap-2.5 bg-paper/95 px-3 py-2 backdrop-blur sm:-mx-4 sm:flex-row sm:px-4 lg:top-0 lg:-mx-5 lg:px-5">
-        <label className="relative min-w-0 flex-1">
-          <span className="sr-only">Search stores</span>
-          <Search
-            className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate/60"
-            aria-hidden
-          />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search name, link or email"
-            enterKeyHint="search"
-            className="h-11 w-full rounded-md border border-line bg-white pl-11 pr-10 text-base text-ink placeholder:text-slate/55 focus:border-primary focus:outline-none focus-visible:outline-none! focus:ring-[3px] focus:ring-primary/15 [&::-webkit-search-cancel-button]:hidden"
-          />
-          {query && (
-            <button
-              type="button"
-              onClick={() => setQuery("")}
-              aria-label="Clear search"
-              className="absolute right-0.5 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-md text-slate hover:text-ink"
-            >
-              <X className="h-4 w-4" aria-hidden />
-            </button>
-          )}
-        </label>
-        <div
-          role="tablist"
-          aria-label="Filter stores"
-          className="grid shrink-0 grid-cols-4 gap-1 rounded-md bg-ink/[0.05] p-1"
-        >
-          {(["all", "active", "inactive", "requests"] as const).map((key) => (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              aria-selected={filter === key}
-              onClick={() => setFilter(key)}
-              className={`flex h-9 items-center justify-center gap-1.5 rounded-[4px] px-2 text-[13px] font-semibold capitalize transition-colors sm:px-3 ${
-                filter === key ? "bg-white text-ink shadow-[0_1px_2px_rgba(1,18,60,0.12)]" : "text-slate hover:text-ink"
-              }`}
-            >
-              {key === "inactive" ? "Off" : key}
-              <span className={`text-[11px] tabular-nums ${filter === key ? "text-primary" : "text-slate/80"}`}>
-                {stores ? counts[key] : "–"}
-              </span>
-            </button>
-          ))}
+      <div className="sticky top-14 z-20 -mx-3 flex flex-col gap-2.5 bg-paper/95 px-3 py-2 backdrop-blur sm:-mx-4 sm:px-4 lg:top-0 lg:-mx-5 lg:px-5">
+        <div className="flex flex-col gap-2.5 sm:flex-row">
+          <label className="relative min-w-0 flex-1">
+            <span className="sr-only">Search stores</span>
+            <Search
+              className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate/60"
+              aria-hidden
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search name, link or email"
+              enterKeyHint="search"
+              className="h-11 w-full rounded-md border border-line bg-white pl-11 pr-10 text-base text-ink placeholder:text-slate/55 focus:border-primary focus:outline-none focus-visible:outline-none! focus:ring-[3px] focus:ring-primary/15 [&::-webkit-search-cancel-button]:hidden"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="Clear search"
+                className="absolute right-0.5 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-md text-slate hover:text-ink"
+              >
+                <X className="h-4 w-4" aria-hidden />
+              </button>
+            )}
+          </label>
+          <div
+            role="tablist"
+            aria-label="Filter stores"
+            className="grid shrink-0 grid-cols-4 gap-1 rounded-md bg-ink/[0.05] p-1"
+          >
+            {(["all", "active", "inactive", "requests"] as const).map((key) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={filter === key}
+                onClick={() => setFilter(key)}
+                className={`flex h-9 items-center justify-center gap-1.5 rounded-[4px] px-2 text-[13px] font-semibold capitalize transition-colors sm:px-3 ${
+                  filter === key
+                    ? "bg-white text-ink shadow-[0_1px_2px_rgba(1,18,60,0.12)]"
+                    : "text-slate hover:text-ink"
+                }`}
+              >
+                {key === "inactive" ? "Off" : key}
+                <span className={`text-[11px] tabular-nums ${filter === key ? "text-primary" : "text-slate/80"}`}>
+                  {stores ? counts[key] : "–"}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* Business types (counts follow the status tab and the search). Phones: one row that
+            scrolls sideways; larger screens: the chips wrap. */}
+        {typeChips.length > 0 && (
+          <div
+            role="group"
+            aria-label="Filter by business type"
+            className="-mr-3 flex gap-1.5 overflow-x-auto pr-3 [scrollbar-width:none] sm:-mr-4 sm:pr-4 lg:mr-0 lg:flex-wrap lg:pr-0 [&::-webkit-scrollbar]:hidden"
+          >
+            {[{ id: "all" as const, label: "All types", count: matching.length }, ...typeChips].map(({ id, label, count }) => {
+              const selected = activeType === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setTypeFilter(id)}
+                  onPointerDown={ripple}
+                  aria-pressed={selected}
+                  className={`relative inline-flex h-9 shrink-0 items-center gap-1.5 overflow-hidden rounded-md border px-3 text-[13px] font-semibold whitespace-nowrap transition-colors sm:h-7 sm:gap-1 sm:px-2.5 sm:text-xs ${
+                    selected
+                      ? "border-ink bg-ink text-white"
+                      : count === 0
+                        ? "border-line bg-white text-slate/60"
+                        : "border-line bg-white text-ink hover:border-slate/35"
+                  }`}
+                >
+                  {label}
+                  <span
+                    className={`text-[11px] tabular-nums sm:text-[10px] ${selected ? "text-white/70" : "text-slate/80"}`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* WhatsApp numbers waiting for approval: one tap to see them */}
